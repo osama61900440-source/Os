@@ -24,46 +24,54 @@
             text-align: center;
             color: #2c3e50;
             margin-top: 0;
-        }
-        .dashboard {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
             margin-bottom: 20px;
         }
-        .card {
-            background: #eef2f7;
-            padding: 12px;
-            border-radius: 8px;
-            text-align: center;
-            font-weight: bold;
-            font-size: 15px;
-        }
-        .card.profit { background: #d4edda; color: #155724; }
-        .card.expense { background: #f8d7da; color: #721c24; }
         
+        /* 4ቱ ማሳያዎች ለየብቻ እንዲሆኑ የተደረገበት */
+        .dashboard-v2 {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+        .card-v2 {
+            background: #ffffff;
+            padding: 16px;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+            border-left: 6px solid #7f8c8d;
+        }
+        .card-v2.capital { border-left-color: #2980b9; background: #ebf5fb; }
+        .card-v2.profit { border-left-color: #27ae60; background: #eafaf1; color: #1e8449; }
+        .card-v2.expense { border-left-color: #c0392b; background: #fdedec; color: #922b21; }
+        .card-v2.top-item { border-left-color: #f39c12; background: #fef9e7; }
+
         .section-title {
             background: #2c3e50;
             color: white;
-            padding: 6px 10px;
-            border-radius: 4px;
+            padding: 8px 12px;
+            border-radius: 6px;
             font-size: 15px;
-            margin-top: 15px;
-            margin-bottom: 10px;
+            margin-top: 20px;
+            margin-bottom: 12px;
         }
-        
         .form-group {
-            margin-bottom: 10px;
+            margin-bottom: 12px;
         }
         label {
             display: block;
-            margin-bottom: 4px;
+            margin-bottom: 5px;
             font-weight: 600;
             font-size: 14px;
         }
         input, select {
             width: 100%;
-            padding: 10px;
+            padding: 11px;
             border: 1px solid #ccc;
             border-radius: 6px;
             box-sizing: border-box;
@@ -72,8 +80,8 @@
         .status-msg {
             text-align: center;
             font-weight: bold;
-            margin: 10px 0;
-            min-height: 20px;
+            margin: 15px 0;
+            min-height: 22px;
         }
         button {
             padding: 12px;
@@ -86,12 +94,12 @@
             width: 100%;
             margin-top: 5px;
         }
-        .btn-sell { background-color: #28a745; }
-        .btn-expense { background-color: #dc3545; }
-        .btn-add { background-color: #17a2b8; }
+        .btn-sell { background-color: #27ae60; }
+        .btn-expense { background-color: #c0392b; }
+        .btn-add { background-color: #2980b9; }
         
         .inventory-list {
-            max-height: 200px;
+            max-height: 250px;
             overflow-y: auto;
             border: 1px solid #eee;
             border-radius: 6px;
@@ -101,16 +109,15 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 8px;
+            padding: 10px;
             border-bottom: 1px solid #eee;
             font-size: 14px;
         }
         .inventory-item:last-child { border-bottom: none; }
-        
         hr {
             border: 0;
             height: 1px;
-            background: #ddd;
+            background: #e0e0e0;
             margin: 20px 0;
         }
     </style>
@@ -120,74 +127,86 @@
 <div class="container">
     <h2>የሱቅ መቆጣጠሪያ ዳሽቦርድ</h2>
     
-    <div class="dashboard">
-        <div class="card" id="lbl-capital">ጠቅላላ ካፒታል: 0 ብር</div>
-        <div class="card profit" id="lbl-profit">የቀን የተጣራ ትርፍ: 0 ብር</div>
-        <div class="card expense" id="lbl-expense">የቀን ወጪ: 0 ብር</div>
-        <div class="card" id="lbl-top">በጣም የሚሸጠው: -</div>
+    <div class="dashboard-v2">
+        <div class="card-v2 capital">
+            <span>💰 ጠቅላላ የካፒታል መጠን፡</span>
+            <span id="lbl-capital">0 ብር</span>
+        </div>
+        <div class="card-v2 profit">
+            <span>📈 የቀን የተጣራ ትርፍ፡</span>
+            <span id="lbl-profit">0 ብር</span>
+        </div>
+        <div class="card-v2 expense">
+            <span>📉 የቀን ጠቅላላ ወጪ፡</span>
+            <span id="lbl-expense">0 ብር</span>
+        </div>
+        <div class="card-v2 top-item">
+            <span>🔥 በጣም እየተሸጠ ያለው እቃ፡</span>
+            <span id="lbl-top">-</span>
+        </div>
     </div>
 
-    <div class="status-msg" id="lbl-status" style="color: green;">እንኳን ደህና መጡ!</div>
+    <div class="status-msg" id="lbl-status" style="color: #27ae60;">እንኳን ደህና መጡ!</div>
 
-    <div class="section-title">1. ሽያጭ መመዝገቢያ</div>
+    <div class="section-title">📦 1. የሽያጭ መመዝገቢያ ፎርም</div>
     <div class="form-group">
-        <label>የሚሸጠው ዕቃ ስም፦</label>
+        <label>የሚሸጠውን ዕቃ ይምረጡ፦</label>
         <select id="select-sell-item"></select>
     </div>
     <button class="btn-sell" onclick="recordSale()">ሽያጭ መዝግብ (1 ዕቃ)</button>
 
     <hr>
 
-    <div class="section-title">2. አዲስ ዕቃ / ክምችት መጨመሪያ</div>
+    <div class="section-title">➕ 2. አዲስ ዕቃ / ክምችት መጨመሪያ ፎርም</div>
     <div class="form-group">
         <label>የዕቃ ስም፦</label>
-        <input type="text" id="txt-add-name" placeholder="ምሳሌ: ሳሙና">
+        <input type="text" id="txt-add-name" placeholder="ምሳሌ፦ ፌስታል፣ ሻይ ቅጠል">
     </div>
     <div class="form-group">
-        <label>የዕቃ ብዛት፦</label>
-        <input type="number" id="txt-add-qty" placeholder="ምሳሌ: 50">
+        <label>የዕቃ ብዛት (ኳንቲቲ)፦</label>
+        <input type="number" id="txt-add-qty" placeholder="ምሳሌ፦ 100">
     </div>
     <div class="form-group">
         <label>የአንድ ዕቃ መግዣ ዋጋ፦</label>
-        <input type="number" id="txt-add-cost" placeholder="ምሳሌ: 20">
+        <input type="number" id="txt-add-cost" placeholder="ምሳሌ፦ 50">
     </div>
     <div class="form-group">
         <label>የአንድ ዕቃ መሸጫ ዋጋ፦</label>
-        <input type="number" id="txt-add-sell-price" placeholder="ምሳሌ: 25">
+        <input type="number" id="txt-add-sell-price" placeholder="ምሳሌ፦ 70">
     </div>
-    <button class="btn-add" onclick="addNewItem()">አዲስ ዕቃ ወደ ክምችት ጨምር</button>
+    <button class="btn-add" onclick="addNewItem()">አዲስ ዕቃ ወደ ሲስተም አስገባ</button>
 
     <hr>
 
-    <div class="section-title">3. የወጪ መመዝገቢያ</div>
+    <div class="section-title">💸 3. የወጪ መመዝገቢያ ፎርም (ብቻውን)</div>
     <div class="form-group">
         <label>የወጪ ምክንያት፦</label>
-        <input type="text" id="txt-expense-reason" placeholder="ምሳሌ: ለቤት ኪራይ ወይም ለትራንስፖርት">
+        <input type="text" id="txt-expense-reason" placeholder="ምሳሌ፦ ለቤት ኪራይ፣ ለትራንስፖርት">
     </div>
     <div class="form-group">
         <label>የወጪ መጠን (በብር)፦</label>
-        <input type="number" id="txt-expense-amount" placeholder="ምሳሌ: 500">
+        <input type="number" id="txt-expense-amount" placeholder="ምሳሌ፦ 1500">
     </div>
-    <button class="btn-expense" onclick="recordExpense()">ወጪ መዝግብ</button>
+    <button class="btn-expense" onclick="recordExpense()">ወጪውን ብቻ መዝግብ</button>
 
     <hr>
 
-    <div class="section-title">የዕቃ ክምችት እና ዋጋ ዝርዝር</div>
+    <div class="section-title">📋 በሱቅ ውስጥ ያሉ የዕቃዎች ዝርዝር</div>
     <div class="inventory-list" id="inventory-list"></div>
 </div>
 
 <script>
-    // መነሻ መረጃዎች (ባዶ ሲሆን ካፒታል 0 ይሆናል)
-    let data = JSON.parse(localStorage.getItem('business_data_v2')) || {
+    // ሙሉ በሙሉ ባዶ መነሻ መረጃዎች (ሳሙና እና ዘይት ጠፍተዋል)
+    let data = JSON.parse(localStorage.getItem('business_data_v3')) || {
         capital: 0.0,
         total_profit: 0.0,
         total_expense: 0.0,
-        inventory: {}, // መዋቅር: {"ዕቃ ስም": [ብዛት, መግዣ_ዋጋ, መሸጫ_ዋጋ]}
+        inventory: {}, 
         sales_count: {}
     };
 
     function saveData() {
-        localStorage.setItem('business_data_v2', JSON.stringify(data));
+        localStorage.setItem('business_data_v3', JSON.stringify(data));
         updateDashboard();
         updateInventoryDisplay();
         populateDropdown();
@@ -204,9 +223,9 @@
 
     function updateDashboard() {
         calculateCapital();
-        document.getElementById('lbl-capital').innerText = `ጠቅላላ ካፒታል: ${data.capital.toLocaleString()} ብር`;
-        document.getElementById('lbl-profit').innerText = `የቀን የተጣራ ትርፍ: ${data.total_profit.toLocaleString()} ብር`;
-        document.getElementById('lbl-expense').innerText = `የቀን ወጪ: ${data.total_expense.toLocaleString()} ብር`;
+        document.getElementById('lbl-capital').innerText = `${data.capital.toLocaleString()} ብር`;
+        document.getElementById('lbl-profit').innerText = `${data.total_profit.toLocaleString()} ብር`;
+        document.getElementById('lbl-expense').innerText = `${data.total_expense.toLocaleString()} ብር`;
         
         let topItem = "-";
         let maxSales = 0;
@@ -216,18 +235,23 @@
                 topItem = `${item} (${maxSales} ጊዜ)`;
             }
         }
-        document.getElementById('lbl-top').innerText = `በጣም የሚሸጠው: ${topItem}`;
+        document.getElementById('lbl-top').innerText = topItem;
     }
 
     function updateInventoryDisplay() {
         let listDiv = document.getElementById('inventory-list');
         listDiv.innerHTML = "";
+        let hasItems = false;
         for (let item in data.inventory) {
             let details = data.inventory[item];
             listDiv.innerHTML += `<div class="inventory-item">
-                <span><strong>${item}</strong> (ተርፏል: ${details[0]})</span>
-                <span>መግዣ: ${details[1]} ብር | መሸጫ: ${details[2]} ብር</span>
+                <span><strong>${item}</strong> (ያለው ብዛት፦ ${details[0]})</span>
+                <span>መግዣ፦ ${details[1]} ብር | መሸጫ፦ ${details[2]} ብር</span>
             </div>`;
+            hasItems = true;
+        }
+        if(!hasItems) {
+            listDiv.innerHTML = "<div style='text-align:center; padding:10px; color:#aaa;'>እስካሁን ምንም እቃ አልተመዘገበም</div>";
         }
     }
 
@@ -242,14 +266,14 @@
             }
         }
         if(!hasItems) {
-            dropdown.innerHTML = "<option>ክምችት ላይ ዕቃ የለም</option>";
+            dropdown.innerHTML = "<option value=''>ለመሸጥ መጀመሪያ እቃ ይመዝግቡ</option>";
         }
     }
 
     function showStatus(text, isError = false) {
         let status = document.getElementById('lbl-status');
         status.innerText = text;
-        status.style.color = isError ? "red" : "green";
+        status.style.color = isError ? "#c0392b" : "#27ae60";
     }
 
     function addNewItem() {
@@ -264,14 +288,14 @@
 
         if (data.inventory[name]) {
             data.inventory[name][0] += qty;
-            data.inventory[name][1] = cost; // መግዣ ዋጋ አሻሽል
-            data.inventory[name][2] = sellPrice; // መሸጫ ዋጋ አሻሽል
+            data.inventory[name][1] = cost; 
+            data.inventory[name][2] = sellPrice; 
         } else {
             data.inventory[name] = [qty, cost, sellPrice];
             data.sales_count[name] = 0;
         }
 
-        showStatus(`ዕቃ '${name}' በስኬት ተመዝግቧል፤ ካፒታልህ ተዘምኗል!`);
+        showStatus(`ዕቃ '${name}' በስኬት ተመዝግቧል፤ የካፒታል መጠን ተዘምኗል!`);
         document.getElementById('txt-add-name').value = "";
         document.getElementById('txt-add-qty').value = "";
         document.getElementById('txt-add-cost').value = "";
@@ -283,18 +307,18 @@
         let name = document.getElementById('select-sell-item').value;
 
         if (!name || !data.inventory[name] || data.inventory[name][0] <= 0) {
-            return showStatus("ለመሸጥ የሚሆን በቂ ዕቃ በክምችት ውስጥ የለም።", true);
+            return showStatus("ለመሸጥ የሚሆን ዕቃ በክምችት ውስጥ የለም።", true);
         }
 
         let costPrice = data.inventory[name][1];
         let sellPrice = data.inventory[name][2];
         let profit = sellPrice - costPrice;
 
-        data.inventory[name][0] -= 1; // ከክምችት 1 ቀንስ
+        data.inventory[name][0] -= 1; 
         data.sales_count[name] = (data.sales_count[name] || 0) + 1;
-        data.total_profit += profit;
+        data.total_profit += profit; // ትርፍ ከሽያጭ ብቻ ይሰላል
 
-        showStatus(`ሽያጭ ተመዝግቧል! የተገኘ ትርፍ: ${profit} ብር`);
+        showStatus(`ሽያጭ ተመዝግቧል! የተጣራ ትርፍ: +${profit} ብር`);
         saveData();
     }
 
@@ -306,16 +330,15 @@
             return showStatus("እባክህ የወጪውን ምክንያት እና የብር መጠን በትክክል አስገባ።", true);
         }
 
-        data.total_expense += expense;
-        data.total_profit -= expense; // ወጪ ከትርፍ ላይ ይቀነሳል
+        data.total_expense += expense; // ወጪ ለብቻው እዚህ ይደመራል (ከሽያጭ ትርፍ ጋር አይቀላቀልም)
 
-        showStatus(`የወጪ ምክንያት '${reason}' በብር ${expense} ተመዝግቧል!`);
+        showStatus(`ወጪ ማስታወሻ፦ '${reason}' በብር ${expense} ተመዝግቧል!`);
         document.getElementById('txt-expense-reason').value = "";
         document.getElementById('txt-expense-amount').value = "";
         saveData();
     }
 
-    // መጀመሪያ ሲከፈት
+    // መጀመሪያ ገጹ ሲከፈት
     updateDashboard();
     updateInventoryDisplay();
     populateDropdown();
