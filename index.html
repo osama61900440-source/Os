@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="am">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>የሱቅ መቆጣጠሪያ ሲስተም</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f9;
+            margin: 0;
+            padding: 15px;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        h2 {
+            text-align: center;
+            color: #2c3e50;
+            margin-top: 0;
+        }
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .card {
+            background: #eef2f7;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 15px;
+        }
+        .card.profit { background: #d4edda; color: #155724; }
+        .card.expense { background: #f8d7da; color: #721c24; }
+        .form-group {
+            margin-bottom: 12px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        .status-msg {
+            text-align: center;
+            font-weight: bold;
+            margin: 10px 0;
+            min-height: 20px;
+        }
+        .btn-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        button {
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+        }
+        .btn-sell { background-color: #28a745; }
+        .btn-expense { background-color: #dc3545; }
+        .btn-add { background-color: #17a2b8; grid-column: span 2; }
+        .inventory-section {
+            margin-top: 20px;
+        }
+        .inventory-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            border-radius: 6px;
+            padding: 5px;
+        }
+        .inventory-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+        }
+        .inventory-item:last-child { border-bottom: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>የሱቅ መቆጣጠሪያ ዳሽቦርድ</h2>
+    
+    <div class="dashboard">
+        <div class="card" id="lbl-capital">ጠቅላላ ካፒታል: 200,000.00 ብር</div>
+        <div class="card profit" id="lbl-profit">የቀን የተጣራ ትርፍ: 0.00 ብር</div>
+        <div class="card expense" id="lbl-expense">የቀን ወጪ: 0.00 ብር</div>
+        <div class="card" id="lbl-top">በጣም የሚሸጠው: -</div>
+    </div>
+
+    <div class="form-group">
+        <label>የዕቃ ስም / ወጪ ምክንያት:</label>
+        <input type="text" id="txt-name" placeholder="ምሳሌ: ሳሙና">
+    </div>
+    <div class="form-group">
+        <label>ዋጋ / የዕቃ ብዛት (አዲስ እቃ ከሆነ):</label>
+        <input type="number" id="txt-amount" placeholder="ምሳሌ: 25">
+    </div>
+    <div class="form-group">
+        <label>የመግዣ ዋጋ (አዲስ እቃ ለመመዝገብ ብቻ):</label>
+        <input type="number" id="txt-cost" placeholder="ምሳሌ: 20">
+    </div>
+
+    <div class="status-msg" id="lbl-status" style="color: green;">እንኳን ደህና መጡ!</div>
+
+    <div class="btn-group">
+        <button class="btn-sell" onclick="recordSale()">ሽያጭ መዝግብ</button>
+        <button class="btn-expense" onclick="recordExpense()">ወጪ መዝግብ</button>
+        <button class="btn-add" onclick="addNewItem()">አዲስ ዕቃ ጨምር</button>
+    </div>
+
+    <div class="inventory-section">
+        <label>የዕቃ ክምችት ዝርዝር:</label>
+        <div class="inventory-list" id="inventory-list"></div>
+    </div>
+</div>
+
+<script>
+    let data = JSON.parse(localStorage.getItem('business_data')) || {
+        capital: 200000.0,
+        total_profit: 0.0,
+        total_expense: 0.0,
+        inventory: {"ሳሙና": [50, 20], "ዘይት": [20, 150], "ስኳር": [30, 80]},
+        sales_count: {"ሳሙና": 0, "ዘይት": 0, "ስኳር": 0}
+    };
+
+    function saveData() {
+        localStorage.setItem('business_data', JSON.stringify(data));
+        updateDashboard();
+        updateInventoryDisplay();
+    }
+
+    function updateDashboard() {
+        document.getElementById('lbl-capital').innerText = `ጠቅላላ ካፒታል: ${data.capital.toLocaleString()} ብር`;
+        document.getElementById('lbl-profit').innerText = `የቀን የተጣራ ትርፍ: ${data.total_profit.toLocaleString()} ብር`;
+        document.getElementById('lbl-expense').innerText = `የቀን ወጪ: ${data.total_expense.toLocaleString()} ብር`;
+        
+        let topItem = "-";
+        let maxSales = 0;
+        for (let item in data.sales_count) {
+            if (data.sales_count[item] > maxSales) {
+                maxSales = data.sales_count[item];
+                topItem = `${item} (${maxSales} ጊዜ)`;
+            }
+        }
+        document.getElementById('lbl-top').innerText = `በጣም የሚሸጠው: ${topItem}`;
+    }
+
+    function updateInventoryDisplay() {
+        let listDiv = document.getElementById('inventory-list');
+        listDiv.innerHTML = "";
+        for (let item in data.inventory) {
+            let details = data.inventory[item];
+            listDiv.innerHTML += `<div class="inventory-item">
+                <span><strong>${item}</strong></span>
+                <span>በቁጥር: ${details[0]} | መግዣ: ${details[1]} ብር</span>
+            </div>`;
+        }
+    }
+
+    function showStatus(text, isError = false) {
+        let status = document.getElementById('lbl-status');
+        status.innerText = text;
+        status.style.color = isError ? "red" : "green";
+    }
+
+    function clearInputs() {
+        document.getElementById('txt-name').value = "";
+        document.getElementById('txt-amount').value = "";
+        document.getElementById('txt-cost').value = "";
+    }
+
+    function recordSale() {
+        let name = document.getElementById('txt-name').value.trim();
+        let sellPrice = parseFloat(document.getElementById('txt-amount').value);
+
+        if (!name || !data.inventory[name]) {
+            return showStatus("እባክህ ትክክለኛ የዕቃ ስም አስገባ።", true);
+        }
+        if (isNaN(sellPrice)) {
+            return showStatus("እባክህ ትክክለኛ የሽያጭ ዋጋ አስገባ።", true);
+        }
+        if (data.inventory[name][0] <= 0) {
+            return showStatus(`'${name}' ከክምችት አልቋል።`, true);
+        }
+
+        let costPrice = data.inventory[name][1];
+        let profit = sellPrice - costPrice;
+
+        data.inventory[name][0] -= 1;
+        data.sales_count[name] = (data.sales_count[name] || 0) + 1;
+        data.total_profit += profit;
+        data.capital += profit;
+
+        showStatus(`ሽያጭ ተመዝግቧል! ትርፍ: ${profit} ብር`);
+        clearInputs();
+        saveData();
+    }
+
+    function recordExpense() {
+        let expense = parseFloat(document.getElementById('txt-amount').value);
+        if (isNaN(expense)) {
+            return showStatus("እባክህ በትክክለኛ ዋጋ ቦታ ላይ የወጪውን መጠን አስገባ።", true);
+        }
+
+        data.total_expense += expense;
+        data.total_profit -= expense;
+        data.capital -= expense;
+
+        showStatus("ወጪ ተመዝግቧል!");
+        clearInputs();
+        saveData();
+    }
+
+    function addNewItem() {
+        let name = document.getElementById('txt-name').value.trim();
+        let qty = parseInt(document.getElementById('txt-amount').value);
+        let cost = parseFloat(document.getElementById('txt-cost').value);
+
+        if (!name || isNaN(qty) || isNaN(cost)) {
+            return showStatus("እባክህ ስም፣ ብዛት እና መግዣ ዋጋ በትክክል አስገባ።", true);
+        }
+
+        if (data.inventory[name]) {
+            data.inventory[name][0] += qty;
+        } else {
+            data.inventory[name] = [qty, cost];
+            data.sales_count[name] = 0;
+        }
+
+        showStatus(`አዲስ ዕቃ '${name}' ተጨምሯል!`);
+        clearInputs();
+        saveData();
+    }
+
+    updateDashboard();
+    updateInventoryDisplay();
+</script>
+</body>
+</html>
