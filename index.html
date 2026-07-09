@@ -9,71 +9,67 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #f4f6f9;
             margin: 0;
-            padding: 15px;
+            padding: 0;
             color: #333;
+            padding-bottom: 70px; /* የታችኛው ማውጫ እቃዎችን እንዳይሸፍን */
         }
         .container {
             max-width: 600px;
             margin: 0 auto;
             background: white;
             padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            min-height: calc(100vh - 70px);
+            box-sizing: border-box;
         }
         h2 {
             text-align: center;
             color: #2c3e50;
-            margin-top: 0;
-            margin-bottom: 20px;
+            margin-top: 10px;
+            font-size: 20px;
         }
         
-        /* 4ቱ ማሳያዎች ለየብቻ እንዲሆኑ የተደረገበት */
-        .dashboard-v2 {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-bottom: 25px;
+        /* እያንዳንዱ ክፍል መጀመሪያ እንዲደበቅ ማድረግ */
+        .app-page {
+            display: none;
         }
-        .card-v2 {
+        /* ገጹ ሲመረጥ ብቻ እንዲታይ ማድረግ */
+        .app-page.active {
+            display: block;
+        }
+
+        /* 1. የዳሽቦርድ ካርዶች ዲዛይን (ለየብቻ እንዲሆኑ የተደረገ) */
+        .card-box {
             background: #ffffff;
-            padding: 16px;
-            border-radius: 10px;
+            padding: 18px;
+            border-radius: 12px;
             font-weight: bold;
             font-size: 16px;
+            margin-bottom: 15px;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.06);
+            border-left: 6px solid #7f8c8d;
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
-            border-left: 6px solid #7f8c8d;
         }
-        .card-v2.capital { border-left-color: #2980b9; background: #ebf5fb; }
-        .card-v2.profit { border-left-color: #27ae60; background: #eafaf1; color: #1e8449; }
-        .card-v2.expense { border-left-color: #c0392b; background: #fdedec; color: #922b21; }
-        .card-v2.top-item { border-left-color: #f39c12; background: #fef9e7; }
+        .card-box.capital { border-left-color: #2980b9; background: #ebf5fb; color: #2980b9; }
+        .card-box.profit { border-left-color: #27ae60; background: #eafaf1; color: #27ae60; }
+        .card-box.expense { border-left-color: #c0392b; background: #fdedec; color: #c0392b; }
+        .card-box.top-item { border-left-color: #f39c12; background: #fef9e7; color: #d35400; }
 
-        .section-title {
-            background: #2c3e50;
-            color: white;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 15px;
-            margin-top: 20px;
-            margin-bottom: 12px;
-        }
+        /* ፎርሞች */
         .form-group {
-            margin-bottom: 12px;
+            margin-bottom: 15px;
         }
         label {
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 6px;
             font-weight: 600;
             font-size: 14px;
         }
         input, select {
             width: 100%;
-            padding: 11px;
+            padding: 12px;
             border: 1px solid #ccc;
-            border-radius: 6px;
+            border-radius: 8px;
             box-sizing: border-box;
             font-size: 15px;
         }
@@ -81,123 +77,173 @@
             text-align: center;
             font-weight: bold;
             margin: 15px 0;
-            min-height: 22px;
+            font-size: 15px;
         }
         button {
-            padding: 12px;
+            padding: 14px;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             color: white;
-            font-size: 15px;
+            font-size: 16px;
             font-weight: bold;
             cursor: pointer;
             width: 100%;
-            margin-top: 5px;
         }
         .btn-sell { background-color: #27ae60; }
         .btn-expense { background-color: #c0392b; }
         .btn-add { background-color: #2980b9; }
-        
+
+        /* የዕቃዎች ዝርዝር */
         .inventory-list {
-            max-height: 250px;
-            overflow-y: auto;
+            margin-top: 15px;
             border: 1px solid #eee;
-            border-radius: 6px;
+            border-radius: 8px;
             padding: 5px;
+            background: #fafafa;
         }
         .inventory-item {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            padding: 10px;
+            padding: 12px 10px;
             border-bottom: 1px solid #eee;
             font-size: 14px;
         }
         .inventory-item:last-child { border-bottom: none; }
-        hr {
-            border: 0;
-            height: 1px;
-            background: #e0e0e0;
-            margin: 20px 0;
+
+        /* 📱 ልክ እንደ ቲክቶክ የታችኛው ማውጫ (Bottom Navigation) */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 65px;
+            background-color: #111111; /* ጥቁር ቀለም ለክላሲክ እይታ */
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #888888;
+            text-decoration: none;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 25%;
+            height: 100%;
+            justify-content: center;
+            transition: 0.2s;
+        }
+        .nav-item .icon {
+            font-size: 20px;
+            margin-bottom: 3px;
+        }
+        /* የነቃው (የተመረጠው) ክፍል ቀለም */
+        .nav-item.active {
+            color: #ffffff; /* ነጭ ቀለም */
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>የሱቅ መቆጣጠሪያ ዳሽቦርድ</h2>
+    <h2>የሱቅ መቆጣጠሪያ ሲስተም</h2>
     
-    <div class="dashboard-v2">
-        <div class="card-v2 capital">
-            <span>💰 ጠቅላላ የካፒታል መጠን፡</span>
+    <div class="status-msg" id="lbl-status" style="color: #27ae60;">እንኳን ደህና መጡ!</div>
+
+    <div id="page-dashboard" class="app-page active">
+        <div style="font-weight: bold; margin-bottom: 15px; color: #2c3e50;">📊 የሱቅ ወቅታዊ ሁኔታ</div>
+        <div class="card-box capital">
+            <span>💰 ጠቅላላ ካፒታል፡</span>
             <span id="lbl-capital">0 ብር</span>
         </div>
-        <div class="card-v2 profit">
+        <div class="card-box profit">
             <span>📈 የቀን የተጣራ ትርፍ፡</span>
             <span id="lbl-profit">0 ብር</span>
         </div>
-        <div class="card-v2 expense">
+        <div class="card-box expense">
             <span>📉 የቀን ጠቅላላ ወጪ፡</span>
             <span id="lbl-expense">0 ብር</span>
         </div>
-        <div class="card-v2 top-item">
-            <span>🔥 በጣም እየተሸጠ ያለው እቃ፡</span>
+        <div class="card-box top-item">
+            <span>🔥 በጣም የሚሸጠው፡</span>
             <span id="lbl-top">-</span>
         </div>
     </div>
 
-    <div class="status-msg" id="lbl-status" style="color: #27ae60;">እንኳን ደህና መጡ!</div>
-
-    <div class="section-title">📦 1. የሽያጭ መመዝገቢያ ፎርም</div>
-    <div class="form-group">
-        <label>የሚሸጠውን ዕቃ ይምረጡ፦</label>
-        <select id="select-sell-item"></select>
+    <div id="page-sell" class="app-page">
+        <div style="font-weight: bold; margin-bottom: 15px; color: #2c3e50;">📝 1. ሽያጭ መመዝገቢያ ፎርም</div>
+        <div class="form-group">
+            <label>የሚሸጠውን ዕቃ ይምረጡ፦</label>
+            <select id="select-sell-item"></select>
+        </div>
+        <button class="btn-sell" onclick="recordSale()">ሽያጭ መዝግብ (1 ዕቃ)</button>
     </div>
-    <button class="btn-sell" onclick="recordSale()">ሽያጭ መዝግብ (1 ዕቃ)</button>
 
-    <hr>
+    <div id="page-expense" class="app-page">
+        <div style="font-weight: bold; margin-bottom: 15px; color: #2c3e50;">💸 2. የወጪ መመዝገቢያ ፎርም</div>
+        <div class="form-group">
+            <label>የወጪ ምክንያት፦</label>
+            <input type="text" id="txt-expense-reason" placeholder="ምሳሌ፦ ለቤት ኪራይ፣ ለትራንስፖርት">
+        </div>
+        <div class="form-group">
+            <label>የወጪ መጠን (በብር)፦</label>
+            <input type="number" id="txt-expense-amount" placeholder="ምሳሌ፦ 500">
+        </div>
+        <button class="btn-expense" onclick="recordExpense()">ወጪ መዝግብ</button>
+    </div>
 
-    <div class="section-title">➕ 2. አዲስ ዕቃ / ክምችት መጨመሪያ ፎርም</div>
-    <div class="form-group">
-        <label>የዕቃ ስም፦</label>
-        <input type="text" id="txt-add-name" placeholder="ምሳሌ፦ ፌስታል፣ ሻይ ቅጠል">
+    <div id="page-add" class="app-page">
+        <div style="font-weight: bold; margin-bottom: 15px; color: #2c3e50;">➕ 3. አዲስ ዕቃ መጨመሪያ ፎርም</div>
+        <div class="form-group">
+            <label>የዕቃ ስም፦</label>
+            <input type="text" id="txt-add-name" placeholder="ምሳሌ፦ ፌስታል፣ ሻይ ቅጠል">
+        </div>
+        <div class="form-group">
+            <label>የዕቃ ብዛት፦</label>
+            <input type="number" id="txt-add-qty" placeholder="ምሳሌ፦ 100">
+        </div>
+        <div class="form-group">
+            <label>የአንድ ዕቃ መግዣ ዋጋ፦</label>
+            <input type="number" id="txt-add-cost" placeholder="ምሳሌ፦ 50">
+        </div>
+        <div class="form-group">
+            <label>የአንድ ዕቃ መሸጫ ዋጋ፦</label>
+            <input type="number" id="txt-add-sell-price" placeholder="ምሳሌ፦ 70">
+        </div>
+        <button class="btn-add" onclick="addNewItem()">አዲስ ዕቃ ወደ ሲስተም አስገባ</button>
+        
+        <div style="font-weight: bold; margin-top: 25px; color: #2c3e50;">📋 በሱቅ ውስጥ ያሉ የዕቃዎች ዝርዝር</div>
+        <div class="inventory-list" id="inventory-list"></div>
     </div>
-    <div class="form-group">
-        <label>የዕቃ ብዛት (ኳንቲቲ)፦</label>
-        <input type="number" id="txt-add-qty" placeholder="ምሳሌ፦ 100">
-    </div>
-    <div class="form-group">
-        <label>የአንድ ዕቃ መግዣ ዋጋ፦</label>
-        <input type="number" id="txt-add-cost" placeholder="ምሳሌ፦ 50">
-    </div>
-    <div class="form-group">
-        <label>የአንድ ዕቃ መሸጫ ዋጋ፦</label>
-        <input type="number" id="txt-add-sell-price" placeholder="ምሳሌ፦ 70">
-    </div>
-    <button class="btn-add" onclick="addNewItem()">አዲስ ዕቃ ወደ ሲስተም አስገባ</button>
+</div>
 
-    <hr>
-
-    <div class="section-title">💸 3. የወጪ መመዝገቢያ ፎርም (ብቻውን)</div>
-    <div class="form-group">
-        <label>የወጪ ምክንያት፦</label>
-        <input type="text" id="txt-expense-reason" placeholder="ምሳሌ፦ ለቤት ኪራይ፣ ለትራንስፖርት">
+<div class="bottom-nav">
+    <div class="nav-item active" onclick="switchPage('dashboard', this)">
+        <span class="icon">🏠</span>
+        <span>ዳሽቦርድ</span>
     </div>
-    <div class="form-group">
-        <label>የወጪ መጠን (በብር)፦</label>
-        <input type="number" id="txt-expense-amount" placeholder="ምሳሌ፦ 1500">
+    <div class="nav-item" onclick="switchPage('sell', this)">
+        <span class="icon">📦</span>
+        <span>ሽያጭ</span>
     </div>
-    <button class="btn-expense" onclick="recordExpense()">ወጪውን ብቻ መዝግብ</button>
-
-    <hr>
-
-    <div class="section-title">📋 በሱቅ ውስጥ ያሉ የዕቃዎች ዝርዝር</div>
-    <div class="inventory-list" id="inventory-list"></div>
+    <div class="nav-item" onclick="switchPage('expense', this)">
+        <span class="icon">💸</span>
+        <span>ወጪ</span>
+    </div>
+    <div class="nav-item" onclick="switchPage('add', this)">
+        <span class="icon">➕</span>
+        <span>እቃ ጨምር</span>
+    </div>
 </div>
 
 <script>
-    // ሙሉ በሙሉ ባዶ መነሻ መረጃዎች (ሳሙና እና ዘይት ጠፍተዋል)
-    let data = JSON.parse(localStorage.getItem('business_data_v3')) || {
+    // መረጃዎችን ማስቀመጫ
+    let data = JSON.parse(localStorage.getItem('business_data_nav_v1')) || {
         capital: 0.0,
         total_profit: 0.0,
         total_expense: 0.0,
@@ -205,8 +251,26 @@
         sales_count: {}
     };
 
+    // ገጾችን ለመቀያየር የሚረዳ ተግባር (ልክ እንደ ቲክቶክ)
+    function switchPage(pageId, element) {
+        // ሁሉንም ገጽ ደብቅ
+        let pages = document.querySelectorAll('.app-page');
+        pages.forEach(p => p.classList.remove('active'));
+        
+        // ሁሉንም የናቪጌሽን በተን አጥፋ
+        let navItems = document.querySelectorAll('.nav-item');
+        navItems.forEach(item => item.classList.remove('active'));
+        
+        // የተመረጠውን ገጽ እና በተን አሳይ
+        document.getElementById('page-' + pageId).classList.add('active');
+        element.classList.add('active');
+        
+        // ገጽ ሲቀየር መልዕክቱን ማጽዳት
+        document.getElementById('lbl-status').innerText = "";
+    }
+
     function saveData() {
-        localStorage.setItem('business_data_v3', JSON.stringify(data));
+        localStorage.setItem('business_data_nav_v1', JSON.stringify(data));
         updateDashboard();
         updateInventoryDisplay();
         populateDropdown();
@@ -216,7 +280,7 @@
         let total = 0;
         for (let item in data.inventory) {
             let details = data.inventory[item];
-            total += details[0] * details[1]; // ብዛት x መግዣ ዋጋ
+            total += details[0] * details[1]; 
         }
         data.capital = total;
     }
@@ -245,8 +309,8 @@
         for (let item in data.inventory) {
             let details = data.inventory[item];
             listDiv.innerHTML += `<div class="inventory-item">
-                <span><strong>${item}</strong> (ያለው ብዛት፦ ${details[0]})</span>
-                <span>መግዣ፦ ${details[1]} ብር | መሸጫ፦ ${details[2]} ብር</span>
+                <span><strong>${item}</strong> (ብዛት፦ ${details[0]})</span>
+                <span>መግዣ፦ ${details[1]} | መሸጫ፦ ${details[2]} ብር</span>
             </div>`;
             hasItems = true;
         }
@@ -266,7 +330,7 @@
             }
         }
         if(!hasItems) {
-            dropdown.innerHTML = "<option value=''>ለመሸጥ መጀመሪያ እቃ ይመዝግቡ</option>";
+            dropdown.innerHTML = "<option value=''>ለመሸጥ መጀመሪያ እቃ ጨምር ክፍል ውስጥ ይመዝግቡ</option>";
         }
     }
 
@@ -295,7 +359,7 @@
             data.sales_count[name] = 0;
         }
 
-        showStatus(`ዕቃ '${name}' በስኬት ተመዝግቧል፤ የካፒታል መጠን ተዘምኗል!`);
+        showStatus(`ዕቃ '${name}' በስኬት ተጨምሯል!`);
         document.getElementById('txt-add-name').value = "";
         document.getElementById('txt-add-qty').value = "";
         document.getElementById('txt-add-cost').value = "";
@@ -316,7 +380,7 @@
 
         data.inventory[name][0] -= 1; 
         data.sales_count[name] = (data.sales_count[name] || 0) + 1;
-        data.total_profit += profit; // ትርፍ ከሽያጭ ብቻ ይሰላል
+        data.total_profit += profit; 
 
         showStatus(`ሽያጭ ተመዝግቧል! የተጣራ ትርፍ: +${profit} ብር`);
         saveData();
@@ -330,15 +394,15 @@
             return showStatus("እባክህ የወጪውን ምክንያት እና የብር መጠን በትክክል አስገባ።", true);
         }
 
-        data.total_expense += expense; // ወጪ ለብቻው እዚህ ይደመራል (ከሽያጭ ትርፍ ጋር አይቀላቀልም)
+        data.total_expense += expense; 
 
-        showStatus(`ወጪ ማስታወሻ፦ '${reason}' በብር ${expense} ተመዝግቧል!`);
+        showStatus(`ወጪ ማስታወሻ፦ '${reason}' ተመዝግቧል!`);
         document.getElementById('txt-expense-reason').value = "";
         document.getElementById('txt-expense-amount').value = "";
         saveData();
     }
 
-    // መጀመሪያ ገጹ ሲከፈት
+    // መጀመሪያ ሲከፈት
     updateDashboard();
     updateInventoryDisplay();
     populateDropdown();
