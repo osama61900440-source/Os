@@ -1,411 +1,304 @@
 <!DOCTYPE html>
-<html lang="am">
+<html lang="am" dir="ltr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>የሱቅ መቆጣጠሪያ ሲስተም</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f6f9;
-            margin: 0;
-            padding: 0;
-            color: #333;
-            padding-bottom: 70px; /* የታችኛው ማውጫ እቃዎችን እንዳይሸፍን */
-        }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background: white;
-            padding: 20px;
-            min-height: calc(100vh - 70px);
-            box-sizing: border-box;
-        }
-        h2 {
-            text-align: center;
-            color: #2c3e50;
-            margin-top: 10px;
-            font-size: 20px;
-        }
-        
-        /* እያንዳንዱ ክፍል መጀመሪያ እንዲደበቅ ማድረግ */
-        .app-page {
-            display: none;
-        }
-        /* ገጹ ሲመረጥ ብቻ እንዲታይ ማድረግ */
-        .app-page.active {
-            display: block;
-        }
-
-        /* 1. የዳሽቦርድ ካርዶች ዲዛይን (ለየብቻ እንዲሆኑ የተደረገ) */
-        .card-box {
-            background: #ffffff;
-            padding: 18px;
-            border-radius: 12px;
-            font-weight: bold;
-            font-size: 16px;
-            margin-bottom: 15px;
-            box-shadow: 0 3px 8px rgba(0,0,0,0.06);
-            border-left: 6px solid #7f8c8d;
-            display: flex;
-            justify-content: space-between;
-        }
-        .card-box.capital { border-left-color: #2980b9; background: #ebf5fb; color: #2980b9; }
-        .card-box.profit { border-left-color: #27ae60; background: #eafaf1; color: #27ae60; }
-        .card-box.expense { border-left-color: #c0392b; background: #fdedec; color: #c0392b; }
-        .card-box.top-item { border-left-color: #f39c12; background: #fef9e7; color: #d35400; }
-
-        /* ፎርሞች */
-        .form-group {
-            margin-bottom: 15px;
-        }
-        label {
-            display: block;
-            margin-bottom: 6px;
-            font-weight: 600;
-            font-size: 14px;
-        }
-        input, select {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            box-sizing: border-box;
-            font-size: 15px;
-        }
-        .status-msg {
-            text-align: center;
-            font-weight: bold;
-            margin: 15px 0;
-            font-size: 15px;
-        }
-        button {
-            padding: 14px;
-            border: none;
-            border-radius: 8px;
-            color: white;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            width: 100%;
-        }
-        .btn-sell { background-color: #27ae60; }
-        .btn-expense { background-color: #c0392b; }
-        .btn-add { background-color: #2980b9; }
-
-        /* የዕቃዎች ዝርዝር */
-        .inventory-list {
-            margin-top: 15px;
-            border: 1px solid #eee;
-            border-radius: 8px;
-            padding: 5px;
-            background: #fafafa;
-        }
-        .inventory-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 12px 10px;
-            border-bottom: 1px solid #eee;
-            font-size: 14px;
-        }
-        .inventory-item:last-child { border-bottom: none; }
-
-        /* 📱 ልክ እንደ ቲክቶክ የታችኛው ማውጫ (Bottom Navigation) */
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 65px;
-            background-color: #111111; /* ጥቁር ቀለም ለክላሲክ እይታ */
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
-            z-index: 1000;
-        }
-        .nav-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            color: #888888;
-            text-decoration: none;
-            font-size: 11px;
-            font-weight: bold;
-            cursor: pointer;
-            width: 25%;
-            height: 100%;
-            justify-content: center;
-            transition: 0.2s;
-        }
-        .nav-item .icon {
-            font-size: 20px;
-            margin-bottom: 3px;
-        }
-        /* የነቃው (የተመረጠው) ክፍል ቀለም */
-        .nav-item.active {
-            color: #ffffff; /* ነጭ ቀለም */
-        }
-    </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>የሱቅ መቆጣጠሪያ ሲስተም</title>
+<link rel="manifest" href="data:application/manifest+json,{%22name%22:%22Business%20Tracker%22,%22short_name%22:%22Tracker%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%23F5F7F9%22,%22theme_color%22:%22%23123A5E%22,%22description%22:%22የሱቅ%20መቆጣጠሪያ%20እና%20የሂሳብ%20መመዝገቢያ%22}" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: -apple-system, "Noto Sans Ethiopic", "Segoe UI", Roboto, sans-serif; margin:0; background-color: #F5F7F9; }
+</style>
 </head>
 <body>
+<div id="root"></div>
 
-<div class="container">
-    <h2>የሱቅ መቆጣጠሪያ ሲስተም</h2>
-    
-    <div class="status-msg" id="lbl-status" style="color: #27ae60;">እንኳን ደህና መጡ!</div>
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo } = React;
 
-    <div id="page-dashboard" class="app-page active">
-        <div style="font-weight: bold; margin-bottom: 15px; color: #2c3e50;">📊 የሱቅ ወቅታዊ ሁኔታ</div>
-        <div class="card-box capital">
-            <span>💰 ጠቅላላ ካፒታል፡</span>
-            <span id="lbl-capital">0 ብር</span>
-        </div>
-        <div class="card-box profit">
-            <span>📈 የቀን የተጣራ ትርፍ፡</span>
-            <span id="lbl-profit">0 ብር</span>
-        </div>
-        <div class="card-box expense">
-            <span>📉 የቀን ጠቅላላ ወጪ፡</span>
-            <span id="lbl-expense">0 ብር</span>
-        </div>
-        <div class="card-box top-item">
-            <span>🔥 በጣም የሚሸጠው፡</span>
-            <span id="lbl-top">-</span>
-        </div>
-    </div>
+const STORAGE_KEY = "shop-control-data-v2";
+const fmt = (n) => (Number(n) || 0).toLocaleString("en-US") + " ብር";
 
-    <div id="page-sell" class="app-page">
-        <div style="font-weight: bold; margin-bottom: 15px; color: #2c3e50;">📝 1. ሽያጭ መመዝገቢያ ፎርም</div>
-        <div class="form-group">
-            <label>የሚሸጠውን ዕቃ ይምረጡ፦</label>
-            <select id="select-sell-item"></select>
-        </div>
-        <button class="btn-sell" onclick="recordSale()">ሽያጭ መዝግብ (1 ዕቃ)</button>
-    </div>
+function App() {
+  const [data, setData] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try { return JSON.parse(saved); } catch(e) {}
+    }
+    return {
+      items: [{ id: "1", name: "ጄልና", price: 222, stock: 50 }],
+      sales: [],
+      expenses: [],
+      capital: 124375
+    };
+  });
 
-    <div id="page-expense" class="app-page">
-        <div style="font-weight: bold; margin-bottom: 15px; color: #2c3e50;">💸 2. የወጪ መመዝገቢያ ፎርም</div>
-        <div class="form-group">
-            <label>የወጪ ምክንያት፦</label>
-            <input type="text" id="txt-expense-reason" placeholder="ምሳሌ፦ ለቤት ኪራይ፣ ለትራንስፖርት">
-        </div>
-        <div class="form-group">
-            <label>የወጪ መጠን (በብር)፦</label>
-            <input type="number" id="txt-expense-amount" placeholder="ምሳሌ፦ 500">
-        </div>
-        <button class="btn-expense" onclick="recordExpense()">ወጪ መዝግብ</button>
-    </div>
+  const [tab, setTab] = useState("dashboard");
+  const [selectedItemId, setSelectedItemId] = useState("");
+  const [saleQty, setSaleQty] = useState(1);
+  const [newItemName, setNewItemName] = useState("");
+  const [newItemPrice, setNewItemPrice] = useState("");
+  const [newItemStock, setNewItemStock] = useState("");
 
-    <div id="page-add" class="app-page">
-        <div style="font-weight: bold; margin-bottom: 15px; color: #2c3e50;">➕ 3. አዲስ ዕቃ መጨመሪያ ፎርም</div>
-        <div class="form-group">
-            <label>የዕቃ ስም፦</label>
-            <input type="text" id="txt-add-name" placeholder="ምሳሌ፦ ፌስታል፣ ሻይ ቅጠል">
-        </div>
-        <div class="form-group">
-            <label>የዕቃ ብዛት፦</label>
-            <input type="number" id="txt-add-qty" placeholder="ምሳሌ፦ 100">
-        </div>
-        <div class="form-group">
-            <label>የአንድ ዕቃ መግዣ ዋጋ፦</label>
-            <input type="number" id="txt-add-cost" placeholder="ምሳሌ፦ 50">
-        </div>
-        <div class="form-group">
-            <label>የአንድ ዕቃ መሸጫ ዋጋ፦</label>
-            <input type="number" id="txt-add-sell-price" placeholder="ምሳሌ፦ 70">
-        </div>
-        <button class="btn-add" onclick="addNewItem()">አዲስ ዕቃ ወደ ሲስተም አስገባ</button>
-        
-        <div style="font-weight: bold; margin-top: 25px; color: #2c3e50;">📋 በሱቅ ውስጥ ያሉ የዕቃዎች ዝርዝር</div>
-        <div class="inventory-list" id="inventory-list"></div>
-    </div>
-</div>
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }, [data]);
 
-<div class="bottom-nav">
-    <div class="nav-item active" onclick="switchPage('dashboard', this)">
-        <span class="icon">🏠</span>
-        <span>ዳሽቦርድ</span>
-    </div>
-    <div class="nav-item" onclick="switchPage('sell', this)">
-        <span class="icon">📦</span>
-        <span>ሽያጭ</span>
-    </div>
-    <div class="nav-item" onclick="switchPage('expense', this)">
-        <span class="icon">💸</span>
-        <span>ወጪ</span>
-    </div>
-    <div class="nav-item" onclick="switchPage('add', this)">
-        <span class="icon">➕</span>
-        <span>እቃ ጨምር</span>
-    </div>
-</div>
+  // ስታቲስቲክስ ስሌቶች
+  const todaySales = useMemo(() => data.sales.reduce((sum, s) => sum + s.total, 0), [data.sales]);
+  const todayExpenses = useMemo(() => data.expenses.reduce((sum, e) => sum + e.amount, 0), [data.expenses]);
+  const todayProfit = todaySales - todayExpenses;
 
-<script>
-    // መረጃዎችን ማስቀመጫ
-    let data = JSON.parse(localStorage.getItem('business_data_nav_v1')) || {
-        capital: 0.0,
-        total_profit: 0.0,
-        total_expense: 0.0,
-        inventory: {}, 
-        sales_count: {}
+  // በጣም የተሸጠ ዕቃ ስሌት
+  const topSellingItem = useMemo(() => {
+    if (data.sales.length === 0) return "ምንም አልተሸጠም";
+    const counts = {};
+    data.sales.forEach(s => {
+      counts[s.itemName] = (counts[s.itemName] || 0) + s.qty;
+    });
+    let topItem = "";
+    let maxQty = 0;
+    Object.keys(counts).forEach(name => {
+      if (counts[name] > maxQty) {
+        maxQty = counts[name];
+        topItem = `${name} (${maxQty} ጊዜ)`;
+      }
+    });
+    return topItem;
+  }, [data.sales]);
+
+  // የሚያልቁ ዕቃዎች (ስቶክ ከ 5 በታች የሆኑ)
+  const lowStockItems = useMemo(() => {
+    return data.items.filter(i => (i.stock || 0) <= 5);
+  }, [data.items]);
+
+  // ሽያጭ መመዝገብ
+  const handleAddSale = () => {
+    const item = data.items.find(i => i.id === selectedItemId);
+    if (!item) return alert("እባክዎ መጀመሪያ ዕቃ ይምረጡ!");
+    if (item.stock < saleQty) return alert("በቂ ስቶክ የለም! የቀረው ስቶክ: " + item.stock);
+
+    const total = item.price * saleQty;
+    const newSale = {
+      id: Date.now().toString(),
+      itemName: item.name,
+      qty: Number(saleQty),
+      total: total,
+      date: new Date().toLocaleDateString()
     };
 
-    // ገጾችን ለመቀያየር የሚረዳ ተግባር (ልክ እንደ ቲክቶክ)
-    function switchPage(pageId, element) {
-        // ሁሉንም ገጽ ደብቅ
-        let pages = document.querySelectorAll('.app-page');
-        pages.forEach(p => p.classList.remove('active'));
+    setData(prev => ({
+      ...prev,
+      sales: [...prev.sales, newSale],
+      capital: prev.capital + total,
+      items: prev.items.map(i => i.id === item.id ? { ...i, stock: i.stock - saleQty } : i)
+    }));
+
+    setSaleQty(1);
+    alert("ሽያጭ ተመዝግቧል!");
+  };
+
+  // አዲስ ዕቃ መጨመር
+  const handleAddItem = () => {
+    if (!newItemName || !newItemPrice || !newItemStock) return alert("እባክዎ ሁሉንም ሳጥን ይሙሉ!");
+    const newItem = {
+      id: Date.now().toString(),
+      name: newItemName,
+      price: Number(newItemPrice),
+      stock: Number(newItemStock)
+    };
+    setData(prev => ({ ...prev, items: [...prev.items, newItem] }));
+    setNewItemName(""); setNewItemPrice(""); setNewItemStock("");
+    alert("አዲስ ዕቃ ተጨምሯል!");
+  };
+
+  // ዕቃ መሰረዝ / ማጥፊያ
+  const handleDeleteItem = (id) => {
+    if(confirm("ይህንን ዕቃ በእርግጥ ማጥፋት ይፈልጋሉ?")) {
+      setData(prev => ({
+        ...prev,
+        items: prev.items.filter(i => i.id !== id)
+      }));
+    }
+  };
+
+  return (
+    <div className="w-full max-w-md mx-auto min-h-screen flex flex-col justify-between bg-[#F5F7F9]">
+      
+      {/* ራስጌ ክፍል */}
+      <div className="bg-white py-4 shadow-sm text-center border-b">
+        <h1 className="text-xl font-bold text-slate-800">የሱቅ መቆጣጠሪያ ሲስተም</h1>
+      </div>
+
+      {/* ዋናው ይዘት */}
+      <div className="flex-1 p-4 overflow-y-auto pb-24">
         
-        // ሁሉንም የናቪጌሽን በተን አጥፋ
-        let navItems = document.querySelectorAll('.nav-item');
-        navItems.forEach(item => item.classList.remove('active'));
-        
-        // የተመረጠውን ገጽ እና በተን አሳይ
-        document.getElementById('page-' + pageId).classList.add('active');
-        element.classList.add('active');
-        
-        // ገጽ ሲቀየር መልዕክቱን ማጽዳት
-        document.getElementById('lbl-status').innerText = "";
-    }
+        {/* TAB 1: ዳሽቦርድ */}
+        {tab === "dashboard" && (
+          <div className="space-y-4">
+            <h2 className="text-sm font-semibold text-slate-500">📊 የሱቅ ወቅታዊ ሁኔታ</h2>
+            
+            <div className="bg-white border-l-4 border-blue-500 rounded-xl p-4 shadow-sm flex justify-between items-center">
+              <div>
+                <p className="text-xs text-slate-400 font-medium">💰 ጠቅላላ ካፒታል</p>
+                <p className="text-lg font-bold text-slate-800 mt-1">{fmt(data.capital)}</p>
+              </div>
+            </div>
 
-    function saveData() {
-        localStorage.setItem('business_data_nav_v1', JSON.stringify(data));
-        updateDashboard();
-        updateInventoryDisplay();
-        populateDropdown();
-    }
+            <div className="bg-white border-l-4 border-green-500 rounded-xl p-4 shadow-sm flex justify-between items-center">
+              <div>
+                <p className="text-xs text-slate-400 font-medium">📈 የቀን የተጣራ ትርፍ</p>
+                <p className="text-lg font-bold text-green-600 mt-1">{fmt(todayProfit)}</p>
+              </div>
+            </div>
 
-    function calculateCapital() {
-        let total = 0;
-        for (let item in data.inventory) {
-            let details = data.inventory[item];
-            total += details[0] * details[1]; 
-        }
-        data.capital = total;
-    }
+            <div className="bg-white border-l-4 border-red-500 rounded-xl p-4 shadow-sm flex justify-between items-center">
+              <div>
+                <p className="text-xs text-slate-400 font-medium">📉 የቀን ጠቅላላ ወጪ</p>
+                <p className="text-lg font-bold text-red-500 mt-1">{fmt(todayExpenses)}</p>
+              </div>
+            </div>
 
-    function updateDashboard() {
-        calculateCapital();
-        document.getElementById('lbl-capital').innerText = `${data.capital.toLocaleString()} ብር`;
-        document.getElementById('lbl-profit').innerText = `${data.total_profit.toLocaleString()} ብር`;
-        document.getElementById('lbl-expense').innerText = `${data.total_expense.toLocaleString()} ብር`;
-        
-        let topItem = "-";
-        let maxSales = 0;
-        for (let item in data.sales_count) {
-            if (data.sales_count[item] > maxSales) {
-                maxSales = data.sales_count[item];
-                topItem = `${item} (${maxSales} ጊዜ)`;
-            }
-        }
-        document.getElementById('lbl-top').innerText = topItem;
-    }
+            <div className="bg-amber-50 border-l-4 border-amber-500 rounded-xl p-4 shadow-sm flex justify-between items-center">
+              <div>
+                <p className="text-xs text-amber-600 font-medium">🔥 በጣም የሚሸጠው ዕቃ</p>
+                <p className="text-base font-bold text-amber-900 mt-1">{topSellingItem}</p>
+              </div>
+            </div>
 
-    function updateInventoryDisplay() {
-        let listDiv = document.getElementById('inventory-list');
-        listDiv.innerHTML = "";
-        let hasItems = false;
-        for (let item in data.inventory) {
-            let details = data.inventory[item];
-            listDiv.innerHTML += `<div class="inventory-item">
-                <span><strong>${item}</strong> (ብዛት፦ ${details[0]})</span>
-                <span>መግዣ፦ ${details[1]} | መሸጫ፦ ${details[2]} ብር</span>
-            </div>`;
-            hasItems = true;
-        }
-        if(!hasItems) {
-            listDiv.innerHTML = "<div style='text-align:center; padding:10px; color:#aaa;'>እስካሁን ምንም እቃ አልተመዘገበም</div>";
-        }
-    }
+            {/* የሚያልቁ ዕቃዎች ማስጠንቀቂያ */}
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-orange-100">
+              <h3 className="text-xs font-bold text-orange-600 mb-2">⚠️ ያለቁ / የሚያልቁ ዕቃዎች</h3>
+              {lowStockItems.length === 0 ? (
+                <p className="text-xs text-slate-400">ሁሉም ዕቃዎች በቂ ስቶክ አላቸው።</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {lowStockItems.map(i => (
+                    <div key={i.id} className="flex justify-between items-center text-xs bg-orange-50 p-2 rounded">
+                      <span className="font-medium text-slate-700">{i.name}</span>
+                      <span className="bg-orange-200 text-orange-800 px-2 py-0.5 rounded-full font-bold">ቀሪ ስቶክ: {i.stock}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
-    function populateDropdown() {
-        let dropdown = document.getElementById('select-sell-item');
-        dropdown.innerHTML = "";
-        let hasItems = false;
-        for (let item in data.inventory) {
-            if(data.inventory[item][0] > 0) {
-                dropdown.innerHTML += `<option value="${item}">${item} (መሸጫ፡ ${data.inventory[item][2]} ብር)</option>`;
-                hasItems = true;
-            }
-        }
-        if(!hasItems) {
-            dropdown.innerHTML = "<option value=''>ለመሸጥ መጀመሪያ እቃ ጨምር ክፍል ውስጥ ይመዝግቡ</option>";
-        }
-    }
+        {/* TAB 2: ሽያጭ መመዝገቢያ */}
+        {tab === "sales" && (
+          <div className="space-y-4">
+            <h2 className="text-sm font-semibold text-slate-500">📝 1. ሽያጭ መመዝገቢያ ፎርም</h2>
+            
+            <div className="bg-white rounded-2xl p-4 shadow-sm space-y-4">
+              <div>
+                <label className="text-xs font-medium text-slate-500 block mb-1">የሚሸጠውን ዕቃ ይምረጡ፦</label>
+                <select 
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none"
+                  value={selectedItemId}
+                  onChange={(e) => setSelectedItemId(e.target.value)}
+                >
+                  <option value="">ዕቃ ይምረጡ...</option>
+                  {data.items.map(i => (
+                    <option key={i.id} value={i.id}>{i.name} (ዋጋ: {i.price} ብር - ስቶክ: {i.stock})</option>
+                  ))}
+                </select>
+              </div>
 
-    function showStatus(text, isError = false) {
-        let status = document.getElementById('lbl-status');
-        status.innerText = text;
-        status.style.color = isError ? "#c0392b" : "#27ae60";
-    }
+              {/* የብዛት መጨመሪያ እዚህ ጋር ተስተካክሏል */}
+              <div>
+                <label className="text-xs font-medium text-slate-500 block mb-1">የዕቃ ብዛት (መጠን)፦</label>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => setSaleQty(Math.max(1, saleQty - 1))}
+                    className="w-10 h-10 bg-slate-100 font-bold rounded-lg text-slate-700 flex items-center justify-center border"
+                  >-</button>
+                  <input 
+                    type="number" 
+                    min="1" 
+                    className="flex-1 text-center bg-slate-50 border border-slate-200 rounded-lg p-2 font-bold text-sm"
+                    value={saleQty}
+                    onChange={(e) => setSaleQty(Math.max(1, Number(e.target.value)))}
+                  />
+                  <button 
+                    onClick={() => setSaleQty(saleQty + 1)}
+                    className="w-10 h-10 bg-slate-100 font-bold rounded-lg text-slate-700 flex items-center justify-center border"
+                  >+</button>
+                </div>
+              </div>
 
-    function addNewItem() {
-        let name = document.getElementById('txt-add-name').value.trim();
-        let qty = parseInt(document.getElementById('txt-add-qty').value);
-        let cost = parseFloat(document.getElementById('txt-add-cost').value);
-        let sellPrice = parseFloat(document.getElementById('txt-add-sell-price').value);
+              <button 
+                onClick={handleAddSale}
+                className="w-full bg-emerald-500 text-white font-bold py-3.5 rounded-xl hover:bg-emerald-600 transition shadow-md mt-2"
+              >
+                ሽያጭ መዝግብ ({saleQty} ዕቃ)
+              </button>
+            </div>
+          </div>
+        )}
 
-        if (!name || isNaN(qty) || isNaN(cost) || isNaN(sellPrice)) {
-            return showStatus("እባክህ ሁሉንም የአዲስ ዕቃ መረጃዎች በትክክል አስገባ።", true);
-        }
+        {/* TAB 3: የዕቃዎች ዝርዝር እና መሰረዣ */}
+        {tab === "items" && (
+          <div className="space-y-4">
+            <h2 className="text-sm font-semibold text-slate-500">📦 አዲስ ዕቃ መጨመሪያ እና የነበሩት ዝርዝር</h2>
+            
+            <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
+              <input type="text" placeholder="የዕቃ ስም" className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm outline-none" value={newItemName} onChange={e=>setNewItemName(e.target.value)} />
+              <div className="grid grid-cols-2 gap-2">
+                <input type="number" placeholder="የመሸጫ ዋጋ" className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm outline-none" value={newItemPrice} onChange={e=>setNewItemPrice(e.target.value)} />
+                <input type="number" placeholder="የመጀመሪያ ስቶክ" className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm outline-none" value={newItemStock} onChange={e=>setNewItemStock(e.target.value)} />
+              </div>
+              <button onClick={handleAddItem} className="w-full bg-blue-600 text-white font-semibold py-2.5 rounded-xl text-sm">ዕቃ ጨምር +</button>
+            </div>
 
-        if (data.inventory[name]) {
-            data.inventory[name][0] += qty;
-            data.inventory[name][1] = cost; 
-            data.inventory[name][2] = sellPrice; 
-        } else {
-            data.inventory[name] = [qty, cost, sellPrice];
-            data.sales_count[name] = 0;
-        }
+            <div className="space-y-2">
+              <h3 className="text-xs font-bold text-slate-400">የተመዘገቡ ዕቃዎች ዝርዝር</h3>
+              {data.items.map(i => (
+                <div key={i.id} className="bg-white p-3 rounded-xl shadow-sm flex justify-between items-center border">
+                  <div>
+                    <p className="font-bold text-sm text-slate-800">{i.name}</p>
+                    <p className="text-xs text-slate-400">ዋጋ: {i.price} ብር | ስቶክ: {i.stock}</p>
+                  </div>
+                  {/* ማጥፊያ መሰረዣ ቁልፍ */}
+                  <button 
+                    onClick={() => handleDeleteItem(i.id)} 
+                    className="p-2 text-red-100 hover:text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition"
+                    title="ለመሰረዝ"
+                  >
+                    🗑️ ማጥፊያ
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
-        showStatus(`ዕቃ '${name}' በስኬት ተጨምሯል!`);
-        document.getElementById('txt-add-name').value = "";
-        document.getElementById('txt-add-qty').value = "";
-        document.getElementById('txt-add-cost').value = "";
-        document.getElementById('txt-add-sell-price').value = "";
-        saveData();
-    }
+      </div>
 
-    function recordSale() {
-        let name = document.getElementById('select-sell-item').value;
+      {/* ታችኛው ማውጫ (Bottom Navigation) */}
+      <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-[#1A1A1A] p-2 flex justify-around items-center rounded-t-2xl shadow-xl z-50">
+        <button onClick={() => setTab("dashboard")} className={`flex flex-col items-center flex-1 py-1 ${tab === 'dashboard' ? 'text-white font-bold' : 'text-slate-400'}`}>
+          <span className="text-lg">🏠</span>
+          <span className="text-[10px] mt-0.5">ዳሽቦርድ</span>
+        </button>
+        <button onClick={() => setTab("sales")} className={`flex flex-col items-center flex-1 py-1 ${tab === 'sales' ? 'text-white font-bold' : 'text-slate-400'}`}>
+          <span className="text-lg">📦</span>
+          <span className="text-[10px] mt-0.5">ሽያጭ</span>
+        </button>
+        <button onClick={() => setTab("items")} className={`flex flex-col items-center flex-1 py-1 ${tab === 'items' ? 'text-white font-bold' : 'text-slate-400'}`}>
+          <span className="text-lg">➕</span>
+          <span className="text-[10px] mt-0.5">ዕቃ ጨምር</span>
+        </button>
+      </div>
 
-        if (!name || !data.inventory[name] || data.inventory[name][0] <= 0) {
-            return showStatus("ለመሸጥ የሚሆን ዕቃ በክምችት ውስጥ የለም።", true);
-        }
+    </div>
+  );
+}
 
-        let costPrice = data.inventory[name][1];
-        let sellPrice = data.inventory[name][2];
-        let profit = sellPrice - costPrice;
-
-        data.inventory[name][0] -= 1; 
-        data.sales_count[name] = (data.sales_count[name] || 0) + 1;
-        data.total_profit += profit; 
-
-        showStatus(`ሽያጭ ተመዝግቧል! የተጣራ ትርፍ: +${profit} ብር`);
-        saveData();
-    }
-
-    function recordExpense() {
-        let reason = document.getElementById('txt-expense-reason').value.trim();
-        let expense = parseFloat(document.getElementById('txt-expense-amount').value);
-
-        if (!reason || isNaN(expense)) {
-            return showStatus("እባክህ የወጪውን ምክንያት እና የብር መጠን በትክክል አስገባ።", true);
-        }
-
-        data.total_expense += expense; 
-
-        showStatus(`ወጪ ማስታወሻ፦ '${reason}' ተመዝግቧል!`);
-        document.getElementById('txt-expense-reason').value = "";
-        document.getElementById('txt-expense-amount').value = "";
-        saveData();
-    }
-
-    // መጀመሪያ ሲከፈት
-    updateDashboard();
-    updateInventoryDisplay();
-    populateDropdown();
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 </script>
 </body>
 </html>
