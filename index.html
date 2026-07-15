@@ -17,169 +17,326 @@
 <div id="root"></div>
 
 <script type="text/babel" data-presets="react">
-const { useState, useEffect, useMemo } = React;
+const { useState, useEffect, useMemo, useRef } = React;
 
-const STORAGE_KEY = "shop-control-data-v2";
-const fmt = (n) => (Number(n) || 0).toLocaleString("en-US") + " ብር";
+const STORAGE_KEY = "shop-control-data-v3";
+const OLD_STORAGE_KEY = "shop-control-data-v2";
 
-function App() {
-  const [data, setData] = useState(() => {
+/* ============ money helpers: everything is stored/added as INTEGER CENTS
+   so totals can never drift or produce rounding conflicts. Only the
+   display function (fmt) converts back to birr with 2 decimals. ============ */
+function toCents(v) { const n = parseFloat(v); return isNaN(n) ? 0 : Math.round(n * 100); }
+function fmt(cents) {
+  cents = Math.round(Number(cents) || 0);
+  const neg = cents < 0; cents = Math.abs(cents);
+  const whole = Math.floor(cents / 100), frac = cents % 100;
+  return (neg ? "-" : "") + whole.toLocaleString("en-US") + "." + String(frac).padStart(2, "0") + " ብር";
+}
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function todayISO() { return new Date().toISOString().slice(0, 10); }
+function daysBetween(iso1, iso2) {
+  const a = new Date(iso1 + "T00:00:00"), b = new Date(iso2 + "T00:00:00");
+  return Math.max(0, Math.round((b - a) / 86400000));
+}
+
+/* ============ period range helpers (day / week / month / year) ============ */
+function periodRange(period) {
+  const now = new Date();
+  let start;
+  if (period === "day") {
+    start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  } else if (period === "week") {
+    const day = now.getDay(); // 0 Sun .. 6 Sat
+    const diffToMonday = (day + 6) % 7;
+    start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday);
+  } else if (period === "month") {
+    start = new Date(now.getFullYear(), now.getMonth(), 1);
+  } else { // year
+    start = new Date(now.getFullYear(), 0, 1);
+  }
+  return { start: start.getTime(), end: now.getTime() + 1 };
+}
+function inPeriod(iso, range) {
+  const t = new Date(iso + "T00:00:00").getTime();
+  return t >= range.start && t <= range.end;
+}
+const PERIOD_LABEL = { day: "የቀን", week: "የሳምንት", month: "የወር", year: "የአመት" };
+
+/* ============ initial / migrated data ============ */
+function freshData() {
+  return { openingCapitalCents: 0, items: [], sales: [], expenses: [] };
+}
+function loadData() {
+  try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
-      try { return JSON.parse(saved); } catch(e) {}
+      const d = JSON.parse(saved);
+      if (d && Array.isArray(d.items) && Array.isArray(d.sales) && Array.isArray(d.expenses)) return d;
     }
-    return {
-      items: [{ id: "1", name: "ጄልና", price: 222, stock: 50 }],
-      sales: [],
-      expenses: [],
-      capital: 124375
-    };
-  });
+  } catch (e) {}
+  // one-time migration from the old v2 shape, best-effort
+  try {
+    const old = localStorage.getItem(OLD_STORAGE_KEY);
+    if (old) {
+      const o = JSON.parse(old);
+      const migrated = {
+        openingCapitalCents: toCents(o.capital || 0),
+        items: (o.items || []).map((it) => ({
+          id: it.id || uid(), name: it.name,
+          sellPriceCents: toCents(it.price), costPriceCents: 0,
+          openingStock: Number(it.stock) || 0,
+          dateAdded: todayISO(), createdAt: Date.now()
+        })),
+        sales: [], expenses: []
+      };
+      return migrated;
+    }
+  } catch (e) {}
+  return freshData();
+}
+function saveData(d) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); } catch (e) {} }
 
+/* ============ derived (single-source-of-truth) calculations ============
+   Nothing below is ever incremented/decremented directly in state — every
+   number is recomputed from the sales/expenses/items log each time, so the
+   books can never go out of sync or double-count. */
+function itemStock(data, itemId) {
+  const item = data.items.find((i) => i.id === itemId);
+  if (!item) return 0;
+  const sold = data.sales.filter((s) => s.itemId === itemId).reduce((s, x) => s + x.qty, 0);
+  return item.openingStock - sold;
+}
+function itemSoldOutInfo(data, item) {
+  const stock = itemStock(data, item.id);
+  if (stock > 0) return { soldOut: false, daysSoAndFar: daysBetween(item.dateAdded, todayISO()) };
+  // walk sales for this item in chronological order to find the exact sale that emptied it
+  const salesForItem = data.sales.filter((s) => s.itemId === item.id).slice().sort((a, b) => a.createdAt - b.createdAt);
+  let cum = 0, soldOutDate = null;
+  for (const s of salesForItem) {
+    cum += s.qty;
+    if (cum >= item.openingStock) { soldOutDate = s.date; break; }
+  }
+  if (!soldOutDate) return { soldOut: false, daysSoAndFar: daysBetween(item.dateAdded, todayISO()) };
+  return { soldOut: true, soldOutDate: soldOutDate, days: daysBetween(item.dateAdded, soldOutDate) };
+}
+function lineProfitCents(sale) { return (sale.unitPriceCents - sale.unitCostCents) * sale.qty; }
+function totalCapitalCents(data) {
+  const allProfit = data.sales.reduce((s, x) => s + lineProfitCents(x), 0);
+  const allExpense = data.expenses.reduce((s, x) => s + x.amountCents, 0);
+  return data.openingCapitalCents + allProfit - allExpense;
+}
+function periodStats(data, period) {
+  const range = periodRange(period);
+  const sales = data.sales.filter((s) => inPeriod(s.date, range));
+  const expenses = data.expenses.filter((e) => inPeriod(e.date, range));
+  const revenue = sales.reduce((s, x) => s + x.totalCents, 0);
+  const profit = sales.reduce((s, x) => s + lineProfitCents(x), 0) - expenses.reduce((s, x) => s + x.amountCents, 0);
+  const expenseTotal = expenses.reduce((s, x) => s + x.amountCents, 0);
+  const counts = {};
+  sales.forEach((s) => { counts[s.itemName] = (counts[s.itemName] || 0) + s.qty; });
+  let topName = null, topQty = 0;
+  Object.keys(counts).forEach((n) => { if (counts[n] > topQty) { topQty = counts[n]; topName = n; } });
+  return { revenue, profit, expenseTotal, topName, topQty, count: sales.length };
+}
+
+/* ============ small reusable UI ============ */
+function Modal({ title, onClose, children, footer }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose}></div>
+      <div className="relative w-full max-w-md bg-white rounded-t-2xl sm:rounded-2xl p-5 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-bold text-slate-800">{title}</h3>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">✕</button>
+        </div>
+        {children}
+        {footer && <div className="mt-4">{footer}</div>}
+      </div>
+    </div>
+  );
+}
+
+function SearchableItemPicker({ items, valueId, onSelect, dataForStock }) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const selected = items.find((i) => i.id === valueId);
+  const filtered = items.filter((i) => i.name.toLowerCase().includes(q.toLowerCase()));
+  return (
+    <div className="relative">
+      {selected && !open ? (
+        <button type="button" onClick={() => setOpen(true)} className="w-full flex justify-between items-center bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm text-left">
+          <span className="font-semibold text-slate-800">{selected.name}</span>
+          <span className="text-xs text-blue-600 font-medium">ለውጥ</span>
+        </button>
+      ) : (
+        <div>
+          <input
+            autoFocus={open}
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onFocus={() => setOpen(true)}
+            placeholder="🔍 የዕቃ ስም ይፈልጉ..."
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none"
+          />
+          {open && (
+            <div className="mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-52 overflow-y-auto">
+              {filtered.length === 0 && <div className="p-3 text-xs text-slate-400">ምንም ዕቃ አልተገኘም</div>}
+              {filtered.map((i) => {
+                const stock = itemStock(dataForStock, i.id);
+                return (
+                  <button
+                    type="button" key={i.id}
+                    onClick={() => { onSelect(i.id); setQ(""); setOpen(false); }}
+                    className="w-full text-left px-3 py-2.5 text-sm hover:bg-slate-50 flex justify-between items-center border-b last:border-b-0 border-slate-50"
+                  >
+                    <span className="font-medium text-slate-700">{i.name}</span>
+                    <span className="text-xs text-slate-400">ዋጋ: {fmt(i.sellPriceCents)} · ስቶክ: {stock}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ============ App ============ */
+function App() {
+  const [data, setData] = useState(loadData);
   const [tab, setTab] = useState("dashboard");
+  const [period, setPeriod] = useState("day");
+  const [showEditCapital, setShowEditCapital] = useState(false);
+
+  // sales form state
   const [selectedItemId, setSelectedItemId] = useState("");
   const [saleQty, setSaleQty] = useState(1);
+  const [customer, setCustomer] = useState("");
+  const [priceOverride, setPriceOverride] = useState("");
+
+  // add item form state
   const [newItemName, setNewItemName] = useState("");
-  const [newItemPrice, setNewItemPrice] = useState("");
+  const [newItemCost, setNewItemCost] = useState("");
+  const [newItemSell, setNewItemSell] = useState("");
   const [newItemStock, setNewItemStock] = useState("");
+  const [itemSearch, setItemSearch] = useState("");
 
+  useEffect(() => { saveData(data); }, [data]);
+
+  const stats = useMemo(() => periodStats(data, period), [data, period]);
+  const capital = useMemo(() => totalCapitalCents(data), [data]);
+  const lowStockItems = useMemo(() => data.items.filter((i) => itemStock(data, i.id) <= 5 && itemStock(data, i.id) > 0), [data]);
+  const outOfStockItems = useMemo(() => data.items.filter((i) => itemStock(data, i.id) <= 0), [data]);
+
+  const selectedItem = data.items.find((i) => i.id === selectedItemId);
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  }, [data]);
+    if (selectedItem) setPriceOverride((selectedItem.sellPriceCents / 100).toFixed(2));
+  }, [selectedItemId]);
 
-  // ስታቲስቲክስ ስሌቶች
-  const todaySales = useMemo(() => data.sales.reduce((sum, s) => sum + s.total, 0), [data.sales]);
-  const todayExpenses = useMemo(() => data.expenses.reduce((sum, e) => sum + e.amount, 0), [data.expenses]);
-  const todayProfit = todaySales - todayExpenses;
+  const saleTotalCents = selectedItem ? Math.round(toCents(priceOverride) * saleQty) : 0;
 
-  // በጣም የተሸጠ ዕቃ ስሌት
-  const topSellingItem = useMemo(() => {
-    if (data.sales.length === 0) return "ምንም አልተሸጠም";
-    const counts = {};
-    data.sales.forEach(s => {
-      counts[s.itemName] = (counts[s.itemName] || 0) + s.qty;
-    });
-    let topItem = "";
-    let maxQty = 0;
-    Object.keys(counts).forEach(name => {
-      if (counts[name] > maxQty) {
-        maxQty = counts[name];
-        topItem = `${name} (${maxQty} ጊዜ)`;
-      }
-    });
-    return topItem;
-  }, [data.sales]);
-
-  // የሚያልቁ ዕቃዎች (ስቶክ ከ 5 በታች የሆኑ)
-  const lowStockItems = useMemo(() => {
-    return data.items.filter(i => (i.stock || 0) <= 5);
-  }, [data.items]);
-
-  // ሽያጭ መመዝገብ
   const handleAddSale = () => {
-    const item = data.items.find(i => i.id === selectedItemId);
-    if (!item) return alert("እባክዎ መጀመሪያ ዕቃ ይምረጡ!");
-    if (item.stock < saleQty) return alert("በቂ ስቶክ የለም! የቀረው ስቶክ: " + item.stock);
-
-    const total = item.price * saleQty;
-    const newSale = {
-      id: Date.now().toString(),
-      itemName: item.name,
-      qty: Number(saleQty),
-      total: total,
-      date: new Date().toLocaleDateString()
+    if (!selectedItem) return alert("እባክዎ መጀመሪያ ዕቃ ይምረጡ!");
+    const stock = itemStock(data, selectedItem.id);
+    if (stock < saleQty) return alert("በቂ ስቶክ የለም! የቀረው ስቶክ: " + stock);
+    const unitPriceCents = toCents(priceOverride);
+    if (unitPriceCents <= 0) return alert("እባክዎ ትክክለኛ ዋጋ ያስገቡ");
+    const sale = {
+      id: uid(), itemId: selectedItem.id, itemName: selectedItem.name,
+      qty: Number(saleQty), unitPriceCents, unitCostCents: selectedItem.costPriceCents,
+      totalCents: Math.round(unitPriceCents * saleQty),
+      customer: customer.trim() || "ስም ያልገለጸ ደንበኛ",
+      date: todayISO(), createdAt: Date.now()
     };
-
-    setData(prev => ({
-      ...prev,
-      sales: [...prev.sales, newSale],
-      capital: prev.capital + total,
-      items: prev.items.map(i => i.id === item.id ? { ...i, stock: i.stock - saleQty } : i)
-    }));
-
-    setSaleQty(1);
+    setData((prev) => ({ ...prev, sales: [...prev.sales, sale] }));
+    setSaleQty(1); setCustomer(""); setSelectedItemId(""); setPriceOverride("");
     alert("ሽያጭ ተመዝግቧል!");
   };
 
-  // አዲስ ዕቃ መጨመር
   const handleAddItem = () => {
-    if (!newItemName || !newItemPrice || !newItemStock) return alert("እባክዎ ሁሉንም ሳጥን ይሙሉ!");
-    const newItem = {
-      id: Date.now().toString(),
-      name: newItemName,
-      price: Number(newItemPrice),
-      stock: Number(newItemStock)
+    if (!newItemName || !newItemSell || !newItemStock) return alert("እባክዎ የዕቃ ስም፣ የመሸጫ ዋጋ እና ስቶክ ይሙሉ!");
+    const item = {
+      id: uid(), name: newItemName.trim(),
+      costPriceCents: toCents(newItemCost || 0), sellPriceCents: toCents(newItemSell),
+      openingStock: Number(newItemStock) || 0,
+      dateAdded: todayISO(), createdAt: Date.now()
     };
-    setData(prev => ({ ...prev, items: [...prev.items, newItem] }));
-    setNewItemName(""); setNewItemPrice(""); setNewItemStock("");
+    setData((prev) => ({ ...prev, items: [...prev.items, item] }));
+    setNewItemName(""); setNewItemCost(""); setNewItemSell(""); setNewItemStock("");
     alert("አዲስ ዕቃ ተጨምሯል!");
   };
 
-  // ዕቃ መሰረዝ / ማጥፊያ
   const handleDeleteItem = (id) => {
-    if(confirm("ይህንን ዕቃ በእርግጥ ማጥፋት ይፈልጋሉ?")) {
-      setData(prev => ({
-        ...prev,
-        items: prev.items.filter(i => i.id !== id)
-      }));
+    if (confirm("ይህንን ዕቃ በእርግጥ ማጥፋት ይፈልጋሉ? ከዚህ ዕቃ ጋር የተያያዙ የሽያጭ ታሪኮች አይሰረዙም።")) {
+      setData((prev) => ({ ...prev, items: prev.items.filter((i) => i.id !== id) }));
     }
   };
 
+  const filteredItemList = data.items.filter((i) => i.name.toLowerCase().includes(itemSearch.toLowerCase()));
+
   return (
     <div className="w-full max-w-md mx-auto min-h-screen flex flex-col justify-between bg-[#F5F7F9]">
-      
-      {/* ራስጌ ክፍል */}
+
       <div className="bg-white py-4 shadow-sm text-center border-b">
         <h1 className="text-xl font-bold text-slate-800">የሱቅ መቆጣጠሪያ ሲስተም</h1>
       </div>
 
-      {/* ዋናው ይዘት */}
       <div className="flex-1 p-4 overflow-y-auto pb-24">
-        
-        {/* TAB 1: ዳሽቦርድ */}
+
         {tab === "dashboard" && (
           <div className="space-y-4">
-            <h2 className="text-sm font-semibold text-slate-500">📊 የሱቅ ወቅታዊ ሁኔታ</h2>
-            
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-slate-500">📊 የሱቅ ወቅታዊ ሁኔታ</h2>
+              <div className="flex bg-white rounded-full p-1 shadow-sm text-xs">
+                {["day", "week", "month", "year"].map((p) => (
+                  <button key={p} onClick={() => setPeriod(p)}
+                    className={"px-2.5 py-1 rounded-full font-medium " + (period === p ? "bg-slate-800 text-white" : "text-slate-500")}>
+                    {p === "day" ? "ቀን" : p === "week" ? "ሳምንት" : p === "month" ? "ወር" : "አመት"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="bg-white border-l-4 border-blue-500 rounded-xl p-4 shadow-sm flex justify-between items-center">
               <div>
                 <p className="text-xs text-slate-400 font-medium">💰 ጠቅላላ ካፒታል</p>
-                <p className="text-lg font-bold text-slate-800 mt-1">{fmt(data.capital)}</p>
+                <p className="text-lg font-bold text-slate-800 mt-1">{fmt(capital)}</p>
               </div>
+              <button onClick={() => setShowEditCapital(true)} className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-sm">✎</button>
             </div>
 
-            <div className="bg-white border-l-4 border-green-500 rounded-xl p-4 shadow-sm flex justify-between items-center">
-              <div>
-                <p className="text-xs text-slate-400 font-medium">📈 የቀን የተጣራ ትርፍ</p>
-                <p className="text-lg font-bold text-green-600 mt-1">{fmt(todayProfit)}</p>
-              </div>
+            <div className="bg-white border-l-4 border-green-500 rounded-xl p-4 shadow-sm">
+              <p className="text-xs text-slate-400 font-medium">📈 {PERIOD_LABEL[period]} የተጣራ ትርፍ</p>
+              <p className={"text-lg font-bold mt-1 " + (stats.profit >= 0 ? "text-green-600" : "text-red-500")}>{fmt(stats.profit)}</p>
             </div>
 
-            <div className="bg-white border-l-4 border-red-500 rounded-xl p-4 shadow-sm flex justify-between items-center">
-              <div>
-                <p className="text-xs text-slate-400 font-medium">📉 የቀን ጠቅላላ ወጪ</p>
-                <p className="text-lg font-bold text-red-500 mt-1">{fmt(todayExpenses)}</p>
-              </div>
+            <div className="bg-white border-l-4 border-red-500 rounded-xl p-4 shadow-sm">
+              <p className="text-xs text-slate-400 font-medium">📉 {PERIOD_LABEL[period]} ጠቅላላ ወጪ</p>
+              <p className="text-lg font-bold text-red-500 mt-1">{fmt(stats.expenseTotal)}</p>
             </div>
 
-            <div className="bg-amber-50 border-l-4 border-amber-500 rounded-xl p-4 shadow-sm flex justify-between items-center">
-              <div>
-                <p className="text-xs text-amber-600 font-medium">🔥 በጣም የሚሸጠው ዕቃ</p>
-                <p className="text-base font-bold text-amber-900 mt-1">{topSellingItem}</p>
-              </div>
+            <div className="bg-amber-50 border-l-4 border-amber-500 rounded-xl p-4 shadow-sm">
+              <p className="text-xs text-amber-600 font-medium">🔥 {PERIOD_LABEL[period]} በጣም የተሸጠው ዕቃ</p>
+              <p className="text-base font-bold text-amber-900 mt-1">{stats.topName ? `${stats.topName} (${stats.topQty} ጊዜ)` : "ምንም አልተሸጠም"}</p>
             </div>
 
-            {/* የሚያልቁ ዕቃዎች ማስጠንቀቂያ */}
             <div className="bg-white rounded-xl p-4 shadow-sm border border-orange-100">
               <h3 className="text-xs font-bold text-orange-600 mb-2">⚠️ ያለቁ / የሚያልቁ ዕቃዎች</h3>
-              {lowStockItems.length === 0 ? (
+              {lowStockItems.length === 0 && outOfStockItems.length === 0 ? (
                 <p className="text-xs text-slate-400">ሁሉም ዕቃዎች በቂ ስቶክ አላቸው።</p>
               ) : (
                 <div className="space-y-1.5">
-                  {lowStockItems.map(i => (
+                  {outOfStockItems.map((i) => (
+                    <div key={i.id} className="flex justify-between items-center text-xs bg-red-50 p-2 rounded">
+                      <span className="font-medium text-slate-700">{i.name}</span>
+                      <span className="bg-red-200 text-red-800 px-2 py-0.5 rounded-full font-bold">አልቋል</span>
+                    </div>
+                  ))}
+                  {lowStockItems.map((i) => (
                     <div key={i.id} className="flex justify-between items-center text-xs bg-orange-50 p-2 rounded">
                       <span className="font-medium text-slate-700">{i.name}</span>
-                      <span className="bg-orange-200 text-orange-800 px-2 py-0.5 rounded-full font-bold">ቀሪ ስቶክ: {i.stock}</span>
+                      <span className="bg-orange-200 text-orange-800 px-2 py-0.5 rounded-full font-bold">ቀሪ ስቶክ: {itemStock(data, i.id)}</span>
                     </div>
                   ))}
                 </div>
@@ -188,113 +345,139 @@ function App() {
           </div>
         )}
 
-        {/* TAB 2: ሽያጭ መመዝገቢያ */}
         {tab === "sales" && (
           <div className="space-y-4">
-            <h2 className="text-sm font-semibold text-slate-500">📝 1. ሽያጭ መመዝገቢያ ፎርም</h2>
-            
+            <h2 className="text-sm font-semibold text-slate-500">📝 ሽያጭ መመዝገቢያ ፎርም</h2>
+
             <div className="bg-white rounded-2xl p-4 shadow-sm space-y-4">
               <div>
                 <label className="text-xs font-medium text-slate-500 block mb-1">የሚሸጠውን ዕቃ ይምረጡ፦</label>
-                <select 
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none"
-                  value={selectedItemId}
-                  onChange={(e) => setSelectedItemId(e.target.value)}
-                >
-                  <option value="">ዕቃ ይምረጡ...</option>
-                  {data.items.map(i => (
-                    <option key={i.id} value={i.id}>{i.name} (ዋጋ: {i.price} ብር - ስቶክ: {i.stock})</option>
-                  ))}
-                </select>
+                <SearchableItemPicker items={data.items} valueId={selectedItemId} onSelect={setSelectedItemId} dataForStock={data} />
               </div>
 
-              {/* የብዛት መጨመሪያ እዚህ ጋር ተስተካክሏል */}
-              <div>
-                <label className="text-xs font-medium text-slate-500 block mb-1">የዕቃ ብዛት (መጠን)፦</label>
-                <div className="flex items-center gap-2">
-                  <button 
-                    onClick={() => setSaleQty(Math.max(1, saleQty - 1))}
-                    className="w-10 h-10 bg-slate-100 font-bold rounded-lg text-slate-700 flex items-center justify-center border"
-                  >-</button>
-                  <input 
-                    type="number" 
-                    min="1" 
-                    className="flex-1 text-center bg-slate-50 border border-slate-200 rounded-lg p-2 font-bold text-sm"
-                    value={saleQty}
-                    onChange={(e) => setSaleQty(Math.max(1, Number(e.target.value)))}
-                  />
-                  <button 
-                    onClick={() => setSaleQty(saleQty + 1)}
-                    className="w-10 h-10 bg-slate-100 font-bold rounded-lg text-slate-700 flex items-center justify-center border"
-                  >+</button>
-                </div>
-              </div>
+              {selectedItem && (
+                <>
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 block mb-1">የደንበኛ ስም (ካስፈለገ) ፦</label>
+                    <input type="text" placeholder="ለምሳሌ አበበ" value={customer} onChange={(e) => setCustomer(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none" />
+                  </div>
 
-              <button 
-                onClick={handleAddSale}
-                className="w-full bg-emerald-500 text-white font-bold py-3.5 rounded-xl hover:bg-emerald-600 transition shadow-md mt-2"
-              >
-                ሽያጭ መዝግብ ({saleQty} ዕቃ)
-              </button>
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 block mb-1">
+                      የሽያጭ ዋጋ (ለደንበኛ ቅናሽ ማድረግ ከፈለጉ እዚህ ይቀይሩ) — መደበኛ ዋጋ: {fmt(selectedItem.sellPriceCents)}
+                    </label>
+                    <input type="number" step="0.01" min="0" value={priceOverride} onChange={(e) => setPriceOverride(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none font-semibold" />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 block mb-1">የዕቃ ብዛት (መጠን)፦</label>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => setSaleQty(Math.max(1, saleQty - 1))} className="w-10 h-10 bg-slate-100 font-bold rounded-lg text-slate-700 flex items-center justify-center border">-</button>
+                      <input type="number" min="1" className="flex-1 text-center bg-slate-50 border border-slate-200 rounded-lg p-2 font-bold text-sm"
+                        value={saleQty} onChange={(e) => setSaleQty(Math.max(1, Number(e.target.value) || 1))} />
+                      <button onClick={() => setSaleQty(saleQty + 1)} className="w-10 h-10 bg-slate-100 font-bold rounded-lg text-slate-700 flex items-center justify-center border">+</button>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center bg-slate-50 rounded-xl p-3">
+                    <span className="text-xs text-slate-500 font-medium">ጠቅላላ የሽያጭ መጠን</span>
+                    <span className="font-extrabold text-slate-800">{fmt(saleTotalCents)}</span>
+                  </div>
+
+                  <button onClick={handleAddSale} className="w-full bg-emerald-500 text-white font-bold py-3.5 rounded-xl hover:bg-emerald-600 transition shadow-md mt-2">
+                    ሽያጭ መዝግብ ({saleQty} ዕቃ)
+                  </button>
+                </>
+              )}
             </div>
           </div>
         )}
 
-        {/* TAB 3: የዕቃዎች ዝርዝር እና መሰረዣ */}
         {tab === "items" && (
           <div className="space-y-4">
             <h2 className="text-sm font-semibold text-slate-500">📦 አዲስ ዕቃ መጨመሪያ እና የነበሩት ዝርዝር</h2>
-            
+
             <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
-              <input type="text" placeholder="የዕቃ ስም" className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm outline-none" value={newItemName} onChange={e=>setNewItemName(e.target.value)} />
+              <input type="text" placeholder="የዕቃ ስም" className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm outline-none" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} />
               <div className="grid grid-cols-2 gap-2">
-                <input type="number" placeholder="የመሸጫ ዋጋ" className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm outline-none" value={newItemPrice} onChange={e=>setNewItemPrice(e.target.value)} />
-                <input type="number" placeholder="የመጀመሪያ ስቶክ" className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm outline-none" value={newItemStock} onChange={e=>setNewItemStock(e.target.value)} />
+                <input type="number" step="0.01" placeholder="የገዙበት ዋጋ (ወጪ)" className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm outline-none" value={newItemCost} onChange={(e) => setNewItemCost(e.target.value)} />
+                <input type="number" step="0.01" placeholder="የመሸጫ ዋጋ" className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm outline-none" value={newItemSell} onChange={(e) => setNewItemSell(e.target.value)} />
               </div>
+              <input type="number" placeholder="የመጀመሪያ ስቶክ (ብዛት)" className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm outline-none" value={newItemStock} onChange={(e) => setNewItemStock(e.target.value)} />
               <button onClick={handleAddItem} className="w-full bg-blue-600 text-white font-semibold py-2.5 rounded-xl text-sm">ዕቃ ጨምር +</button>
             </div>
 
             <div className="space-y-2">
-              <h3 className="text-xs font-bold text-slate-400">የተመዘገቡ ዕቃዎች ዝርዝር</h3>
-              {data.items.map(i => (
-                <div key={i.id} className="bg-white p-3 rounded-xl shadow-sm flex justify-between items-center border">
-                  <div>
-                    <p className="font-bold text-sm text-slate-800">{i.name}</p>
-                    <p className="text-xs text-slate-400">ዋጋ: {i.price} ብር | ስቶክ: {i.stock}</p>
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold text-slate-400">የተመዘገቡ ዕቃዎች ዝርዝር</h3>
+              </div>
+              <input type="text" placeholder="🔍 ዕቃ ይፈልጉ..." value={itemSearch} onChange={(e) => setItemSearch(e.target.value)}
+                className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-sm outline-none shadow-sm" />
+
+              {filteredItemList.map((i) => {
+                const stock = itemStock(data, i.id);
+                const shelf = itemSoldOutInfo(data, i);
+                return (
+                  <div key={i.id} className="bg-white p-3 rounded-xl shadow-sm border">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="font-bold text-sm text-slate-800">{i.name}</p>
+                        <p className="text-xs text-slate-400">የገዢ ዋጋ: {fmt(i.costPriceCents)} | መሸጫ: {fmt(i.sellPriceCents)}</p>
+                        <p className={"text-xs mt-0.5 font-medium " + (stock <= 0 ? "text-red-500" : stock <= 5 ? "text-orange-500" : "text-slate-500")}>ቀሪ ስቶክ: {stock}</p>
+                      </div>
+                      <button onClick={() => handleDeleteItem(i.id)} className="p-2 text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition text-xs whitespace-nowrap">🗑️ ማጥፊያ</button>
+                    </div>
+                    <div className="mt-2 pt-2 border-t border-slate-50 text-[11px] text-slate-400">
+                      {shelf.soldOut
+                        ? `⏱ ${i.dateAdded} ገብቶ በ${shelf.days} ቀናት ውስጥ አልቋል (${shelf.soldOutDate})`
+                        : `⏱ ${i.dateAdded} ገብቷል — እስካሁን ${shelf.daysSoAndFar} ቀናት ቆይቷል፣ ገና አላለቀም`}
+                    </div>
                   </div>
-                  {/* ማጥፊያ መሰረዣ ቁልፍ */}
-                  <button 
-                    onClick={() => handleDeleteItem(i.id)} 
-                    className="p-2 text-red-100 hover:text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition"
-                    title="ለመሰረዝ"
-                  >
-                    🗑️ ማጥፊያ
-                  </button>
-                </div>
-              ))}
+                );
+              })}
+              {filteredItemList.length === 0 && <div className="text-center text-xs text-slate-400 py-6">ምንም ዕቃ አልተገኘም</div>}
             </div>
           </div>
         )}
 
       </div>
 
-      {/* ታችኛው ማውጫ (Bottom Navigation) */}
-      <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-[#1A1A1A] p-2 flex justify-around items-center rounded-t-2xl shadow-xl z-50">
-        <button onClick={() => setTab("dashboard")} className={`flex flex-col items-center flex-1 py-1 ${tab === 'dashboard' ? 'text-white font-bold' : 'text-slate-400'}`}>
-          <span className="text-lg">🏠</span>
-          <span className="text-[10px] mt-0.5">ዳሽቦርድ</span>
+      <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-[#1A1A1A] p-2 flex justify-around items-center rounded-t-2xl shadow-xl z-40">
+        <button onClick={() => setTab("dashboard")} className={"flex flex-col items-center flex-1 py-1 " + (tab === "dashboard" ? "text-white font-bold" : "text-slate-400")}>
+          <span className="text-lg">🏠</span><span className="text-[10px] mt-0.5">ዳሽቦርድ</span>
         </button>
-        <button onClick={() => setTab("sales")} className={`flex flex-col items-center flex-1 py-1 ${tab === 'sales' ? 'text-white font-bold' : 'text-slate-400'}`}>
-          <span className="text-lg">📦</span>
-          <span className="text-[10px] mt-0.5">ሽያጭ</span>
+        <button onClick={() => setTab("sales")} className={"flex flex-col items-center flex-1 py-1 " + (tab === "sales" ? "text-white font-bold" : "text-slate-400")}>
+          <span className="text-lg">📦</span><span className="text-[10px] mt-0.5">ሽያጭ</span>
         </button>
-        <button onClick={() => setTab("items")} className={`flex flex-col items-center flex-1 py-1 ${tab === 'items' ? 'text-white font-bold' : 'text-slate-400'}`}>
-          <span className="text-lg">➕</span>
-          <span className="text-[10px] mt-0.5">ዕቃ ጨምር</span>
+        <button onClick={() => setTab("items")} className={"flex flex-col items-center flex-1 py-1 " + (tab === "items" ? "text-white font-bold" : "text-slate-400")}>
+          <span className="text-lg">➕</span><span className="text-[10px] mt-0.5">ዕቃ ጨምር</span>
         </button>
       </div>
 
+      {showEditCapital && (
+        <EditCapitalModal
+          currentCents={data.openingCapitalCents}
+          onClose={() => setShowEditCapital(false)}
+          onSave={(cents) => { setData((prev) => ({ ...prev, openingCapitalCents: cents })); setShowEditCapital(false); }}
+        />
+      )}
     </div>
+  );
+}
+
+function EditCapitalModal({ currentCents, onClose, onSave }) {
+  const [val, setVal] = useState((currentCents / 100).toFixed(2));
+  return (
+    <Modal title="የመነሻ ካፒታል አርም" onClose={onClose}
+      footer={
+        <button onClick={() => onSave(toCents(val))} className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl">አስቀምጥ</button>
+      }>
+      <p className="text-xs text-slate-400 mb-3">ይህ የመነሻ (መጀመሪያ) ካፒታልዎ ነው። ትርፍና ወጪ ራሱ ስሌት ውስጥ ስለሚገባ፣ እዚህ ላይ የያዙትን ትክክለኛ የመነሻ ገንዘብ ብቻ ያስተካክሉ።</p>
+      <input type="number" step="0.01" value={val} onChange={(e) => setVal(e.target.value)} autoFocus
+        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-lg font-bold outline-none" />
+    </Modal>
   );
 }
 
