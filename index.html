@@ -4,484 +4,715 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <title>የሱቅ መቆጣጠሪያ ሲስተም</title>
-<link rel="manifest" href="data:application/manifest+json,{%22name%22:%22Business%20Tracker%22,%22short_name%22:%22Tracker%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%23F5F7F9%22,%22theme_color%22:%22%23123A5E%22,%22description%22:%22የሱቅ%20መቆጣጠሪያ%20እና%20የሂሳብ%20መመዝገቢያ%22}" />
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
-<script src="https://cdn.tailwindcss.com"></script>
 <style>
-  body { font-family: -apple-system, "Noto Sans Ethiopic", "Segoe UI", Roboto, sans-serif; margin:0; background-color: #F5F7F9; }
+* { box-sizing: border-box; }
+html,body { margin:0; padding:0; background:#F5F7F9; }
+body { font-family: -apple-system, "Noto Sans Ethiopic", "Segoe UI", Roboto, Arial, sans-serif; color:#1e293b; -webkit-tap-highlight-color:transparent; }
+button { font-family:inherit; cursor:pointer; }
+input, select, textarea { font-family:inherit; }
+::placeholder { color:#94a3b8; }
+
+.app { max-width:448px; margin:0 auto; min-height:100vh; position:relative; background:#F5F7F9; display:flex; flex-direction:column; }
+.content { flex:1; overflow-y:auto; padding:16px 16px 112px; }
+.section { margin-bottom:16px; }
+.flex{display:flex}.items-center{align-items:center}.justify-between{justify-content:space-between}.justify-center{justify-content:center}
+.gap2{gap:8px}.gap3{gap:12px}.flex1{flex:1}.flex-col{flex-direction:column}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mt2{margin-top:8px}.mt3{margin-top:12px}.mb2{margin-bottom:8px}.mb3{margin-bottom:12px}
+
+.header { text-align:center; background:#fff; padding:16px; border-bottom:1px solid #eef1f3; }
+.header h1 { margin:0; font-size:20px; font-weight:800; color:#1e293b; }
+
+.eyebrow { font-size:13px; font-weight:600; color:#64748b; }
+
+.pill-row { display:flex; background:#fff; border-radius:999px; padding:4px; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+.pill { border:none; background:transparent; padding:6px 10px; border-radius:999px; font-size:12px; font-weight:600; color:#64748b; }
+.pill.active { background:#1e293b; color:#fff; }
+
+.card { background:#fff; border-radius:14px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,.06); border-left:4px solid #cbd5e1; }
+.card.blue { border-color:#3b82f6; } .card.green { border-color:#22c55e; } .card.red { border-color:#ef4444; }
+.card.amber { background:#fffbeb; border-color:#f59e0b; } .card.violet { border-color:#8b5cf6; }
+.card-label { font-size:12px; color:#94a3b8; font-weight:600; }
+.card-value { font-size:18px; font-weight:800; color:#1e293b; margin-top:4px; }
+.icon-btn { width:36px; height:36px; border-radius:10px; border:none; background:#eff6ff; color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; }
+
+.list-row { display:flex; align-items:center; justify-content:space-between; font-size:12px; background:#fef3ec; padding:8px; border-radius:8px; margin-top:6px; }
+.list-row.out { background:#fef2f2; }
+.badge { background:#fed7aa; color:#9a3412; padding:2px 8px; border-radius:999px; font-weight:700; font-size:11px; }
+.badge.out { background:#fecaca; color:#991b1b; }
+
+.search { display:flex; align-items:center; gap:8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:10px 14px; }
+.search input { flex:1; border:none; outline:none; background:transparent; font-size:14px; }
+
+.input { width:100%; border-radius:12px; padding:11px 13px; font-size:14px; outline:none; border:1px solid #e2e8f0; background:#f8fafc; }
+.input:focus { border-color:#94a3b8; }
+.field { margin-bottom:12px; }
+.field label { display:block; font-size:12px; font-weight:600; color:#64748b; margin-bottom:5px; }
+
+.btn { border:none; border-radius:12px; padding:12px; font-weight:700; font-size:14px; width:100%; }
+.btn-primary { background:#2563eb; color:#fff; }
+.btn-emerald { background:#10b981; color:#fff; }
+.btn-navy { background:#1e293b; color:#fff; }
+.btn-outline { background:#fff; border:1px solid #e2e8f0; color:#334155; }
+.btn-sm { width:auto; padding:8px 12px; font-size:12px; border-radius:10px; }
+.btn:disabled { opacity:.45; }
+
+.item-row { background:#fff; border:1px solid #eef1f3; border-radius:12px; padding:12px; box-shadow:0 1px 2px rgba(0,0,0,.04); margin-bottom:8px; }
+.item-name { font-weight:700; font-size:14px; color:#1e293b; }
+.item-sub { font-size:11px; color:#94a3b8; margin-top:2px; }
+.trash-btn { border:none; background:#fef2f2; color:#ef4444; border-radius:8px; padding:7px 10px; font-size:11px; white-space:nowrap; }
+.shelf-note { font-size:10.5px; color:#94a3b8; margin-top:8px; padding-top:8px; border-top:1px solid #f1f5f9; }
+
+.picker-box { position:relative; }
+.picker-selected { width:100%; display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:12px; text-align:left; }
+.picker-list { margin-top:4px; background:#fff; border:1px solid #e2e8f0; border-radius:12px; box-shadow:0 8px 20px rgba(0,0,0,.1); max-height:220px; overflow-y:auto; }
+.picker-item { width:100%; text-align:left; padding:10px 12px; font-size:13px; border:none; background:transparent; border-bottom:1px solid #f8fafc; display:flex; justify-content:space-between; }
+
+.navwrap { position:absolute; left:0; right:0; bottom:0; padding:0 12px 12px; }
+.nav { background:#141414; border-radius:20px; display:flex; align-items:center; justify-content:space-around; padding:8px 4px; box-shadow:0 10px 24px rgba(0,0,0,.3); }
+.navbtn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:6px 0; border:none; background:transparent; border-radius:14px; color:#8a8a8a; }
+.navbtn.active { color:#fff; font-weight:700; }
+.navbtn .em { font-size:17px; } .navbtn span.lbl { font-size:10px; margin-top:2px; }
+
+.overlay { position:fixed; inset:0; z-index:50; display:flex; justify-content:center; }
+.overlay-bg { position:absolute; inset:0; background:rgba(0,0,0,.4); }
+.sheet { position:relative; width:100%; max-width:448px; background:#fff; margin-top:auto; border-radius:20px 20px 0 0; max-height:92vh; display:flex; flex-direction:column; animation:slideUp .18s ease-out; }
+@keyframes slideUp { from{ transform:translateY(24px); opacity:.6 } to{ transform:translateY(0); opacity:1 } }
+.sheet-header { display:flex; align-items:center; gap:12px; padding:16px 20px; background:#f1f5f9; border-radius:20px 20px 0 0; }
+.sheet-back { width:32px; height:32px; border-radius:999px; background:#fff; border:none; display:flex; align-items:center; justify-content:center; font-size:18px; box-shadow:0 1px 2px rgba(0,0,0,.08); }
+.sheet-body { overflow-y:auto; padding:18px 20px; flex:1; }
+.sheet-footer { padding:14px 20px; border-top:1px solid #f1f5f9; }
+.sheet h2 { font-size:15px; margin:0; font-weight:800; color:#1e293b; }
+
+.errmsg { color:#ef4444; font-size:11.5px; margin-top:4px; }
+.helpmsg { color:#94a3b8; font-size:11.5px; margin-bottom:10px; line-height:1.5; }
+
+.alloc-row { display:flex; align-items:center; gap:8px; background:#f8fafc; border-radius:10px; padding:8px; margin-bottom:8px; }
+.alloc-name { flex:1.4; } .alloc-pct { width:64px; } .alloc-amt { flex:1; text-align:right; font-weight:700; font-size:13px; color:#1e293b; }
+
+.toast { position:absolute; bottom:96px; left:50%; transform:translateX(-50%); background:#1e293b; color:#fff; font-size:13px; padding:10px 18px; border-radius:999px; box-shadow:0 8px 20px rgba(0,0,0,.25); z-index:60; }
+.empty { text-align:center; color:#94a3b8; font-size:13px; padding:24px 0; }
 </style>
 </head>
 <body>
 <div id="root"></div>
 
-<script type="text/babel" data-presets="react">
-const { useState, useEffect, useMemo, useRef } = React;
+<script>
+(function () {
+"use strict";
 
-const STORAGE_KEY = "shop-control-data-v3";
-const OLD_STORAGE_KEY = "shop-control-data-v2";
+/* ================= constants & storage keys ================= */
+var STORAGE_KEY = "shop-control-data-v4";
+var OLD_V3_KEY = "shop-control-data-v3";
+var OLD_V2_KEY = "shop-control-data-v2";
+var PERIOD_LABEL = { day: "የቀን", week: "የሳምንት", month: "የወር", year: "የአመት" };
 
-/* ============ money helpers: everything is stored/added as INTEGER CENTS
-   so totals can never drift or produce rounding conflicts. Only the
-   display function (fmt) converts back to birr with 2 decimals. ============ */
-function toCents(v) { const n = parseFloat(v); return isNaN(n) ? 0 : Math.round(n * 100); }
-function fmt(cents) {
-  cents = Math.round(Number(cents) || 0);
-  const neg = cents < 0; cents = Math.abs(cents);
-  const whole = Math.floor(cents / 100), frac = cents % 100;
-  return (neg ? "-" : "") + whole.toLocaleString("en-US") + "." + String(frac).padStart(2, "0") + " ብር";
+/* ================= helpers ================= */
+function el(tag, props, children) {
+  var e = document.createElement(tag);
+  props = props || {};
+  for (var k in props) {
+    if (!props.hasOwnProperty(k)) continue;
+    var v = props[k];
+    if (v === undefined || v === null) continue;
+    if (k === "class") e.className = v;
+    else if (k === "style" && typeof v === "object") { for (var s in v) e.style[s] = v[s]; }
+    else if (k.indexOf("on") === 0 && typeof v === "function") e.addEventListener(k.slice(2).toLowerCase(), v);
+    else e.setAttribute(k, v);
+  }
+  children = children || [];
+  if (!Array.isArray(children)) children = [children];
+  children.forEach(function (c) {
+    if (c === null || c === undefined || c === false) return;
+    if (typeof c === "string" || typeof c === "number") e.appendChild(document.createTextNode(c));
+    else e.appendChild(c);
+  });
+  return e;
 }
+function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 function todayISO() { return new Date().toISOString().slice(0, 10); }
+function toCents(v) { var n = parseFloat(v); if (isNaN(n)) n = 0; return Math.round(n * 100); }
+function fmt(cents) {
+  cents = Math.round(Number(cents) || 0);
+  var neg = cents < 0; cents = Math.abs(cents);
+  var whole = Math.floor(cents / 100), frac = cents % 100;
+  return (neg ? "-" : "") + whole.toLocaleString("en-US") + "." + String(frac).padStart(2, "0") + " ብር";
+}
 function daysBetween(iso1, iso2) {
-  const a = new Date(iso1 + "T00:00:00"), b = new Date(iso2 + "T00:00:00");
+  var a = new Date(iso1 + "T00:00:00"), b = new Date(iso2 + "T00:00:00");
   return Math.max(0, Math.round((b - a) / 86400000));
 }
 
-/* ============ period range helpers (day / week / month / year) ============ */
+/* ================= period range ================= */
 function periodRange(period) {
-  const now = new Date();
-  let start;
-  if (period === "day") {
-    start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  } else if (period === "week") {
-    const day = now.getDay(); // 0 Sun .. 6 Sat
-    const diffToMonday = (day + 6) % 7;
-    start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday);
-  } else if (period === "month") {
-    start = new Date(now.getFullYear(), now.getMonth(), 1);
-  } else { // year
-    start = new Date(now.getFullYear(), 0, 1);
-  }
+  var now = new Date(), start;
+  if (period === "day") start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  else if (period === "week") { var day = now.getDay(); var diffToMonday = (day + 6) % 7; start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday); }
+  else if (period === "month") start = new Date(now.getFullYear(), now.getMonth(), 1);
+  else start = new Date(now.getFullYear(), 0, 1);
   return { start: start.getTime(), end: now.getTime() + 1 };
 }
-function inPeriod(iso, range) {
-  const t = new Date(iso + "T00:00:00").getTime();
-  return t >= range.start && t <= range.end;
-}
-const PERIOD_LABEL = { day: "የቀን", week: "የሳምንት", month: "የወር", year: "የአመት" };
+function inPeriod(iso, range) { var t = new Date(iso + "T00:00:00").getTime(); return t >= range.start && t <= range.end; }
 
-/* ============ initial / migrated data ============ */
+/* ================= data model =================
+baseCapitalCents : manually editable base (cash/investment not tied to stock)
+items[]  : {id,name,costPriceCents,sellPriceCents,openingStock,dateAdded,createdAt}
+sales[]  : {id,itemId,itemName,qty,unitPriceCents,unitCostCents,totalCents,customer,date,createdAt}
+expenses[]: {id,title,amountCents,date,createdAt}
+allocations[]: {id,name,percent}   <- user-defined profit split buckets
+
+Everything downstream (stock, capital, revenue, profit) is DERIVED from this
+log every time it's needed — nothing is incremented directly — so numbers
+can never drift or conflict with each other. */
 function freshData() {
-  return { openingCapitalCents: 0, items: [], sales: [], expenses: [] };
+  return {
+    baseCapitalCents: 0,
+    items: [], sales: [], expenses: [],
+    allocations: [
+      { id: uid(), name: "ቁጠባ", percent: 10 },
+      { id: uid(), name: "ለስራ ካፒታል", percent: 70 },
+      { id: uid(), name: "ወጪ", percent: 20 }
+    ]
+  };
 }
 function loadData() {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      const d = JSON.parse(saved);
-      if (d && Array.isArray(d.items) && Array.isArray(d.sales) && Array.isArray(d.expenses)) return d;
+    var v = localStorage.getItem(STORAGE_KEY);
+    if (v) {
+      var d = JSON.parse(v);
+      if (d && Array.isArray(d.items) && Array.isArray(d.sales) && Array.isArray(d.expenses)) {
+        if (!Array.isArray(d.allocations)) d.allocations = freshData().allocations;
+        if (typeof d.baseCapitalCents !== "number") d.baseCapitalCents = 0;
+        return d;
+      }
     }
   } catch (e) {}
-  // one-time migration from the old v2 shape, best-effort
+  // migrate from v3 (react version — field names already match)
   try {
-    const old = localStorage.getItem(OLD_STORAGE_KEY);
-    if (old) {
-      const o = JSON.parse(old);
-      const migrated = {
-        openingCapitalCents: toCents(o.capital || 0),
-        items: (o.items || []).map((it) => ({
-          id: it.id || uid(), name: it.name,
-          sellPriceCents: toCents(it.price), costPriceCents: 0,
-          openingStock: Number(it.stock) || 0,
-          dateAdded: todayISO(), createdAt: Date.now()
-        })),
-        sales: [], expenses: []
-      };
-      return migrated;
+    var v3 = localStorage.getItem(OLD_V3_KEY);
+    if (v3) {
+      var o = JSON.parse(v3);
+      if (o && Array.isArray(o.items)) {
+        return {
+          baseCapitalCents: Number(o.openingCapitalCents) || 0,
+          items: o.items || [], sales: o.sales || [], expenses: o.expenses || [],
+          allocations: freshData().allocations
+        };
+      }
+    }
+  } catch (e) {}
+  // migrate from the original v2 shape
+  try {
+    var v2 = localStorage.getItem(OLD_V2_KEY);
+    if (v2) {
+      var o2 = JSON.parse(v2);
+      if (o2 && Array.isArray(o2.items)) {
+        return {
+          baseCapitalCents: toCents(o2.capital || 0),
+          items: (o2.items || []).map(function (it) {
+            return { id: it.id || uid(), name: it.name, sellPriceCents: toCents(it.price), costPriceCents: 0, openingStock: Number(it.stock) || 0, dateAdded: todayISO(), createdAt: Date.now() };
+          }),
+          sales: [], expenses: [], allocations: freshData().allocations
+        };
+      }
     }
   } catch (e) {}
   return freshData();
 }
-function saveData(d) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); } catch (e) {} }
+var storageAvailable = true;
+function saveData(d) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); } catch (e) { storageAvailable = false; } }
 
-/* ============ derived (single-source-of-truth) calculations ============
-   Nothing below is ever incremented/decremented directly in state — every
-   number is recomputed from the sales/expenses/items log each time, so the
-   books can never go out of sync or double-count. */
+/* ================= derived calculations ================= */
 function itemStock(data, itemId) {
-  const item = data.items.find((i) => i.id === itemId);
+  var item = data.items.find(function (i) { return i.id === itemId; });
   if (!item) return 0;
-  const sold = data.sales.filter((s) => s.itemId === itemId).reduce((s, x) => s + x.qty, 0);
+  var sold = data.sales.filter(function (s) { return s.itemId === itemId; }).reduce(function (s, x) { return s + x.qty; }, 0);
   return item.openingStock - sold;
 }
 function itemSoldOutInfo(data, item) {
-  const stock = itemStock(data, item.id);
-  if (stock > 0) return { soldOut: false, daysSoAndFar: daysBetween(item.dateAdded, todayISO()) };
-  // walk sales for this item in chronological order to find the exact sale that emptied it
-  const salesForItem = data.sales.filter((s) => s.itemId === item.id).slice().sort((a, b) => a.createdAt - b.createdAt);
-  let cum = 0, soldOutDate = null;
-  for (const s of salesForItem) {
-    cum += s.qty;
-    if (cum >= item.openingStock) { soldOutDate = s.date; break; }
+  var stock = itemStock(data, item.id);
+  if (stock > 0) return { soldOut: false, daysSoFar: daysBetween(item.dateAdded, todayISO()) };
+  var salesForItem = data.sales.filter(function (s) { return s.itemId === item.id; }).slice().sort(function (a, b) { return a.createdAt - b.createdAt; });
+  var cum = 0, soldOutDate = null;
+  for (var i = 0; i < salesForItem.length; i++) {
+    cum += salesForItem[i].qty;
+    if (cum >= item.openingStock) { soldOutDate = salesForItem[i].date; break; }
   }
-  if (!soldOutDate) return { soldOut: false, daysSoAndFar: daysBetween(item.dateAdded, todayISO()) };
+  if (!soldOutDate) return { soldOut: false, daysSoFar: daysBetween(item.dateAdded, todayISO()) };
   return { soldOut: true, soldOutDate: soldOutDate, days: daysBetween(item.dateAdded, soldOutDate) };
 }
 function lineProfitCents(sale) { return (sale.unitPriceCents - sale.unitCostCents) * sale.qty; }
-function totalCapitalCents(data) {
-  const allProfit = data.sales.reduce((s, x) => s + lineProfitCents(x), 0);
-  const allExpense = data.expenses.reduce((s, x) => s + x.amountCents, 0);
-  return data.openingCapitalCents + allProfit - allExpense;
+function inventoryValueCents(data) {
+  return data.items.reduce(function (s, it) { return s + Math.max(0, itemStock(data, it.id)) * it.costPriceCents; }, 0);
 }
+function totalCapitalCents(data) { return data.baseCapitalCents + inventoryValueCents(data); }
 function periodStats(data, period) {
-  const range = periodRange(period);
-  const sales = data.sales.filter((s) => inPeriod(s.date, range));
-  const expenses = data.expenses.filter((e) => inPeriod(e.date, range));
-  const revenue = sales.reduce((s, x) => s + x.totalCents, 0);
-  const profit = sales.reduce((s, x) => s + lineProfitCents(x), 0) - expenses.reduce((s, x) => s + x.amountCents, 0);
-  const expenseTotal = expenses.reduce((s, x) => s + x.amountCents, 0);
-  const counts = {};
-  sales.forEach((s) => { counts[s.itemName] = (counts[s.itemName] || 0) + s.qty; });
-  let topName = null, topQty = 0;
-  Object.keys(counts).forEach((n) => { if (counts[n] > topQty) { topQty = counts[n]; topName = n; } });
-  return { revenue, profit, expenseTotal, topName, topQty, count: sales.length };
+  var range = periodRange(period);
+  var sales = data.sales.filter(function (s) { return inPeriod(s.date, range); });
+  var expenses = data.expenses.filter(function (e) { return inPeriod(e.date, range); });
+  var revenue = sales.reduce(function (s, x) { return s + x.totalCents; }, 0);
+  var expenseTotal = expenses.reduce(function (s, x) { return s + x.amountCents; }, 0);
+  var profit = sales.reduce(function (s, x) { return s + lineProfitCents(x); }, 0) - expenseTotal;
+  var counts = {};
+  sales.forEach(function (s) { counts[s.itemName] = (counts[s.itemName] || 0) + s.qty; });
+  var topName = null, topQty = 0;
+  Object.keys(counts).forEach(function (n) { if (counts[n] > topQty) { topQty = counts[n]; topName = n; } });
+  return { revenue: revenue, profit: profit, expenseTotal: expenseTotal, topName: topName, topQty: topQty, salesInPeriod: sales, expensesInPeriod: expenses };
 }
 
-/* ============ small reusable UI ============ */
-function Modal({ title, onClose, children, footer }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose}></div>
-      <div className="relative w-full max-w-md bg-white rounded-t-2xl sm:rounded-2xl p-5 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-bold text-slate-800">{title}</h3>
-          <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">✕</button>
-        </div>
-        {children}
-        {footer && <div className="mt-4">{footer}</div>}
-      </div>
-    </div>
-  );
+/* ================= state ================= */
+var state = { data: loadData(), tab: "dashboard", period: "day" };
+function setData(mutator) { state.data = mutator(state.data); saveData(state.data); renderApp(); }
+function showToast(msg) {
+  var appEl = document.querySelector(".app"); if (!appEl) return;
+  var old = appEl.querySelector(".toast"); if (old) old.remove();
+  var t = el("div", { class: "toast" }, msg);
+  appEl.appendChild(t);
+  setTimeout(function () { t.remove(); }, 1800);
 }
 
-function SearchableItemPicker({ items, valueId, onSelect, dataForStock }) {
-  const [open, setOpen] = useState(false);
-  const [q, setQ] = useState("");
-  const selected = items.find((i) => i.id === valueId);
-  const filtered = items.filter((i) => i.name.toLowerCase().includes(q.toLowerCase()));
-  return (
-    <div className="relative">
-      {selected && !open ? (
-        <button type="button" onClick={() => setOpen(true)} className="w-full flex justify-between items-center bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm text-left">
-          <span className="font-semibold text-slate-800">{selected.name}</span>
-          <span className="text-xs text-blue-600 font-medium">ለውጥ</span>
-        </button>
-      ) : (
-        <div>
-          <input
-            autoFocus={open}
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            onFocus={() => setOpen(true)}
-            placeholder="🔍 የዕቃ ስም ይፈልጉ..."
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none"
-          />
-          {open && (
-            <div className="mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-52 overflow-y-auto">
-              {filtered.length === 0 && <div className="p-3 text-xs text-slate-400">ምንም ዕቃ አልተገኘም</div>}
-              {filtered.map((i) => {
-                const stock = itemStock(dataForStock, i.id);
-                return (
-                  <button
-                    type="button" key={i.id}
-                    onClick={() => { onSelect(i.id); setQ(""); setOpen(false); }}
-                    className="w-full text-left px-3 py-2.5 text-sm hover:bg-slate-50 flex justify-between items-center border-b last:border-b-0 border-slate-50"
-                  >
-                    <span className="font-medium text-slate-700">{i.name}</span>
-                    <span className="text-xs text-slate-400">ዋጋ: {fmt(i.sellPriceCents)} · ስቶክ: {stock}</span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
+/* ================= sheet / modal ================= */
+function openSheet(title, bodyBuilder, footerBuilder) {
+  var overlay = el("div", { class: "overlay" });
+  var bg = el("div", { class: "overlay-bg", onclick: close });
+  var body = el("div", { class: "sheet-body" });
+  var footerWrap = el("div", { class: "sheet-footer" });
+  var sheetEl = el("div", { class: "sheet" }, [
+    el("div", { class: "sheet-header" }, [
+      el("button", { class: "sheet-back", onclick: close }, "‹"),
+      el("h2", {}, title)
+    ]),
+    body, footerWrap
+  ]);
+  overlay.appendChild(bg); overlay.appendChild(sheetEl);
+  function close() { overlay.remove(); }
+  function refreshFooter() { clear(footerWrap); footerWrap.appendChild(footerBuilder(close, refreshFooter)); }
+  bodyBuilder(body, close, refreshFooter);
+  refreshFooter();
+  document.querySelector(".app").appendChild(overlay);
+  return { close: close };
+}
+function Field(labelText, required, inputEl) {
+  return el("div", { class: "field" }, [
+    el("label", {}, labelText + (required ? " *" : "")),
+    inputEl
+  ]);
 }
 
-/* ============ App ============ */
-function App() {
-  const [data, setData] = useState(loadData);
-  const [tab, setTab] = useState("dashboard");
-  const [period, setPeriod] = useState("day");
-  const [showEditCapital, setShowEditCapital] = useState(false);
+/* ================= dashboard ================= */
+function renderDashboard(container) {
+  var data = state.data, period = state.period;
+  var stats = periodStats(data, period);
+  var capital = totalCapitalCents(data);
 
-  // sales form state
-  const [selectedItemId, setSelectedItemId] = useState("");
-  const [saleQty, setSaleQty] = useState(1);
-  const [customer, setCustomer] = useState("");
-  const [priceOverride, setPriceOverride] = useState("");
+  var head = el("div", { class: "flex items-center justify-between section" }, [
+    el("div", { class: "eyebrow" }, "📊 የሱቅ ወቅታዊ ሁኔታ")
+  ]);
+  var pillRow = el("div", { class: "pill-row" });
+  ["day", "week", "month", "year"].forEach(function (p) {
+    var b = el("button", { class: "pill" + (period === p ? " active" : "") },
+      p === "day" ? "ቀን" : p === "week" ? "ሳምንት" : p === "month" ? "ወር" : "አመት");
+    b.addEventListener("click", function () { state.period = p; renderApp(); });
+    pillRow.appendChild(b);
+  });
+  head.appendChild(pillRow);
+  container.appendChild(head);
 
-  // add item form state
-  const [newItemName, setNewItemName] = useState("");
-  const [newItemCost, setNewItemCost] = useState("");
-  const [newItemSell, setNewItemSell] = useState("");
-  const [newItemStock, setNewItemStock] = useState("");
-  const [itemSearch, setItemSearch] = useState("");
+  // capital card
+  var capCard = el("div", { class: "card blue section flex items-center justify-between" }, [
+    el("div", {}, [
+      el("div", { class: "card-label" }, "💰 ጠቅላላ ካፒታል (እቃ ክምችት ዋጋ + መነሻ ገንዘብ)"),
+      el("div", { class: "card-value" }, fmt(capital))
+    ])
+  ]);
+  var editCapBtn = el("button", { class: "icon-btn" }, "✎");
+  editCapBtn.addEventListener("click", openEditCapitalModal);
+  capCard.appendChild(editCapBtn);
+  container.appendChild(capCard);
 
-  useEffect(() => { saveData(data); }, [data]);
+  // revenue card
+  container.appendChild(el("div", { class: "card violet section" }, [
+    el("div", { class: "card-label" }, "🧾 " + PERIOD_LABEL[period] + " ጠቅላላ ሽያጭ (ገቢ)"),
+    el("div", { class: "card-value" }, fmt(stats.revenue))
+  ]));
 
-  const stats = useMemo(() => periodStats(data, period), [data, period]);
-  const capital = useMemo(() => totalCapitalCents(data), [data]);
-  const lowStockItems = useMemo(() => data.items.filter((i) => itemStock(data, i.id) <= 5 && itemStock(data, i.id) > 0), [data]);
-  const outOfStockItems = useMemo(() => data.items.filter((i) => itemStock(data, i.id) <= 0), [data]);
+  // profit card
+  container.appendChild(el("div", { class: "card green section" }, [
+    el("div", { class: "card-label" }, "📈 " + PERIOD_LABEL[period] + " የተጣራ ትርፍ"),
+    el("div", { class: "card-value", style: { color: stats.profit >= 0 ? "#16a34a" : "#dc2626" } }, fmt(stats.profit))
+  ]));
 
-  const selectedItem = data.items.find((i) => i.id === selectedItemId);
-  useEffect(() => {
-    if (selectedItem) setPriceOverride((selectedItem.sellPriceCents / 100).toFixed(2));
-  }, [selectedItemId]);
+  // expense card + add button
+  var expCard = el("div", { class: "card red section" });
+  var expTop = el("div", { class: "flex items-center justify-between" }, [
+    el("div", {}, [
+      el("div", { class: "card-label" }, "📉 " + PERIOD_LABEL[period] + " ጠቅላላ ወጪ"),
+      el("div", { class: "card-value" }, fmt(stats.expenseTotal))
+    ])
+  ]);
+  var addExpBtn = el("button", { class: "icon-btn" }, "+");
+  addExpBtn.addEventListener("click", openAddExpenseModal);
+  expTop.appendChild(addExpBtn);
+  expCard.appendChild(expTop);
+  if (stats.expensesInPeriod.length > 0) {
+    var recentExp = stats.expensesInPeriod.slice().sort(function (a, b) { return b.createdAt - a.createdAt; }).slice(0, 3);
+    recentExp.forEach(function (e) {
+      expCard.appendChild(el("div", { class: "list-row" }, [
+        el("span", {}, e.title + " · " + e.date),
+        el("span", { style: { color: "#dc2626", fontWeight: "700" } }, fmt(e.amountCents))
+      ]));
+    });
+  }
+  container.appendChild(expCard);
 
-  const saleTotalCents = selectedItem ? Math.round(toCents(priceOverride) * saleQty) : 0;
+  // top-selling
+  container.appendChild(el("div", { class: "card amber section" }, [
+    el("div", { class: "card-label", style: { color: "#b45309" } }, "🔥 " + PERIOD_LABEL[period] + " በጣም የተሸጠው ዕቃ"),
+    el("div", { class: "card-value", style: { color: "#78350f" } }, stats.topName ? (stats.topName + " (" + stats.topQty + " ጊዜ)") : "ምንም አልተሸጠም")
+  ]));
 
-  const handleAddSale = () => {
-    if (!selectedItem) return alert("እባክዎ መጀመሪያ ዕቃ ይምረጡ!");
-    const stock = itemStock(data, selectedItem.id);
-    if (stock < saleQty) return alert("በቂ ስቶክ የለም! የቀረው ስቶክ: " + stock);
-    const unitPriceCents = toCents(priceOverride);
-    if (unitPriceCents <= 0) return alert("እባክዎ ትክክለኛ ዋጋ ያስገቡ");
-    const sale = {
-      id: uid(), itemId: selectedItem.id, itemName: selectedItem.name,
-      qty: Number(saleQty), unitPriceCents, unitCostCents: selectedItem.costPriceCents,
-      totalCents: Math.round(unitPriceCents * saleQty),
-      customer: customer.trim() || "ስም ያልገለጸ ደንበኛ",
-      date: todayISO(), createdAt: Date.now()
-    };
-    setData((prev) => ({ ...prev, sales: [...prev.sales, sale] }));
-    setSaleQty(1); setCustomer(""); setSelectedItemId(""); setPriceOverride("");
-    alert("ሽያጭ ተመዝግቧል!");
-  };
+  // low/out of stock
+  var lowStock = data.items.filter(function (i) { var s = itemStock(data, i.id); return s > 0 && s <= 5; });
+  var outStock = data.items.filter(function (i) { return itemStock(data, i.id) <= 0; });
+  var warnCard = el("div", { class: "card section", style: { borderColor: "#fb923c" } });
+  warnCard.appendChild(el("div", { class: "card-label", style: { color: "#ea580c", marginBottom: "8px" } }, "⚠️ ያለቁ / የሚያልቁ ዕቃዎች"));
+  if (lowStock.length === 0 && outStock.length === 0) {
+    warnCard.appendChild(el("div", { style: { fontSize: "12px", color: "#94a3b8" } }, "ሁሉም ዕቃዎች በቂ ስቶክ አላቸው።"));
+  } else {
+    outStock.forEach(function (i) {
+      warnCard.appendChild(el("div", { class: "list-row out" }, [el("span", {}, i.name), el("span", { class: "badge out" }, "አልቋል")]));
+    });
+    lowStock.forEach(function (i) {
+      warnCard.appendChild(el("div", { class: "list-row" }, [el("span", {}, i.name), el("span", { class: "badge" }, "ቀሪ ስቶክ: " + itemStock(data, i.id))]));
+    });
+  }
+  container.appendChild(warnCard);
 
-  const handleAddItem = () => {
-    if (!newItemName || !newItemSell || !newItemStock) return alert("እባክዎ የዕቃ ስም፣ የመሸጫ ዋጋ እና ስቶክ ይሙሉ!");
-    const item = {
-      id: uid(), name: newItemName.trim(),
-      costPriceCents: toCents(newItemCost || 0), sellPriceCents: toCents(newItemSell),
-      openingStock: Number(newItemStock) || 0,
-      dateAdded: todayISO(), createdAt: Date.now()
-    };
-    setData((prev) => ({ ...prev, items: [...prev.items, item] }));
-    setNewItemName(""); setNewItemCost(""); setNewItemSell(""); setNewItemStock("");
-    alert("አዲስ ዕቃ ተጨምሯል!");
-  };
+  // allocation / budget split
+  container.appendChild(renderAllocationSection(data, stats, period));
+}
 
-  const handleDeleteItem = (id) => {
-    if (confirm("ይህንን ዕቃ በእርግጥ ማጥፋት ይፈልጋሉ? ከዚህ ዕቃ ጋር የተያያዙ የሽያጭ ታሪኮች አይሰረዙም።")) {
-      setData((prev) => ({ ...prev, items: prev.items.filter((i) => i.id !== id) }));
+function renderAllocationSection(data, stats, period) {
+  var card = el("div", { class: "card section", style: { borderColor: "#8b5cf6" } });
+  var head = el("div", { class: "flex items-center justify-between mb2" }, [
+    el("div", { class: "card-label", style: { color: "#6d28d9" } }, "🧮 " + PERIOD_LABEL[period] + " ትርፍ ክፍፍል"),
+  ]);
+  var editBtn = el("button", { class: "icon-btn" }, "✎");
+  editBtn.addEventListener("click", openAllocationModal);
+  head.appendChild(editBtn);
+  card.appendChild(head);
+  card.appendChild(el("div", { style: { fontSize: "11px", color: "#94a3b8", marginBottom: "8px" } }, PERIOD_LABEL[period] + " ትርፍ (" + fmt(stats.profit) + ") በመቶኛ ተከፋፍሎ፦"));
+  var totalPct = data.allocations.reduce(function (s, a) { return s + Number(a.percent); }, 0);
+  if (data.allocations.length === 0) {
+    card.appendChild(el("div", { class: "empty" }, "ምንም ክፍፍል አልተዘጋጀም — «✎» ተጭነው ይጨምሩ"));
+  } else {
+    data.allocations.forEach(function (a) {
+      var amt = Math.round(stats.profit * (Number(a.percent) / 100));
+      card.appendChild(el("div", { class: "list-row" }, [
+        el("span", {}, a.name + " (" + a.percent + "%)"),
+        el("span", { style: { fontWeight: "700", color: "#1e293b" } }, fmt(amt))
+      ]));
+    });
+    if (Math.abs(totalPct - 100) > 0.01) {
+      card.appendChild(el("div", { style: { fontSize: "10.5px", color: "#f59e0b", marginTop: "6px" } }, "⚠️ ጠቅላላ መቶኛ " + totalPct + "% ነው (100% አይደለም)"));
     }
-  };
-
-  const filteredItemList = data.items.filter((i) => i.name.toLowerCase().includes(itemSearch.toLowerCase()));
-
-  return (
-    <div className="w-full max-w-md mx-auto min-h-screen flex flex-col justify-between bg-[#F5F7F9]">
-
-      <div className="bg-white py-4 shadow-sm text-center border-b">
-        <h1 className="text-xl font-bold text-slate-800">የሱቅ መቆጣጠሪያ ሲስተም</h1>
-      </div>
-
-      <div className="flex-1 p-4 overflow-y-auto pb-24">
-
-        {tab === "dashboard" && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-slate-500">📊 የሱቅ ወቅታዊ ሁኔታ</h2>
-              <div className="flex bg-white rounded-full p-1 shadow-sm text-xs">
-                {["day", "week", "month", "year"].map((p) => (
-                  <button key={p} onClick={() => setPeriod(p)}
-                    className={"px-2.5 py-1 rounded-full font-medium " + (period === p ? "bg-slate-800 text-white" : "text-slate-500")}>
-                    {p === "day" ? "ቀን" : p === "week" ? "ሳምንት" : p === "month" ? "ወር" : "አመት"}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-white border-l-4 border-blue-500 rounded-xl p-4 shadow-sm flex justify-between items-center">
-              <div>
-                <p className="text-xs text-slate-400 font-medium">💰 ጠቅላላ ካፒታል</p>
-                <p className="text-lg font-bold text-slate-800 mt-1">{fmt(capital)}</p>
-              </div>
-              <button onClick={() => setShowEditCapital(true)} className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-sm">✎</button>
-            </div>
-
-            <div className="bg-white border-l-4 border-green-500 rounded-xl p-4 shadow-sm">
-              <p className="text-xs text-slate-400 font-medium">📈 {PERIOD_LABEL[period]} የተጣራ ትርፍ</p>
-              <p className={"text-lg font-bold mt-1 " + (stats.profit >= 0 ? "text-green-600" : "text-red-500")}>{fmt(stats.profit)}</p>
-            </div>
-
-            <div className="bg-white border-l-4 border-red-500 rounded-xl p-4 shadow-sm">
-              <p className="text-xs text-slate-400 font-medium">📉 {PERIOD_LABEL[period]} ጠቅላላ ወጪ</p>
-              <p className="text-lg font-bold text-red-500 mt-1">{fmt(stats.expenseTotal)}</p>
-            </div>
-
-            <div className="bg-amber-50 border-l-4 border-amber-500 rounded-xl p-4 shadow-sm">
-              <p className="text-xs text-amber-600 font-medium">🔥 {PERIOD_LABEL[period]} በጣም የተሸጠው ዕቃ</p>
-              <p className="text-base font-bold text-amber-900 mt-1">{stats.topName ? `${stats.topName} (${stats.topQty} ጊዜ)` : "ምንም አልተሸጠም"}</p>
-            </div>
-
-            <div className="bg-white rounded-xl p-4 shadow-sm border border-orange-100">
-              <h3 className="text-xs font-bold text-orange-600 mb-2">⚠️ ያለቁ / የሚያልቁ ዕቃዎች</h3>
-              {lowStockItems.length === 0 && outOfStockItems.length === 0 ? (
-                <p className="text-xs text-slate-400">ሁሉም ዕቃዎች በቂ ስቶክ አላቸው።</p>
-              ) : (
-                <div className="space-y-1.5">
-                  {outOfStockItems.map((i) => (
-                    <div key={i.id} className="flex justify-between items-center text-xs bg-red-50 p-2 rounded">
-                      <span className="font-medium text-slate-700">{i.name}</span>
-                      <span className="bg-red-200 text-red-800 px-2 py-0.5 rounded-full font-bold">አልቋል</span>
-                    </div>
-                  ))}
-                  {lowStockItems.map((i) => (
-                    <div key={i.id} className="flex justify-between items-center text-xs bg-orange-50 p-2 rounded">
-                      <span className="font-medium text-slate-700">{i.name}</span>
-                      <span className="bg-orange-200 text-orange-800 px-2 py-0.5 rounded-full font-bold">ቀሪ ስቶክ: {itemStock(data, i.id)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {tab === "sales" && (
-          <div className="space-y-4">
-            <h2 className="text-sm font-semibold text-slate-500">📝 ሽያጭ መመዝገቢያ ፎርም</h2>
-
-            <div className="bg-white rounded-2xl p-4 shadow-sm space-y-4">
-              <div>
-                <label className="text-xs font-medium text-slate-500 block mb-1">የሚሸጠውን ዕቃ ይምረጡ፦</label>
-                <SearchableItemPicker items={data.items} valueId={selectedItemId} onSelect={setSelectedItemId} dataForStock={data} />
-              </div>
-
-              {selectedItem && (
-                <>
-                  <div>
-                    <label className="text-xs font-medium text-slate-500 block mb-1">የደንበኛ ስም (ካስፈለገ) ፦</label>
-                    <input type="text" placeholder="ለምሳሌ አበበ" value={customer} onChange={(e) => setCustomer(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none" />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-medium text-slate-500 block mb-1">
-                      የሽያጭ ዋጋ (ለደንበኛ ቅናሽ ማድረግ ከፈለጉ እዚህ ይቀይሩ) — መደበኛ ዋጋ: {fmt(selectedItem.sellPriceCents)}
-                    </label>
-                    <input type="number" step="0.01" min="0" value={priceOverride} onChange={(e) => setPriceOverride(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none font-semibold" />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-medium text-slate-500 block mb-1">የዕቃ ብዛት (መጠን)፦</label>
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => setSaleQty(Math.max(1, saleQty - 1))} className="w-10 h-10 bg-slate-100 font-bold rounded-lg text-slate-700 flex items-center justify-center border">-</button>
-                      <input type="number" min="1" className="flex-1 text-center bg-slate-50 border border-slate-200 rounded-lg p-2 font-bold text-sm"
-                        value={saleQty} onChange={(e) => setSaleQty(Math.max(1, Number(e.target.value) || 1))} />
-                      <button onClick={() => setSaleQty(saleQty + 1)} className="w-10 h-10 bg-slate-100 font-bold rounded-lg text-slate-700 flex items-center justify-center border">+</button>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-between items-center bg-slate-50 rounded-xl p-3">
-                    <span className="text-xs text-slate-500 font-medium">ጠቅላላ የሽያጭ መጠን</span>
-                    <span className="font-extrabold text-slate-800">{fmt(saleTotalCents)}</span>
-                  </div>
-
-                  <button onClick={handleAddSale} className="w-full bg-emerald-500 text-white font-bold py-3.5 rounded-xl hover:bg-emerald-600 transition shadow-md mt-2">
-                    ሽያጭ መዝግብ ({saleQty} ዕቃ)
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        )}
-
-        {tab === "items" && (
-          <div className="space-y-4">
-            <h2 className="text-sm font-semibold text-slate-500">📦 አዲስ ዕቃ መጨመሪያ እና የነበሩት ዝርዝር</h2>
-
-            <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
-              <input type="text" placeholder="የዕቃ ስም" className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm outline-none" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} />
-              <div className="grid grid-cols-2 gap-2">
-                <input type="number" step="0.01" placeholder="የገዙበት ዋጋ (ወጪ)" className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm outline-none" value={newItemCost} onChange={(e) => setNewItemCost(e.target.value)} />
-                <input type="number" step="0.01" placeholder="የመሸጫ ዋጋ" className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm outline-none" value={newItemSell} onChange={(e) => setNewItemSell(e.target.value)} />
-              </div>
-              <input type="number" placeholder="የመጀመሪያ ስቶክ (ብዛት)" className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm outline-none" value={newItemStock} onChange={(e) => setNewItemStock(e.target.value)} />
-              <button onClick={handleAddItem} className="w-full bg-blue-600 text-white font-semibold py-2.5 rounded-xl text-sm">ዕቃ ጨምር +</button>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold text-slate-400">የተመዘገቡ ዕቃዎች ዝርዝር</h3>
-              </div>
-              <input type="text" placeholder="🔍 ዕቃ ይፈልጉ..." value={itemSearch} onChange={(e) => setItemSearch(e.target.value)}
-                className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-sm outline-none shadow-sm" />
-
-              {filteredItemList.map((i) => {
-                const stock = itemStock(data, i.id);
-                const shelf = itemSoldOutInfo(data, i);
-                return (
-                  <div key={i.id} className="bg-white p-3 rounded-xl shadow-sm border">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="font-bold text-sm text-slate-800">{i.name}</p>
-                        <p className="text-xs text-slate-400">የገዢ ዋጋ: {fmt(i.costPriceCents)} | መሸጫ: {fmt(i.sellPriceCents)}</p>
-                        <p className={"text-xs mt-0.5 font-medium " + (stock <= 0 ? "text-red-500" : stock <= 5 ? "text-orange-500" : "text-slate-500")}>ቀሪ ስቶክ: {stock}</p>
-                      </div>
-                      <button onClick={() => handleDeleteItem(i.id)} className="p-2 text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition text-xs whitespace-nowrap">🗑️ ማጥፊያ</button>
-                    </div>
-                    <div className="mt-2 pt-2 border-t border-slate-50 text-[11px] text-slate-400">
-                      {shelf.soldOut
-                        ? `⏱ ${i.dateAdded} ገብቶ በ${shelf.days} ቀናት ውስጥ አልቋል (${shelf.soldOutDate})`
-                        : `⏱ ${i.dateAdded} ገብቷል — እስካሁን ${shelf.daysSoAndFar} ቀናት ቆይቷል፣ ገና አላለቀም`}
-                    </div>
-                  </div>
-                );
-              })}
-              {filteredItemList.length === 0 && <div className="text-center text-xs text-slate-400 py-6">ምንም ዕቃ አልተገኘም</div>}
-            </div>
-          </div>
-        )}
-
-      </div>
-
-      <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-[#1A1A1A] p-2 flex justify-around items-center rounded-t-2xl shadow-xl z-40">
-        <button onClick={() => setTab("dashboard")} className={"flex flex-col items-center flex-1 py-1 " + (tab === "dashboard" ? "text-white font-bold" : "text-slate-400")}>
-          <span className="text-lg">🏠</span><span className="text-[10px] mt-0.5">ዳሽቦርድ</span>
-        </button>
-        <button onClick={() => setTab("sales")} className={"flex flex-col items-center flex-1 py-1 " + (tab === "sales" ? "text-white font-bold" : "text-slate-400")}>
-          <span className="text-lg">📦</span><span className="text-[10px] mt-0.5">ሽያጭ</span>
-        </button>
-        <button onClick={() => setTab("items")} className={"flex flex-col items-center flex-1 py-1 " + (tab === "items" ? "text-white font-bold" : "text-slate-400")}>
-          <span className="text-lg">➕</span><span className="text-[10px] mt-0.5">ዕቃ ጨምር</span>
-        </button>
-      </div>
-
-      {showEditCapital && (
-        <EditCapitalModal
-          currentCents={data.openingCapitalCents}
-          onClose={() => setShowEditCapital(false)}
-          onSave={(cents) => { setData((prev) => ({ ...prev, openingCapitalCents: cents })); setShowEditCapital(false); }}
-        />
-      )}
-    </div>
-  );
+  }
+  return card;
 }
 
-function EditCapitalModal({ currentCents, onClose, onSave }) {
-  const [val, setVal] = useState((currentCents / 100).toFixed(2));
-  return (
-    <Modal title="የመነሻ ካፒታል አርም" onClose={onClose}
-      footer={
-        <button onClick={() => onSave(toCents(val))} className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl">አስቀምጥ</button>
-      }>
-      <p className="text-xs text-slate-400 mb-3">ይህ የመነሻ (መጀመሪያ) ካፒታልዎ ነው። ትርፍና ወጪ ራሱ ስሌት ውስጥ ስለሚገባ፣ እዚህ ላይ የያዙትን ትክክለኛ የመነሻ ገንዘብ ብቻ ያስተካክሉ።</p>
-      <input type="number" step="0.01" value={val} onChange={(e) => setVal(e.target.value)} autoFocus
-        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-lg font-bold outline-none" />
-    </Modal>
-  );
+function openEditCapitalModal() {
+  var input;
+  openSheet("የመነሻ ካፒታል አርም", function (body) {
+    body.appendChild(el("div", { class: "helpmsg" }, "ይህ ከዕቃ ክምችት ውጭ ያለ ተጨማሪ ገንዘብ (ካሽ) ነው። የዕቃ ክምችት ዋጋ ራሱ ዕቃ ሲገባ/ሲሸጥ ራሱ ስለሚታሰብ፣ እዚህ የያዙትን ተጨማሪ የመነሻ ገንዘብ ብቻ ያስተካክሉ።"));
+    input = el("input", { class: "input", type: "number", step: "0.01", value: (state.data.baseCapitalCents / 100).toFixed(2) });
+    body.appendChild(input);
+  }, function (close) {
+    var btn = el("button", { class: "btn btn-primary" }, "አስቀምጥ");
+    btn.addEventListener("click", function () {
+      setData(function (d) { d.baseCapitalCents = toCents(input.value); return d; });
+      close();
+    });
+    return btn;
+  });
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+function openAddExpenseModal() {
+  var titleInput, amountInput, dateInput, errBox;
+  openSheet("ወጪ መዝግብ", function (body) {
+    titleInput = el("input", { class: "input", placeholder: "ለምሳሌ ኪራይ, ትራንስፖርት" });
+    amountInput = el("input", { class: "input", type: "number", step: "0.01", min: "0", placeholder: "0.00" });
+    dateInput = el("input", { class: "input", type: "date", value: todayISO() });
+    errBox = el("div", { class: "errmsg" });
+    body.appendChild(Field("የወጪ አይነት", true, titleInput));
+    body.appendChild(Field("መጠን", true, amountInput));
+    body.appendChild(Field("ቀን", true, dateInput));
+    body.appendChild(errBox);
+  }, function (close) {
+    var btn = el("button", { class: "btn btn-primary" }, "አስቀምጥ");
+    btn.addEventListener("click", function () {
+      var title = titleInput.value.trim(), amt = toCents(amountInput.value);
+      if (!title || amt <= 0) { errBox.textContent = "እባክዎ ትክክለኛ ስም እና መጠን ያስገቡ"; return; }
+      setData(function (d) { d.expenses.push({ id: uid(), title: title, amountCents: amt, date: dateInput.value || todayISO(), createdAt: Date.now() }); return d; });
+      showToast("ወጪ ተመዝግቧል");
+      close();
+    });
+    return btn;
+  });
+}
+
+function openAllocationModal() {
+  var rows = state.data.allocations.map(function (a) { return { id: a.id, name: a.name, percent: a.percent }; });
+  var listWrap, totalLabel;
+  function redraw() {
+    clear(listWrap);
+    rows.forEach(function (r, idx) {
+      var nameInput = el("input", { class: "input alloc-name", value: r.name });
+      nameInput.addEventListener("input", function (e) { r.name = e.target.value; });
+      var pctInput = el("input", { class: "input alloc-pct", type: "number", step: "0.1", value: r.percent });
+      pctInput.addEventListener("input", function (e) { r.percent = Number(e.target.value) || 0; updateTotal(); });
+      var rmBtn = el("button", { class: "trash-btn" }, "✕");
+      rmBtn.addEventListener("click", function () { rows.splice(idx, 1); redraw(); });
+      listWrap.appendChild(el("div", { class: "flex gap2 items-center", style: { marginBottom: "8px" } }, [nameInput, pctInput, rmBtn]));
+    });
+    updateTotal();
+  }
+  function updateTotal() {
+    var tot = rows.reduce(function (s, r) { return s + Number(r.percent); }, 0);
+    if (totalLabel) totalLabel.textContent = "ጠቅላላ: " + tot + "%" + (Math.abs(tot - 100) > 0.01 ? " (100% አይደለም)" : " ✓");
+    if (totalLabel) totalLabel.style.color = Math.abs(tot - 100) > 0.01 ? "#f59e0b" : "#16a34a";
+  }
+  openSheet("የትርፍ ክፍፍል ማስተካከያ", function (body) {
+    body.appendChild(el("div", { class: "helpmsg" }, "የፈለጉትን ስም እና መቶኛ ይስጡ (ለምሳሌ 10% ቁጠባ, 70% ለስራ ካፒታል, 20% ወጪ)። እንደፈለጉ መጨመር/መቀነስ/መቀየር ይችላሉ።"));
+    listWrap = el("div", {});
+    body.appendChild(listWrap);
+    var addBtn = el("button", { class: "btn btn-outline btn-sm", style: { marginTop: "4px" } }, "+ ክፍል ጨምር");
+    addBtn.addEventListener("click", function () { rows.push({ id: uid(), name: "አዲስ ክፍል", percent: 0 }); redraw(); });
+    body.appendChild(addBtn);
+    totalLabel = el("div", { style: { fontSize: "12px", fontWeight: "700", marginTop: "12px", textAlign: "center" } });
+    body.appendChild(totalLabel);
+    redraw();
+  }, function (close) {
+    var btn = el("button", { class: "btn btn-primary" }, "አስቀምጥ");
+    btn.addEventListener("click", function () {
+      setData(function (d) { d.allocations = rows.map(function (r) { return { id: r.id, name: r.name.trim() || "ክፍል", percent: Number(r.percent) || 0 }; }); return d; });
+      close();
+    });
+    return btn;
+  });
+}
+
+/* ================= sales tab ================= */
+function renderSales(container) {
+  container.appendChild(el("div", { class: "eyebrow section" }, "📝 ሽያጭ መመዝገቢያ ፎርም"));
+  var formCard = el("div", { class: "card section" });
+  formCard.style.borderColor = "#e2e8f0";
+
+  var state_ = { itemId: "", qty: 1, customer: "", price: "" };
+
+  var pickerField = el("div", { class: "field" });
+  pickerField.appendChild(el("label", {}, "የሚሸጠውን ዕቃ ይምረጡ:"));
+  var pickerBox = el("div", { class: "picker-box" });
+  pickerField.appendChild(pickerBox);
+  formCard.appendChild(pickerField);
+
+  var restWrap = el("div", {});
+  formCard.appendChild(restWrap);
+
+  function drawPicker() {
+    clear(pickerBox);
+    var item = state.data.items.find(function (i) { return i.id === state_.itemId; });
+    if (item) {
+      var sel = el("button", { class: "picker-selected" }, [
+        el("span", { style: { fontWeight: "700" } }, item.name),
+        el("span", { style: { fontSize: "11px", color: "#2563eb", fontWeight: "700" } }, "ለውጥ")
+      ]);
+      sel.addEventListener("click", function () { state_.itemId = ""; drawPicker(); drawRest(); });
+      pickerBox.appendChild(sel);
+    } else {
+      var search = el("input", { class: "input", placeholder: "🔍 የዕቃ ስም ይፈልጉ..." });
+      var listBox = el("div", { class: "picker-list" });
+      function renderList(q) {
+        clear(listBox);
+        var filtered = state.data.items.filter(function (i) { return i.name.toLowerCase().indexOf((q || "").toLowerCase()) !== -1; });
+        if (filtered.length === 0) { listBox.appendChild(el("div", { style: { padding: "10px", fontSize: "12px", color: "#94a3b8" } }, "ምንም ዕቃ አልተገኘም")); return; }
+        filtered.forEach(function (i) {
+          var stock = itemStock(state.data, i.id);
+          var row = el("button", { class: "picker-item" }, [
+            el("span", {}, i.name),
+            el("span", { style: { color: "#94a3b8" } }, "ዋጋ: " + fmt(i.sellPriceCents) + " · ስቶክ: " + stock)
+          ]);
+          row.addEventListener("click", function () {
+            state_.itemId = i.id; state_.price = (i.sellPriceCents / 100).toFixed(2);
+            drawPicker(); drawRest();
+          });
+          listBox.appendChild(row);
+        });
+      }
+      search.addEventListener("input", function (e) { renderList(e.target.value); });
+      pickerBox.appendChild(search);
+      pickerBox.appendChild(listBox);
+      renderList("");
+    }
+  }
+
+  function drawRest() {
+    clear(restWrap);
+    var item = state.data.items.find(function (i) { return i.id === state_.itemId; });
+    if (!item) return;
+
+    var custInput = el("input", { class: "input", placeholder: "ለምሳሌ አበበ", value: state_.customer });
+    custInput.addEventListener("input", function (e) { state_.customer = e.target.value; });
+    restWrap.appendChild(Field("የደንበኛ ስም (ካስፈለገ)", false, custInput));
+
+    var priceInput = el("input", { class: "input", type: "number", step: "0.01", min: "0", value: state_.price, style: { fontWeight: "700" } });
+    priceInput.addEventListener("input", function (e) { state_.price = e.target.value; updateTotal(); });
+    restWrap.appendChild(Field("የሽያጭ ዋጋ (ቅናሽ ማድረግ ይችላሉ) — መደበኛ ዋጋ: " + fmt(item.sellPriceCents), true, priceInput));
+
+    var qtyRow = el("div", { class: "flex gap2 items-center" });
+    var minusBtn = el("button", { class: "btn btn-outline btn-sm" }, "−");
+    var qtyInput = el("input", { class: "input", type: "number", min: "1", value: state_.qty, style: { textAlign: "center", flex: "1" } });
+    var plusBtn = el("button", { class: "btn btn-outline btn-sm" }, "+");
+    minusBtn.addEventListener("click", function () { state_.qty = Math.max(1, state_.qty - 1); qtyInput.value = state_.qty; updateTotal(); });
+    plusBtn.addEventListener("click", function () { state_.qty = state_.qty + 1; qtyInput.value = state_.qty; updateTotal(); });
+    qtyInput.addEventListener("input", function (e) { state_.qty = Math.max(1, Number(e.target.value) || 1); updateTotal(); });
+    qtyRow.appendChild(minusBtn); qtyRow.appendChild(qtyInput); qtyRow.appendChild(plusBtn);
+    restWrap.appendChild(Field("የዕቃ ብዛት (መጠን)", true, qtyRow));
+
+    var totalAmountSpan = el("span", { style: { fontWeight: "800" } }, fmt(toCents(state_.price) * state_.qty));
+    var totalRow = el("div", { class: "flex items-center justify-between", style: { background: "#f8fafc", borderRadius: "10px", padding: "10px 12px", marginBottom: "12px" } }, [
+      el("span", { style: { fontSize: "12px", color: "#64748b", fontWeight: "600" } }, "ጠቅላላ የሽያጭ መጠን"),
+      totalAmountSpan
+    ]);
+    restWrap.appendChild(totalRow);
+    function updateTotal() { totalAmountSpan.textContent = fmt(toCents(state_.price) * state_.qty); }
+
+    var errBox = el("div", { class: "errmsg" });
+    restWrap.appendChild(errBox);
+
+    var submitBtn = el("button", { class: "btn btn-emerald" }, "ሽያጭ መዝግብ (" + state_.qty + " ዕቃ)");
+    submitBtn.addEventListener("click", function () {
+      var stock = itemStock(state.data, item.id);
+      if (stock < state_.qty) { errBox.textContent = "በቂ ስቶክ የለም! ቀሪ ስቶክ: " + stock; return; }
+      var unitPriceCents = toCents(state_.price);
+      if (unitPriceCents <= 0) { errBox.textContent = "እባክዎ ትክክለኛ ዋጋ ያስገቡ"; return; }
+      setData(function (d) {
+        d.sales.push({
+          id: uid(), itemId: item.id, itemName: item.name, qty: state_.qty,
+          unitPriceCents: unitPriceCents, unitCostCents: item.costPriceCents,
+          totalCents: Math.round(unitPriceCents * state_.qty),
+          customer: state_.customer.trim() || "ስም ያልገለጸ ደንበኛ", date: todayISO(), createdAt: Date.now()
+        });
+        return d;
+      });
+      showToast("ሽያጭ ተመዝግቧል");
+    });
+    restWrap.appendChild(submitBtn);
+  }
+
+  drawPicker();
+  container.appendChild(formCard);
+}
+
+/* ================= items tab ================= */
+function renderItems(container) {
+  container.appendChild(el("div", { class: "eyebrow section" }, "📦 አዲስ ዕቃ መጨመሪያ እና የነበሩት ዝርዝር"));
+
+  var nameInput = el("input", { class: "input", placeholder: "የዕቃ ስም" });
+  var costInput = el("input", { class: "input", type: "number", step: "0.01", placeholder: "የገዙበት ዋጋ (ወጪ)" });
+  var sellInput = el("input", { class: "input", type: "number", step: "0.01", placeholder: "የመሸጫ ዋጋ" });
+  var stockInput = el("input", { class: "input", type: "number", placeholder: "የመጀመሪያ ስቶክ (ብዛት)" });
+  var errBox = el("div", { class: "errmsg" });
+  var addBtn = el("button", { class: "btn btn-primary" }, "ዕቃ ጨምር +");
+  addBtn.addEventListener("click", function () {
+    var name = nameInput.value.trim();
+    if (!name || !sellInput.value || !stockInput.value) { errBox.textContent = "እባክዎ የዕቃ ስም፣ የመሸጫ ዋጋ እና ስቶክ ይሙሉ"; return; }
+    setData(function (d) {
+      d.items.push({ id: uid(), name: name, costPriceCents: toCents(costInput.value || 0), sellPriceCents: toCents(sellInput.value), openingStock: Number(stockInput.value) || 0, dateAdded: todayISO(), createdAt: Date.now() });
+      return d;
+    });
+    showToast("አዲስ ዕቃ ተጨምሯል");
+  });
+  var formCard = el("div", { class: "card section" }, [nameInput, el("div", { class: "grid2 mt2" }, [costInput, sellInput]), el("div", { class: "mt2" }, [stockInput]), el("div", { class: "mt3" }, [addBtn]), errBox]);
+  formCard.style.borderColor = "#e2e8f0";
+  container.appendChild(formCard);
+
+  container.appendChild(el("div", { class: "eyebrow mb2" }, "የተመዘገቡ ዕቃዎች ዝርዝር"));
+  var search = el("input", { class: "input section", placeholder: "🔍 ዕቃ ይፈልጉ..." });
+  container.appendChild(search);
+  var listWrap = el("div", {});
+  container.appendChild(listWrap);
+
+  function draw(q) {
+    clear(listWrap);
+    var filtered = state.data.items.filter(function (i) { return i.name.toLowerCase().indexOf((q || "").toLowerCase()) !== -1; });
+    if (filtered.length === 0) { listWrap.appendChild(el("div", { class: "empty" }, "ምንም ዕቃ አልተገኘም")); return; }
+    filtered.forEach(function (i) {
+      var stock = itemStock(state.data, i.id);
+      var shelf = itemSoldOutInfo(state.data, i);
+      var row = el("div", { class: "item-row" });
+      var top = el("div", { class: "flex items-center justify-between" }, [
+        el("div", {}, [
+          el("div", { class: "item-name" }, i.name),
+          el("div", { class: "item-sub" }, "የገዢ ዋጋ: " + fmt(i.costPriceCents) + " | መሸጫ: " + fmt(i.sellPriceCents)),
+          el("div", { style: { fontSize: "11px", fontWeight: "700", marginTop: "2px", color: stock <= 0 ? "#ef4444" : stock <= 5 ? "#f59e0b" : "#64748b" } }, "ቀሪ ስቶክ: " + stock)
+        ])
+      ]);
+      var delBtn = el("button", { class: "trash-btn" }, "🗑️ ማጥፊያ");
+      delBtn.addEventListener("click", function () {
+        if (confirm("ይህን ዕቃ መሰረዝ ይፈልጋሉ?")) setData(function (d) { d.items = d.items.filter(function (x) { return x.id !== i.id; }); return d; });
+      });
+      top.appendChild(delBtn);
+      row.appendChild(top);
+      row.appendChild(el("div", { class: "shelf-note" },
+        shelf.soldOut
+          ? ("⏱ " + i.dateAdded + " ገብቶ በ" + shelf.days + " ቀናት ውስጥ አልቋል (" + shelf.soldOutDate + ")")
+          : ("⏱ " + i.dateAdded + " ገብቷል — እስካሁን " + shelf.daysSoFar + " ቀናት ቆይቷል፣ ገና አላለቀም")));
+      listWrap.appendChild(row);
+    });
+  }
+  search.addEventListener("input", function (e) { draw(e.target.value); });
+  draw("");
+}
+
+/* ================= nav & root ================= */
+function BottomNav() {
+  var items = [
+    { key: "dashboard", label: "ዳሽቦርድ", em: "🏠" },
+    { key: "sales", label: "ሽያጭ", em: "📦" },
+    { key: "items", label: "ዕቃ ጨምር", em: "➕" }
+  ];
+  var nav = el("div", { class: "nav" });
+  items.forEach(function (it) {
+    var active = state.tab === it.key;
+    var b = el("button", { class: "navbtn" + (active ? " active" : "") }, [
+      el("span", { class: "em" }, it.em), el("span", { class: "lbl" }, it.label)
+    ]);
+    b.addEventListener("click", function () { state.tab = it.key; renderApp(); });
+    nav.appendChild(b);
+  });
+  return el("div", { class: "navwrap" }, [nav]);
+}
+
+function renderApp() {
+  var root = document.getElementById("root");
+  clear(root);
+  var app = el("div", { class: "app" });
+  app.appendChild(el("div", { class: "header" }, [el("h1", {}, "የሱቅ መቆጣጠሪያ ሲስተም")]));
+  if (!storageAvailable) {
+    app.appendChild(el("div", { style: { background: "#fff4e5", color: "#92400e", fontSize: "11px", padding: "8px 16px", textAlign: "center" } }, "ማሳሰቢያ: ውሂብ በራስ-ሰር መቀመጥ አልቻለም። በዚህ ክፍለ-ጊዜ ብቻ ይኖራል።"));
+  }
+  var content = el("div", { class: "content" });
+  if (state.tab === "dashboard") renderDashboard(content);
+  else if (state.tab === "sales") renderSales(content);
+  else if (state.tab === "items") renderItems(content);
+  app.appendChild(content);
+  app.appendChild(BottomNav());
+  root.appendChild(app);
+}
+
+renderApp();
+})();
 </script>
 </body>
 </html>
