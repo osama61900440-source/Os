@@ -20,8 +20,11 @@ input, select, textarea { font-family:inherit; }
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .mt2{margin-top:8px}.mt3{margin-top:12px}.mb2{margin-bottom:8px}.mb3{margin-bottom:12px}
 
-.header { text-align:center; background:#fff; padding:16px; border-bottom:1px solid #eef1f3; }
-.header h1 { margin:0; font-size:20px; font-weight:800; color:#1e293b; }
+.header { display:flex; align-items:center; background:#fff; padding:14px 12px; border-bottom:1px solid #eef1f3; gap:8px; }
+.header h1 { margin:0; font-size:18px; font-weight:800; color:#1e293b; flex:1; text-align:center; }
+.hamburger { width:38px; height:38px; border:none; background:transparent; font-size:20px; color:#334155; border-radius:10px; flex-shrink:0; }
+.hamburger:active{background:#f1f5f9}
+.header-spacer{width:38px;flex-shrink:0}
 
 .eyebrow { font-size:13px; font-weight:600; color:#64748b; }
 
@@ -84,11 +87,22 @@ input, select, textarea { font-family:inherit; }
 .sheet-footer { padding:14px 20px; border-top:1px solid #f1f5f9; }
 .sheet h2 { font-size:15px; margin:0; font-weight:800; color:#1e293b; }
 
+.menu-item { display:flex; align-items:center; gap:12px; width:100%; text-align:left; background:#fff; border:1px solid #f1f5f9; border-radius:14px; padding:14px; font-size:14px; font-weight:700; color:#1e293b; margin-bottom:10px; }
+.menu-item .em { font-size:20px; }
+.menu-item .sub { font-size:11px; color:#94a3b8; font-weight:500; margin-top:2px; }
+
 .errmsg { color:#ef4444; font-size:11.5px; margin-top:4px; }
 .helpmsg { color:#94a3b8; font-size:11.5px; margin-bottom:10px; line-height:1.5; }
 
 .alloc-row { display:flex; align-items:center; gap:8px; background:#f8fafc; border-radius:10px; padding:8px; margin-bottom:8px; }
 .alloc-name { flex:1.4; } .alloc-pct { width:64px; } .alloc-amt { flex:1; text-align:right; font-weight:700; font-size:13px; color:#1e293b; }
+
+.day-card { background:#fff; border-radius:12px; padding:12px; margin-bottom:8px; border:1px solid #f1f5f9; }
+.day-card .dname { font-weight:800; font-size:13px; color:#1e293b; margin-bottom:6px; }
+.day-card .row { display:flex; justify-content:space-between; font-size:11.5px; color:#64748b; padding:2px 0; }
+.day-card .row b { color:#1e293b; }
+
+.sync-dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-inline-end:5px; }
 
 .toast { position:absolute; bottom:96px; left:50%; transform:translateX(-50%); background:#1e293b; color:#fff; font-size:13px; padding:10px 18px; border-radius:999px; box-shadow:0 8px 20px rgba(0,0,0,.25); z-index:60; }
 .empty { text-align:center; color:#94a3b8; font-size:13px; padding:24px 0; }
@@ -102,12 +116,16 @@ input, select, textarea { font-family:inherit; }
 "use strict";
 
 /* ================= constants & storage keys ================= */
-var STORAGE_KEY = "shop-control-data-v4";
+var STORAGE_KEY = "shop-control-data-v5";
+var OLD_V4_KEY = "shop-control-data-v4";
 var OLD_V3_KEY = "shop-control-data-v3";
 var OLD_V2_KEY = "shop-control-data-v2";
+var FIREBASE_CFG_KEY = "shop-control-firebase-cfg";
 var PERIOD_LABEL = { day: "የቀን", week: "የሳምንት", month: "የወር", year: "የአመት" };
+var ETH_MONTHS = ["መስከረም","ጥቅምት","ኅዳር","ታኅሳስ","ጥር","የካቲት","መጋቢት","ሚያዝያ","ግንቦት","ሰኔ","ሐምሌ","ነሐሴ","ጳጉሜን"];
+var ETH_WEEKDAYS = ["ሰኞ","ማክሰኞ","ረቡዕ","ሐሙስ","ዓርብ","ቅዳሜ","እሁድ"]; // Monday-first, matches our week range
 
-/* ================= helpers ================= */
+/* ================= tiny DOM helper ================= */
 function el(tag, props, children) {
   var e = document.createElement(tag);
   props = props || {};
@@ -131,7 +149,13 @@ function el(tag, props, children) {
 }
 function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
-function todayISO() { return new Date().toISOString().slice(0, 10); }
+
+/* local (NOT utc) today, so Ethiopia-timezone users never get a day-shift bug */
+function todayISO() {
+  var d = new Date();
+  var y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, "0"), day = String(d.getDate()).padStart(2, "0");
+  return y + "-" + m + "-" + day;
+}
 function toCents(v) { var n = parseFloat(v); if (isNaN(n)) n = 0; return Math.round(n * 100); }
 function fmt(cents) {
   cents = Math.round(Number(cents) || 0);
@@ -144,7 +168,40 @@ function daysBetween(iso1, iso2) {
   return Math.max(0, Math.round((b - a) / 86400000));
 }
 
-/* ================= period range ================= */
+/* ================= double-submit guard =================
+   A fast double-tap on mobile can fire two click events before the first
+   re-render removes the button. This module-level lock makes every "add"
+   action atomic — a second call within the cooldown is simply ignored,
+   so a sale/expense/item can never be recorded twice from one tap. */
+var submitLock = false;
+function guarded(fn) {
+  return function () {
+    if (submitLock) return;
+    submitLock = true;
+    try { fn.apply(null, arguments); } finally { setTimeout(function () { submitLock = false; }, 600); }
+  };
+}
+
+/* ================= Ethiopian calendar (pure math, no network) ================= */
+function isGregLeap(y) { return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0; }
+function ethNewYearGregorianDate(gYear) {
+  var day = isGregLeap(gYear + 1) ? 12 : 11;
+  return new Date(gYear, 8, day); // September
+}
+function gregorianToEthiopian(gDate) {
+  var gYear = gDate.getFullYear();
+  var nyThisG = ethNewYearGregorianDate(gYear);
+  var startGYear = gDate >= nyThisG ? gYear : gYear - 1;
+  var newYear = ethNewYearGregorianDate(startGYear);
+  var diffDays = Math.floor((gDate - newYear) / 86400000);
+  var ethYear = startGYear - 7;
+  var month = Math.floor(diffDays / 30) + 1;
+  var day = (diffDays % 30) + 1;
+  return { year: ethYear, month: month, day: day };
+}
+function ethLabel(y, m) { return ETH_MONTHS[m - 1] + " " + y + " ዓ.ም"; }
+
+/* ================= period range (used by the main dashboard's "today") ================= */
 function periodRange(period) {
   var now = new Date(), start;
   if (period === "day") start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -160,49 +217,50 @@ baseCapitalCents : manually editable base (cash/investment not tied to stock)
 items[]  : {id,name,costPriceCents,sellPriceCents,openingStock,dateAdded,createdAt}
 sales[]  : {id,itemId,itemName,qty,unitPriceCents,unitCostCents,totalCents,customer,date,createdAt}
 expenses[]: {id,title,amountCents,date,createdAt}
-allocations[]: {id,name,percent}   <- user-defined profit split buckets
+allocations[]: {id,name,percent}
 
-Everything downstream (stock, capital, revenue, profit) is DERIVED from this
-log every time it's needed — nothing is incremented directly — so numbers
-can never drift or conflict with each other. */
-function freshData() {
-  return {
-    baseCapitalCents: 0,
-    items: [], sales: [], expenses: [],
-    allocations: [
-      { id: uid(), name: "ቁጠባ", percent: 10 },
-      { id: uid(), name: "ለስራ ካፒታል", percent: 70 },
-      { id: uid(), name: "ወጪ", percent: 20 }
-    ]
-  };
+Every downstream number (stock, capital, revenue, profit, per-day/month/year
+totals) is DERIVED from this log each time it's needed — nothing is ever
+incremented directly — so numbers can never drift, double-count, or
+disagree with each other. */
+function freshAllocations() {
+  return [
+    { id: uid(), name: "ቁጠባ", percent: 10 },
+    { id: uid(), name: "ለስራ ካፒታል", percent: 70 },
+    { id: uid(), name: "ወጪ", percent: 20 }
+  ];
 }
+function freshData() { return { baseCapitalCents: 0, items: [], sales: [], expenses: [], allocations: freshAllocations() }; }
+
 function loadData() {
   try {
     var v = localStorage.getItem(STORAGE_KEY);
     if (v) {
       var d = JSON.parse(v);
       if (d && Array.isArray(d.items) && Array.isArray(d.sales) && Array.isArray(d.expenses)) {
-        if (!Array.isArray(d.allocations)) d.allocations = freshData().allocations;
+        if (!Array.isArray(d.allocations)) d.allocations = freshAllocations();
         if (typeof d.baseCapitalCents !== "number") d.baseCapitalCents = 0;
         return d;
       }
     }
   } catch (e) {}
-  // migrate from v3 (react version — field names already match)
-  try {
-    var v3 = localStorage.getItem(OLD_V3_KEY);
-    if (v3) {
-      var o = JSON.parse(v3);
-      if (o && Array.isArray(o.items)) {
-        return {
-          baseCapitalCents: Number(o.openingCapitalCents) || 0,
-          items: o.items || [], sales: o.sales || [], expenses: o.expenses || [],
-          allocations: freshData().allocations
-        };
+  // migrate forward from any earlier version we can find
+  var chain = [OLD_V4_KEY, OLD_V3_KEY];
+  for (var i = 0; i < chain.length; i++) {
+    try {
+      var raw = localStorage.getItem(chain[i]);
+      if (raw) {
+        var o = JSON.parse(raw);
+        if (o && Array.isArray(o.items)) {
+          return {
+            baseCapitalCents: Number(o.baseCapitalCents || o.openingCapitalCents) || 0,
+            items: o.items || [], sales: o.sales || [], expenses: o.expenses || [],
+            allocations: (Array.isArray(o.allocations) && o.allocations.length) ? o.allocations : freshAllocations()
+          };
+        }
       }
-    }
-  } catch (e) {}
-  // migrate from the original v2 shape
+    } catch (e) {}
+  }
   try {
     var v2 = localStorage.getItem(OLD_V2_KEY);
     if (v2) {
@@ -213,7 +271,7 @@ function loadData() {
           items: (o2.items || []).map(function (it) {
             return { id: it.id || uid(), name: it.name, sellPriceCents: toCents(it.price), costPriceCents: 0, openingStock: Number(it.stock) || 0, dateAdded: todayISO(), createdAt: Date.now() };
           }),
-          sales: [], expenses: [], allocations: freshData().allocations
+          sales: [], expenses: [], allocations: freshAllocations()
         };
       }
     }
@@ -221,7 +279,7 @@ function loadData() {
   return freshData();
 }
 var storageAvailable = true;
-function saveData(d) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); } catch (e) { storageAvailable = false; } }
+function saveLocal(d) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); } catch (e) { storageAvailable = false; } }
 
 /* ================= derived calculations ================= */
 function itemStock(data, itemId) {
@@ -247,10 +305,8 @@ function inventoryValueCents(data) {
   return data.items.reduce(function (s, it) { return s + Math.max(0, itemStock(data, it.id)) * it.costPriceCents; }, 0);
 }
 function totalCapitalCents(data) { return data.baseCapitalCents + inventoryValueCents(data); }
-function periodStats(data, period) {
-  var range = periodRange(period);
-  var sales = data.sales.filter(function (s) { return inPeriod(s.date, range); });
-  var expenses = data.expenses.filter(function (e) { return inPeriod(e.date, range); });
+
+function statsFor(sales, expenses) {
   var revenue = sales.reduce(function (s, x) { return s + x.totalCents; }, 0);
   var expenseTotal = expenses.reduce(function (s, x) { return s + x.amountCents; }, 0);
   var profit = sales.reduce(function (s, x) { return s + lineProfitCents(x); }, 0) - expenseTotal;
@@ -258,12 +314,41 @@ function periodStats(data, period) {
   sales.forEach(function (s) { counts[s.itemName] = (counts[s.itemName] || 0) + s.qty; });
   var topName = null, topQty = 0;
   Object.keys(counts).forEach(function (n) { if (counts[n] > topQty) { topQty = counts[n]; topName = n; } });
-  return { revenue: revenue, profit: profit, expenseTotal: expenseTotal, topName: topName, topQty: topQty, salesInPeriod: sales, expensesInPeriod: expenses };
+  return { revenue: revenue, expenseTotal: expenseTotal, profit: profit, topName: topName, topQty: topQty };
+}
+function periodStats(data, period) {
+  var range = periodRange(period);
+  var sales = data.sales.filter(function (s) { return inPeriod(s.date, range); });
+  var expenses = data.expenses.filter(function (e) { return inPeriod(e.date, range); });
+  var st = statsFor(sales, expenses);
+  st.salesInPeriod = sales; st.expensesInPeriod = expenses;
+  return st;
+}
+function dayStats(data, iso) {
+  return statsFor(data.sales.filter(function (s) { return s.date === iso; }), data.expenses.filter(function (e) { return e.date === iso; }));
+}
+/* group EVERY sale/expense once into Ethiopian year+month buckets — single pass, single source */
+function ethiopianBuckets(data) {
+  var map = {}; // key "y-m" -> {sales:[], expenses:[]}
+  function bucketFor(iso) {
+    var e = gregorianToEthiopian(new Date(iso + "T00:00:00"));
+    var key = e.year + "-" + e.month;
+    if (!map[key]) map[key] = { year: e.year, month: e.month, sales: [], expenses: [] };
+    return map[key];
+  }
+  data.sales.forEach(function (s) { bucketFor(s.date).sales.push(s); });
+  data.expenses.forEach(function (e) { bucketFor(e.date).expenses.push(e); });
+  return map;
 }
 
 /* ================= state ================= */
-var state = { data: loadData(), tab: "dashboard", period: "day" };
-function setData(mutator) { state.data = mutator(state.data); saveData(state.data); renderApp(); }
+var state = { data: loadData(), tab: "dashboard" };
+function setData(mutator) {
+  state.data = mutator(state.data);
+  saveLocal(state.data);
+  cloudPush(state.data); // no-op unless Firebase is configured
+  renderApp();
+}
 function showToast(msg) {
   var appEl = document.querySelector(".app"); if (!appEl) return;
   var old = appEl.querySelector(".toast"); if (old) old.remove();
@@ -287,39 +372,52 @@ function openSheet(title, bodyBuilder, footerBuilder) {
   ]);
   overlay.appendChild(bg); overlay.appendChild(sheetEl);
   function close() { overlay.remove(); }
-  function refreshFooter() { clear(footerWrap); footerWrap.appendChild(footerBuilder(close, refreshFooter)); }
+  function refreshFooter() { clear(footerWrap); if (footerBuilder) footerWrap.appendChild(footerBuilder(close, refreshFooter)); }
   bodyBuilder(body, close, refreshFooter);
-  refreshFooter();
+  if (footerBuilder) refreshFooter(); else footerWrap.remove();
   document.querySelector(".app").appendChild(overlay);
   return { close: close };
 }
 function Field(labelText, required, inputEl) {
-  return el("div", { class: "field" }, [
-    el("label", {}, labelText + (required ? " *" : "")),
-    inputEl
-  ]);
+  return el("div", { class: "field" }, [el("label", {}, labelText + (required ? " *" : "")), inputEl]);
 }
 
-/* ================= dashboard ================= */
+/* ================= allocation renderer (guarded against zero/negative profit) ================= */
+function renderAllocationBlock(profitCents, allocations, periodLabel) {
+  var wrap = el("div", {});
+  wrap.appendChild(el("div", { style: { fontSize: "11px", color: "#94a3b8", marginBottom: "8px" } },
+    periodLabel + " ትርፍ (" + fmt(profitCents) + ")"));
+  if (profitCents <= 0) {
+    wrap.appendChild(el("div", { style: { fontSize: "12px", color: "#b45309", background: "#fffbeb", padding: "10px", borderRadius: "10px" } },
+      "⚠️ በዚህ ጊዜ ውስጥ ትርፍ ስላልተገኘ (" + fmt(profitCents) + ") የትርፍ ክፍፍል አይሰላም። ኪሳራ/ወጪ በመቶኛ መከፋፈል ትክክል ስላልሆነ ተትቷል።"));
+    return wrap;
+  }
+  var totalPct = allocations.reduce(function (s, a) { return s + Number(a.percent); }, 0);
+  if (allocations.length === 0) {
+    wrap.appendChild(el("div", { class: "empty" }, "ምንም ክፍፍል አልተዘጋጀም"));
+  } else {
+    allocations.forEach(function (a) {
+      var amt = Math.round(profitCents * (Number(a.percent) / 100));
+      wrap.appendChild(el("div", { class: "list-row" }, [
+        el("span", {}, a.name + " (" + a.percent + "%)"),
+        el("span", { style: { fontWeight: "700", color: "#1e293b" } }, fmt(amt))
+      ]));
+    });
+    if (Math.abs(totalPct - 100) > 0.01) {
+      wrap.appendChild(el("div", { style: { fontSize: "10.5px", color: "#f59e0b", marginTop: "6px" } }, "⚠️ ጠቅላላ መቶኛ " + totalPct + "% ነው (100% አይደለም)"));
+    }
+  }
+  return wrap;
+}
+
+/* ================= dashboard (simplified: always "today") ================= */
 function renderDashboard(container) {
-  var data = state.data, period = state.period;
-  var stats = periodStats(data, period);
+  var data = state.data;
+  var stats = periodStats(data, "day");
   var capital = totalCapitalCents(data);
 
-  var head = el("div", { class: "flex items-center justify-between section" }, [
-    el("div", { class: "eyebrow" }, "📊 የሱቅ ወቅታዊ ሁኔታ")
-  ]);
-  var pillRow = el("div", { class: "pill-row" });
-  ["day", "week", "month", "year"].forEach(function (p) {
-    var b = el("button", { class: "pill" + (period === p ? " active" : "") },
-      p === "day" ? "ቀን" : p === "week" ? "ሳምንት" : p === "month" ? "ወር" : "አመት");
-    b.addEventListener("click", function () { state.period = p; renderApp(); });
-    pillRow.appendChild(b);
-  });
-  head.appendChild(pillRow);
-  container.appendChild(head);
+  container.appendChild(el("div", { class: "eyebrow section" }, "📊 የዛሬ ሁኔታ (" + todayISO() + ")"));
 
-  // capital card
   var capCard = el("div", { class: "card blue section flex items-center justify-between" }, [
     el("div", {}, [
       el("div", { class: "card-label" }, "💰 ጠቅላላ ካፒታል (እቃ ክምችት ዋጋ + መነሻ ገንዘብ)"),
@@ -331,48 +429,36 @@ function renderDashboard(container) {
   capCard.appendChild(editCapBtn);
   container.appendChild(capCard);
 
-  // revenue card
   container.appendChild(el("div", { class: "card violet section" }, [
-    el("div", { class: "card-label" }, "🧾 " + PERIOD_LABEL[period] + " ጠቅላላ ሽያጭ (ገቢ)"),
+    el("div", { class: "card-label" }, "🧾 የዛሬ ጠቅላላ ሽያጭ (ገቢ)"),
     el("div", { class: "card-value" }, fmt(stats.revenue))
   ]));
 
-  // profit card
   container.appendChild(el("div", { class: "card green section" }, [
-    el("div", { class: "card-label" }, "📈 " + PERIOD_LABEL[period] + " የተጣራ ትርፍ"),
+    el("div", { class: "card-label" }, "📈 የዛሬ የተጣራ ትርፍ"),
     el("div", { class: "card-value", style: { color: stats.profit >= 0 ? "#16a34a" : "#dc2626" } }, fmt(stats.profit))
   ]));
 
-  // expense card + add button
   var expCard = el("div", { class: "card red section" });
   var expTop = el("div", { class: "flex items-center justify-between" }, [
-    el("div", {}, [
-      el("div", { class: "card-label" }, "📉 " + PERIOD_LABEL[period] + " ጠቅላላ ወጪ"),
-      el("div", { class: "card-value" }, fmt(stats.expenseTotal))
-    ])
+    el("div", {}, [el("div", { class: "card-label" }, "📉 የዛሬ ጠቅላላ ወጪ"), el("div", { class: "card-value" }, fmt(stats.expenseTotal))])
   ]);
   var addExpBtn = el("button", { class: "icon-btn" }, "+");
   addExpBtn.addEventListener("click", openAddExpenseModal);
   expTop.appendChild(addExpBtn);
   expCard.appendChild(expTop);
   if (stats.expensesInPeriod.length > 0) {
-    var recentExp = stats.expensesInPeriod.slice().sort(function (a, b) { return b.createdAt - a.createdAt; }).slice(0, 3);
-    recentExp.forEach(function (e) {
-      expCard.appendChild(el("div", { class: "list-row" }, [
-        el("span", {}, e.title + " · " + e.date),
-        el("span", { style: { color: "#dc2626", fontWeight: "700" } }, fmt(e.amountCents))
-      ]));
+    stats.expensesInPeriod.slice().sort(function (a, b) { return b.createdAt - a.createdAt; }).slice(0, 3).forEach(function (e) {
+      expCard.appendChild(el("div", { class: "list-row" }, [el("span", {}, e.title), el("span", { style: { color: "#dc2626", fontWeight: "700" } }, fmt(e.amountCents))]));
     });
   }
   container.appendChild(expCard);
 
-  // top-selling
   container.appendChild(el("div", { class: "card amber section" }, [
-    el("div", { class: "card-label", style: { color: "#b45309" } }, "🔥 " + PERIOD_LABEL[period] + " በጣም የተሸጠው ዕቃ"),
+    el("div", { class: "card-label", style: { color: "#b45309" } }, "🔥 የዛሬ በጣም የተሸጠው ዕቃ"),
     el("div", { class: "card-value", style: { color: "#78350f" } }, stats.topName ? (stats.topName + " (" + stats.topQty + " ጊዜ)") : "ምንም አልተሸጠም")
   ]));
 
-  // low/out of stock
   var lowStock = data.items.filter(function (i) { var s = itemStock(data, i.id); return s > 0 && s <= 5; });
   var outStock = data.items.filter(function (i) { return itemStock(data, i.id) <= 0; });
   var warnCard = el("div", { class: "card section", style: { borderColor: "#fb923c" } });
@@ -380,45 +466,22 @@ function renderDashboard(container) {
   if (lowStock.length === 0 && outStock.length === 0) {
     warnCard.appendChild(el("div", { style: { fontSize: "12px", color: "#94a3b8" } }, "ሁሉም ዕቃዎች በቂ ስቶክ አላቸው።"));
   } else {
-    outStock.forEach(function (i) {
-      warnCard.appendChild(el("div", { class: "list-row out" }, [el("span", {}, i.name), el("span", { class: "badge out" }, "አልቋል")]));
-    });
-    lowStock.forEach(function (i) {
-      warnCard.appendChild(el("div", { class: "list-row" }, [el("span", {}, i.name), el("span", { class: "badge" }, "ቀሪ ስቶክ: " + itemStock(data, i.id))]));
-    });
+    outStock.forEach(function (i) { warnCard.appendChild(el("div", { class: "list-row out" }, [el("span", {}, i.name), el("span", { class: "badge out" }, "አልቋል")])); });
+    lowStock.forEach(function (i) { warnCard.appendChild(el("div", { class: "list-row" }, [el("span", {}, i.name), el("span", { class: "badge" }, "ቀሪ ስቶክ: " + itemStock(data, i.id))])); });
   }
   container.appendChild(warnCard);
 
-  // allocation / budget split
-  container.appendChild(renderAllocationSection(data, stats, period));
-}
+  var allocCard = el("div", { class: "card section", style: { borderColor: "#8b5cf6" } });
+  var allocHead = el("div", { class: "flex items-center justify-between mb2" }, [el("div", { class: "card-label", style: { color: "#6d28d9" } }, "🧮 የዛሬ ትርፍ ክፍፍል")]);
+  var allocEditBtn = el("button", { class: "icon-btn" }, "✎");
+  allocEditBtn.addEventListener("click", openAllocationModal);
+  allocHead.appendChild(allocEditBtn);
+  allocCard.appendChild(allocHead);
+  allocCard.appendChild(renderAllocationBlock(stats.profit, data.allocations, "የዛሬ"));
+  container.appendChild(allocCard);
 
-function renderAllocationSection(data, stats, period) {
-  var card = el("div", { class: "card section", style: { borderColor: "#8b5cf6" } });
-  var head = el("div", { class: "flex items-center justify-between mb2" }, [
-    el("div", { class: "card-label", style: { color: "#6d28d9" } }, "🧮 " + PERIOD_LABEL[period] + " ትርፍ ክፍፍል"),
-  ]);
-  var editBtn = el("button", { class: "icon-btn" }, "✎");
-  editBtn.addEventListener("click", openAllocationModal);
-  head.appendChild(editBtn);
-  card.appendChild(head);
-  card.appendChild(el("div", { style: { fontSize: "11px", color: "#94a3b8", marginBottom: "8px" } }, PERIOD_LABEL[period] + " ትርፍ (" + fmt(stats.profit) + ") በመቶኛ ተከፋፍሎ፦"));
-  var totalPct = data.allocations.reduce(function (s, a) { return s + Number(a.percent); }, 0);
-  if (data.allocations.length === 0) {
-    card.appendChild(el("div", { class: "empty" }, "ምንም ክፍፍል አልተዘጋጀም — «✎» ተጭነው ይጨምሩ"));
-  } else {
-    data.allocations.forEach(function (a) {
-      var amt = Math.round(stats.profit * (Number(a.percent) / 100));
-      card.appendChild(el("div", { class: "list-row" }, [
-        el("span", {}, a.name + " (" + a.percent + "%)"),
-        el("span", { style: { fontWeight: "700", color: "#1e293b" } }, fmt(amt))
-      ]));
-    });
-    if (Math.abs(totalPct - 100) > 0.01) {
-      card.appendChild(el("div", { style: { fontSize: "10.5px", color: "#f59e0b", marginTop: "6px" } }, "⚠️ ጠቅላላ መቶኛ " + totalPct + "% ነው (100% አይደለም)"));
-    }
-  }
-  return card;
+  var syncNote = cloudStatus();
+  if (syncNote) container.appendChild(syncNote);
 }
 
 function openEditCapitalModal() {
@@ -429,10 +492,7 @@ function openEditCapitalModal() {
     body.appendChild(input);
   }, function (close) {
     var btn = el("button", { class: "btn btn-primary" }, "አስቀምጥ");
-    btn.addEventListener("click", function () {
-      setData(function (d) { d.baseCapitalCents = toCents(input.value); return d; });
-      close();
-    });
+    btn.addEventListener("click", guarded(function () { setData(function (d) { d.baseCapitalCents = toCents(input.value); return d; }); close(); }));
     return btn;
   });
 }
@@ -450,13 +510,13 @@ function openAddExpenseModal() {
     body.appendChild(errBox);
   }, function (close) {
     var btn = el("button", { class: "btn btn-primary" }, "አስቀምጥ");
-    btn.addEventListener("click", function () {
+    btn.addEventListener("click", guarded(function () {
       var title = titleInput.value.trim(), amt = toCents(amountInput.value);
       if (!title || amt <= 0) { errBox.textContent = "እባክዎ ትክክለኛ ስም እና መጠን ያስገቡ"; return; }
       setData(function (d) { d.expenses.push({ id: uid(), title: title, amountCents: amt, date: dateInput.value || todayISO(), createdAt: Date.now() }); return d; });
       showToast("ወጪ ተመዝግቧል");
       close();
-    });
+    }));
     return btn;
   });
 }
@@ -479,11 +539,10 @@ function openAllocationModal() {
   }
   function updateTotal() {
     var tot = rows.reduce(function (s, r) { return s + Number(r.percent); }, 0);
-    if (totalLabel) totalLabel.textContent = "ጠቅላላ: " + tot + "%" + (Math.abs(tot - 100) > 0.01 ? " (100% አይደለም)" : " ✓");
-    if (totalLabel) totalLabel.style.color = Math.abs(tot - 100) > 0.01 ? "#f59e0b" : "#16a34a";
+    if (totalLabel) { totalLabel.textContent = "ጠቅላላ: " + tot + "%" + (Math.abs(tot - 100) > 0.01 ? " (100% አይደለም)" : " ✓"); totalLabel.style.color = Math.abs(tot - 100) > 0.01 ? "#f59e0b" : "#16a34a"; }
   }
   openSheet("የትርፍ ክፍፍል ማስተካከያ", function (body) {
-    body.appendChild(el("div", { class: "helpmsg" }, "የፈለጉትን ስም እና መቶኛ ይስጡ (ለምሳሌ 10% ቁጠባ, 70% ለስራ ካፒታል, 20% ወጪ)። እንደፈለጉ መጨመር/መቀነስ/መቀየር ይችላሉ።"));
+    body.appendChild(el("div", { class: "helpmsg" }, "የፈለጉትን ስም እና መቶኛ ይስጡ (ለምሳሌ 10% ቁጠባ, 70% ለስራ ካፒታል, 20% ወጪ)። ትርፍ ባልተገኘበት ጊዜ ክፍፍሉ ራሱ አይሰላም።"));
     listWrap = el("div", {});
     body.appendChild(listWrap);
     var addBtn = el("button", { class: "btn btn-outline btn-sm", style: { marginTop: "4px" } }, "+ ክፍል ጨምር");
@@ -494,10 +553,10 @@ function openAllocationModal() {
     redraw();
   }, function (close) {
     var btn = el("button", { class: "btn btn-primary" }, "አስቀምጥ");
-    btn.addEventListener("click", function () {
+    btn.addEventListener("click", guarded(function () {
       setData(function (d) { d.allocations = rows.map(function (r) { return { id: r.id, name: r.name.trim() || "ክፍል", percent: Number(r.percent) || 0 }; }); return d; });
       close();
-    });
+    }));
     return btn;
   });
 }
@@ -507,7 +566,6 @@ function renderSales(container) {
   container.appendChild(el("div", { class: "eyebrow section" }, "📝 ሽያጭ መመዝገቢያ ፎርም"));
   var formCard = el("div", { class: "card section" });
   formCard.style.borderColor = "#e2e8f0";
-
   var state_ = { itemId: "", qty: 1, customer: "", price: "" };
 
   var pickerField = el("div", { class: "field" });
@@ -515,7 +573,6 @@ function renderSales(container) {
   var pickerBox = el("div", { class: "picker-box" });
   pickerField.appendChild(pickerBox);
   formCard.appendChild(pickerField);
-
   var restWrap = el("div", {});
   formCard.appendChild(restWrap);
 
@@ -538,20 +595,13 @@ function renderSales(container) {
         if (filtered.length === 0) { listBox.appendChild(el("div", { style: { padding: "10px", fontSize: "12px", color: "#94a3b8" } }, "ምንም ዕቃ አልተገኘም")); return; }
         filtered.forEach(function (i) {
           var stock = itemStock(state.data, i.id);
-          var row = el("button", { class: "picker-item" }, [
-            el("span", {}, i.name),
-            el("span", { style: { color: "#94a3b8" } }, "ዋጋ: " + fmt(i.sellPriceCents) + " · ስቶክ: " + stock)
-          ]);
-          row.addEventListener("click", function () {
-            state_.itemId = i.id; state_.price = (i.sellPriceCents / 100).toFixed(2);
-            drawPicker(); drawRest();
-          });
+          var row = el("button", { class: "picker-item" }, [el("span", {}, i.name), el("span", { style: { color: "#94a3b8" } }, "ዋጋ: " + fmt(i.sellPriceCents) + " · ስቶክ: " + stock)]);
+          row.addEventListener("click", function () { state_.itemId = i.id; state_.price = (i.sellPriceCents / 100).toFixed(2); drawPicker(); drawRest(); });
           listBox.appendChild(row);
         });
       }
       search.addEventListener("input", function (e) { renderList(e.target.value); });
-      pickerBox.appendChild(search);
-      pickerBox.appendChild(listBox);
+      pickerBox.appendChild(search); pickerBox.appendChild(listBox);
       renderList("");
     }
   }
@@ -580,33 +630,27 @@ function renderSales(container) {
     restWrap.appendChild(Field("የዕቃ ብዛት (መጠን)", true, qtyRow));
 
     var totalAmountSpan = el("span", { style: { fontWeight: "800" } }, fmt(toCents(state_.price) * state_.qty));
-    var totalRow = el("div", { class: "flex items-center justify-between", style: { background: "#f8fafc", borderRadius: "10px", padding: "10px 12px", marginBottom: "12px" } }, [
-      el("span", { style: { fontSize: "12px", color: "#64748b", fontWeight: "600" } }, "ጠቅላላ የሽያጭ መጠን"),
-      totalAmountSpan
-    ]);
-    restWrap.appendChild(totalRow);
+    restWrap.appendChild(el("div", { class: "flex items-center justify-between", style: { background: "#f8fafc", borderRadius: "10px", padding: "10px 12px", marginBottom: "12px" } }, [
+      el("span", { style: { fontSize: "12px", color: "#64748b", fontWeight: "600" } }, "ጠቅላላ የሽያጭ መጠን"), totalAmountSpan
+    ]));
     function updateTotal() { totalAmountSpan.textContent = fmt(toCents(state_.price) * state_.qty); }
 
     var errBox = el("div", { class: "errmsg" });
     restWrap.appendChild(errBox);
 
     var submitBtn = el("button", { class: "btn btn-emerald" }, "ሽያጭ መዝግብ (" + state_.qty + " ዕቃ)");
-    submitBtn.addEventListener("click", function () {
+    submitBtn.addEventListener("click", guarded(function () {
       var stock = itemStock(state.data, item.id);
       if (stock < state_.qty) { errBox.textContent = "በቂ ስቶክ የለም! ቀሪ ስቶክ: " + stock; return; }
       var unitPriceCents = toCents(state_.price);
       if (unitPriceCents <= 0) { errBox.textContent = "እባክዎ ትክክለኛ ዋጋ ያስገቡ"; return; }
+      submitBtn.disabled = true;
       setData(function (d) {
-        d.sales.push({
-          id: uid(), itemId: item.id, itemName: item.name, qty: state_.qty,
-          unitPriceCents: unitPriceCents, unitCostCents: item.costPriceCents,
-          totalCents: Math.round(unitPriceCents * state_.qty),
-          customer: state_.customer.trim() || "ስም ያልገለጸ ደንበኛ", date: todayISO(), createdAt: Date.now()
-        });
+        d.sales.push({ id: uid(), itemId: item.id, itemName: item.name, qty: state_.qty, unitPriceCents: unitPriceCents, unitCostCents: item.costPriceCents, totalCents: Math.round(unitPriceCents * state_.qty), customer: state_.customer.trim() || "ስም ያልገለጸ ደንበኛ", date: todayISO(), createdAt: Date.now() });
         return d;
       });
       showToast("ሽያጭ ተመዝግቧል");
-    });
+    }));
     restWrap.appendChild(submitBtn);
   }
 
@@ -617,22 +661,19 @@ function renderSales(container) {
 /* ================= items tab ================= */
 function renderItems(container) {
   container.appendChild(el("div", { class: "eyebrow section" }, "📦 አዲስ ዕቃ መጨመሪያ እና የነበሩት ዝርዝር"));
-
   var nameInput = el("input", { class: "input", placeholder: "የዕቃ ስም" });
   var costInput = el("input", { class: "input", type: "number", step: "0.01", placeholder: "የገዙበት ዋጋ (ወጪ)" });
   var sellInput = el("input", { class: "input", type: "number", step: "0.01", placeholder: "የመሸጫ ዋጋ" });
   var stockInput = el("input", { class: "input", type: "number", placeholder: "የመጀመሪያ ስቶክ (ብዛት)" });
   var errBox = el("div", { class: "errmsg" });
   var addBtn = el("button", { class: "btn btn-primary" }, "ዕቃ ጨምር +");
-  addBtn.addEventListener("click", function () {
+  addBtn.addEventListener("click", guarded(function () {
     var name = nameInput.value.trim();
     if (!name || !sellInput.value || !stockInput.value) { errBox.textContent = "እባክዎ የዕቃ ስም፣ የመሸጫ ዋጋ እና ስቶክ ይሙሉ"; return; }
-    setData(function (d) {
-      d.items.push({ id: uid(), name: name, costPriceCents: toCents(costInput.value || 0), sellPriceCents: toCents(sellInput.value), openingStock: Number(stockInput.value) || 0, dateAdded: todayISO(), createdAt: Date.now() });
-      return d;
-    });
+    setData(function (d) { d.items.push({ id: uid(), name: name, costPriceCents: toCents(costInput.value || 0), sellPriceCents: toCents(sellInput.value), openingStock: Number(stockInput.value) || 0, dateAdded: todayISO(), createdAt: Date.now() }); return d; });
     showToast("አዲስ ዕቃ ተጨምሯል");
-  });
+    nameInput.value = ""; costInput.value = ""; sellInput.value = ""; stockInput.value = "";
+  }));
   var formCard = el("div", { class: "card section" }, [nameInput, el("div", { class: "grid2 mt2" }, [costInput, sellInput]), el("div", { class: "mt2" }, [stockInput]), el("div", { class: "mt3" }, [addBtn]), errBox]);
   formCard.style.borderColor = "#e2e8f0";
   container.appendChild(formCard);
@@ -659,14 +700,11 @@ function renderItems(container) {
         ])
       ]);
       var delBtn = el("button", { class: "trash-btn" }, "🗑️ ማጥፊያ");
-      delBtn.addEventListener("click", function () {
-        if (confirm("ይህን ዕቃ መሰረዝ ይፈልጋሉ?")) setData(function (d) { d.items = d.items.filter(function (x) { return x.id !== i.id; }); return d; });
-      });
+      delBtn.addEventListener("click", function () { if (confirm("ይህን ዕቃ መሰረዝ ይፈልጋሉ?")) setData(function (d) { d.items = d.items.filter(function (x) { return x.id !== i.id; }); return d; }); });
       top.appendChild(delBtn);
       row.appendChild(top);
       row.appendChild(el("div", { class: "shelf-note" },
-        shelf.soldOut
-          ? ("⏱ " + i.dateAdded + " ገብቶ በ" + shelf.days + " ቀናት ውስጥ አልቋል (" + shelf.soldOutDate + ")")
+        shelf.soldOut ? ("⏱ " + i.dateAdded + " ገብቶ በ" + shelf.days + " ቀናት ውስጥ አልቋል (" + shelf.soldOutDate + ")")
           : ("⏱ " + i.dateAdded + " ገብቷል — እስካሁን " + shelf.daysSoFar + " ቀናት ቆይቷል፣ ገና አላለቀም")));
       listWrap.appendChild(row);
     });
@@ -675,19 +713,188 @@ function renderItems(container) {
   draw("");
 }
 
+/* ================= hamburger menu & reports ================= */
+function openMainMenu() {
+  openSheet("ዝርዝር ሪፖርቶች", function (body) {
+    var weekly = el("button", { class: "menu-item" }, [el("span", { class: "em" }, "📅"), el("div", {}, [el("div", {}, "ሳምንታዊ ሪፖርት"), el("div", { class: "sub" }, "የዚህ ሳምንት 7ቱ ቀናት በስማቸው")])]);
+    weekly.addEventListener("click", openWeeklyReport);
+    var monthly = el("button", { class: "menu-item" }, [el("span", { class: "em" }, "🗓️"), el("div", {}, [el("div", {}, "ወርሃዊ ሪፖርት"), el("div", { class: "sub" }, "12ቱ የኢትዮጵያ ወራት")])]);
+    monthly.addEventListener("click", openMonthlyReport);
+    var yearly = el("button", { class: "menu-item" }, [el("span", { class: "em" }, "📆"), el("div", {}, [el("div", {}, "አመታዊ ሪፖርት"), el("div", { class: "sub" }, "በኢትዮጵያ ዓ.ም")])]);
+    yearly.addEventListener("click", openYearlyReport);
+    var sync = el("button", { class: "menu-item" }, [el("span", { class: "em" }, "☁️"), el("div", {}, [el("div", {}, "የጋራ ዳታቤዝ (Firebase) ማዋቀሪያ"), el("div", { class: "sub" }, "ብዙ ስልኮች በ real-time እንዲመሳሰሉ")])]);
+    sync.addEventListener("click", openFirebaseSetup);
+    body.appendChild(weekly); body.appendChild(monthly); body.appendChild(yearly); body.appendChild(sync);
+  }, null);
+}
+
+function openWeeklyReport() {
+  openSheet("📅 ሳምንታዊ ሪፖርት", function (body) {
+    var now = new Date();
+    var day = now.getDay(), diffToMonday = (day + 6) % 7;
+    var monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday);
+    var isoList = [];
+    for (var j = 0; j < 7; j++) {
+      var dd = new Date(monday); dd.setDate(monday.getDate() + j);
+      var iso = dd.getFullYear() + "-" + String(dd.getMonth() + 1).padStart(2, "0") + "-" + String(dd.getDate()).padStart(2, "0");
+      isoList.push({ iso: iso, label: ETH_WEEKDAYS[j] });
+    }
+    var weekSales = state.data.sales.filter(function (s) { return isoList.some(function (x) { return x.iso === s.date; }); });
+    var weekExpenses = state.data.expenses.filter(function (e) { return isoList.some(function (x) { return x.iso === e.date; }); });
+    var weekTotals = statsFor(weekSales, weekExpenses);
+    body.appendChild(el("div", { class: "card violet section" }, [el("div", { class: "card-label" }, "የሳምንቱ ጠቅላላ ትርፍ"), el("div", { class: "card-value" }, fmt(weekTotals.profit))]));
+    body.appendChild(renderAllocationBlock(weekTotals.profit, state.data.allocations, "የሳምንቱ"));
+    body.appendChild(el("div", { class: "eyebrow mt3 mb2" }, "በቀናት"));
+    isoList.forEach(function (x) {
+      var st = dayStats(state.data, x.iso);
+      body.appendChild(el("div", { class: "day-card" }, [
+        el("div", { class: "dname" }, x.label + " (" + x.iso + ")"),
+        el("div", { class: "row" }, [el("span", {}, "ሽያጭ"), el("b", {}, fmt(st.revenue))]),
+        el("div", { class: "row" }, [el("span", {}, "ወጪ"), el("b", {}, fmt(st.expenseTotal))]),
+        el("div", { class: "row" }, [el("span", {}, "ትርፍ"), el("b", { style: { color: st.profit >= 0 ? "#16a34a" : "#dc2626" } }, fmt(st.profit))])
+      ]));
+    });
+  }, null);
+}
+
+function openMonthlyReport() {
+  openSheet("🗓️ ወርሃዊ ሪፖርት", function (body) {
+    var buckets = ethiopianBuckets(state.data);
+    var todayEth = gregorianToEthiopian(new Date());
+    body.appendChild(el("div", { class: "eyebrow mb2" }, todayEth.year + " ዓ.ም — 13ቱ ወራት"));
+    for (var m = 1; m <= 13; m++) {
+      var key = todayEth.year + "-" + m;
+      var bucket = buckets[key];
+      var st = bucket ? statsFor(bucket.sales, bucket.expenses) : { revenue: 0, expenseTotal: 0, profit: 0 };
+      body.appendChild(el("div", { class: "day-card" }, [
+        el("div", { class: "dname" }, ETH_MONTHS[m - 1]),
+        el("div", { class: "row" }, [el("span", {}, "ሽያጭ"), el("b", {}, fmt(st.revenue))]),
+        el("div", { class: "row" }, [el("span", {}, "ወጪ"), el("b", {}, fmt(st.expenseTotal))]),
+        el("div", { class: "row" }, [el("span", {}, "ትርፍ"), el("b", { style: { color: st.profit >= 0 ? "#16a34a" : "#dc2626" } }, fmt(st.profit))])
+      ]));
+    }
+  }, null);
+}
+
+function openYearlyReport() {
+  openSheet("📆 አመታዊ ሪፖርት", function (body) {
+    var buckets = ethiopianBuckets(state.data);
+    var yearMap = {};
+    Object.keys(buckets).forEach(function (k) {
+      var b = buckets[k];
+      if (!yearMap[b.year]) yearMap[b.year] = { sales: [], expenses: [] };
+      yearMap[b.year].sales = yearMap[b.year].sales.concat(b.sales);
+      yearMap[b.year].expenses = yearMap[b.year].expenses.concat(b.expenses);
+    });
+    var todayEth = gregorianToEthiopian(new Date());
+    if (!yearMap[todayEth.year]) yearMap[todayEth.year] = { sales: [], expenses: [] };
+    var years = Object.keys(yearMap).map(Number).sort(function (a, b) { return b - a; });
+    years.forEach(function (y) {
+      var st = statsFor(yearMap[y].sales, yearMap[y].expenses);
+      body.appendChild(el("div", { class: "day-card" }, [
+        el("div", { class: "dname" }, y + " ዓ.ም"),
+        el("div", { class: "row" }, [el("span", {}, "ሽያጭ"), el("b", {}, fmt(st.revenue))]),
+        el("div", { class: "row" }, [el("span", {}, "ወጪ"), el("b", {}, fmt(st.expenseTotal))]),
+        el("div", { class: "row" }, [el("span", {}, "ትርፍ"), el("b", { style: { color: st.profit >= 0 ? "#16a34a" : "#dc2626" } }, fmt(st.profit))])
+      ]));
+    });
+  }, null);
+}
+
+/* ================= Firebase (optional, lazy-loaded — app stays 100% offline unless this is set up) ================= */
+var firebaseReady = false, firebaseDb = null, firebaseDocPath = null, firebaseApplyingRemote = false;
+function loadFirebaseConfig() { try { var v = localStorage.getItem(FIREBASE_CFG_KEY); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
+function saveFirebaseConfig(cfg) { try { localStorage.setItem(FIREBASE_CFG_KEY, JSON.stringify(cfg)); } catch (e) {} }
+
+function injectScript(src) {
+  return new Promise(function (resolve, reject) {
+    var s = document.createElement("script");
+    s.src = src; s.onload = resolve; s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+function initFirebaseIfConfigured() {
+  var cfg = loadFirebaseConfig();
+  if (!cfg || !cfg.apiKey || !cfg.shopId) return;
+  injectScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js")
+    .then(function () { return injectScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"); })
+    .then(function () {
+      firebase.initializeApp(cfg);
+      var db = firebase.firestore();
+      try { db.enablePersistence({ synchronizeTabs: true }); } catch (e) {}
+      firebaseDb = db;
+      firebaseDocPath = db.collection("shops").doc(cfg.shopId);
+      firebaseDocPath.onSnapshot(function (docSnap) {
+        if (!docSnap.exists) { firebaseDocPath.set(state.data); return; }
+        var remote = docSnap.data();
+        if (remote && Array.isArray(remote.items)) {
+          firebaseApplyingRemote = true;
+          state.data = remote;
+          saveLocal(state.data);
+          renderApp();
+          firebaseApplyingRemote = false;
+        }
+      }, function (err) { console.error("firebase sync error", err); });
+      firebaseReady = true;
+      renderApp();
+    })
+    .catch(function (err) { console.error("firebase load failed — check internet connection", err); });
+}
+function cloudPush(data) {
+  if (!firebaseReady || !firebaseDocPath || firebaseApplyingRemote) return;
+  firebaseDocPath.set(data).catch(function (err) { console.error("firebase push failed", err); });
+}
+function cloudStatus() {
+  var cfg = loadFirebaseConfig();
+  if (!cfg) return null;
+  return el("div", { class: "section", style: { fontSize: "11px", color: "#64748b", textAlign: "center" } }, [
+    el("span", { class: "sync-dot", style: { background: firebaseReady ? "#22c55e" : "#f59e0b" } }),
+    firebaseReady ? ("የጋራ ዳታቤዝ ተገናኝቷል (ሱቅ: " + cfg.shopId + ")") : "የጋራ ዳታቤዝ በመገናኘት ላይ..."
+  ]);
+}
+
+function openFirebaseSetup() {
+  var cfg = loadFirebaseConfig() || {};
+  var fields = ["apiKey", "authDomain", "projectId", "storageBucket", "messagingSenderId", "appId", "shopId"];
+  var labels = { apiKey: "apiKey", authDomain: "authDomain", projectId: "projectId", storageBucket: "storageBucket", messagingSenderId: "messagingSenderId", appId: "appId", shopId: "የሱቅ መለያ ኮድ (ሁሉም ስልኮች ተመሳሳይ መስጠት አለባቸው)" };
+  var inputs = {};
+  openSheet("☁️ የጋራ ዳታቤዝ (Firebase) ማዋቀሪያ", function (body) {
+    body.appendChild(el("div", { class: "helpmsg" },
+      "ብዙ ስልኮች በ real-time እንዲመሳሰሉ firebase.google.com ላይ ነጻ አካውንት ፈጥረው Firestore Database ያንቁ፣ Project Settings ውስጥ ያለውን የ config ቁጥሮች እዚህ ይለጥፉ። ይህን ካልሞሉ አፕሊኬሽኑ በራሱ በዚህ ስልክ ላይ ብቻ (ያለ ኢንተርኔት) መስራቱን ይቀጥላል።"));
+    fields.forEach(function (f) {
+      var input = el("input", { class: "input", value: cfg[f] || "", placeholder: labels[f] });
+      inputs[f] = input;
+      body.appendChild(Field(labels[f], f === "apiKey" || f === "shopId", input));
+    });
+  }, function (close) {
+    var row = el("div", { class: "flex gap2" });
+    if (cfg.apiKey) {
+      var clearBtn = el("button", { class: "btn btn-outline" }, "አላቅ");
+      clearBtn.addEventListener("click", function () { localStorage.removeItem(FIREBASE_CFG_KEY); showToast("የጋራ ዳታቤዝ ግንኙነት ተቋርጧል"); close(); });
+      row.appendChild(clearBtn);
+    }
+    var saveBtn = el("button", { class: "btn btn-primary" }, "አገናኝ / አስቀምጥ");
+    saveBtn.addEventListener("click", guarded(function () {
+      var newCfg = {};
+      fields.forEach(function (f) { newCfg[f] = inputs[f].value.trim(); });
+      if (!newCfg.apiKey || !newCfg.shopId) { showToast("እባክዎ apiKey እና የሱቅ መለያ ኮድ ያስገቡ"); return; }
+      saveFirebaseConfig(newCfg);
+      showToast("ተቀምጧል — በመገናኘት ላይ...");
+      initFirebaseIfConfigured();
+      close();
+    }));
+    row.appendChild(saveBtn);
+    return row;
+  });
+}
+
 /* ================= nav & root ================= */
 function BottomNav() {
-  var items = [
-    { key: "dashboard", label: "ዳሽቦርድ", em: "🏠" },
-    { key: "sales", label: "ሽያጭ", em: "📦" },
-    { key: "items", label: "ዕቃ ጨምር", em: "➕" }
-  ];
+  var items = [{ key: "dashboard", label: "ዳሽቦርድ", em: "🏠" }, { key: "sales", label: "ሽያጭ", em: "📦" }, { key: "items", label: "ዕቃ ጨምር", em: "➕" }];
   var nav = el("div", { class: "nav" });
   items.forEach(function (it) {
     var active = state.tab === it.key;
-    var b = el("button", { class: "navbtn" + (active ? " active" : "") }, [
-      el("span", { class: "em" }, it.em), el("span", { class: "lbl" }, it.label)
-    ]);
+    var b = el("button", { class: "navbtn" + (active ? " active" : "") }, [el("span", { class: "em" }, it.em), el("span", { class: "lbl" }, it.label)]);
     b.addEventListener("click", function () { state.tab = it.key; renderApp(); });
     nav.appendChild(b);
   });
@@ -698,7 +905,9 @@ function renderApp() {
   var root = document.getElementById("root");
   clear(root);
   var app = el("div", { class: "app" });
-  app.appendChild(el("div", { class: "header" }, [el("h1", {}, "የሱቅ መቆጣጠሪያ ሲስተም")]));
+  var hamBtn = el("button", { class: "hamburger" }, "☰");
+  hamBtn.addEventListener("click", openMainMenu);
+  app.appendChild(el("div", { class: "header" }, [hamBtn, el("h1", {}, "የሱቅ መቆጣጠሪያ ሲስተም"), el("div", { class: "header-spacer" })]));
   if (!storageAvailable) {
     app.appendChild(el("div", { style: { background: "#fff4e5", color: "#92400e", fontSize: "11px", padding: "8px 16px", textAlign: "center" } }, "ማሳሰቢያ: ውሂብ በራስ-ሰር መቀመጥ አልቻለም። በዚህ ክፍለ-ጊዜ ብቻ ይኖራል።"));
   }
@@ -712,6 +921,7 @@ function renderApp() {
 }
 
 renderApp();
+initFirebaseIfConfigured(); // no-op (no network call) unless a Firebase config was previously saved
 })();
 </script>
 </body>
