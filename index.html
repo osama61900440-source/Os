@@ -803,7 +803,25 @@ function openYearlyReport() {
 
 /* ================= Firebase (optional, lazy-loaded — app stays 100% offline unless this is set up) ================= */
 var firebaseReady = false, firebaseDb = null, firebaseDocPath = null, firebaseApplyingRemote = false;
-function loadFirebaseConfig() { try { var v = localStorage.getItem(FIREBASE_CFG_KEY); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
+/* Default config supplied by the shop owner — baked in so every phone that
+   opens this same file auto-connects to the same shared shop without
+   anyone needing to retype it. Still editable via ☰ → ☁️ if ever needed. */
+var DEFAULT_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCmAI1Op2i-HD7Qy66ZqHoxjpr9UTt4vPM",
+  authDomain: "seniy-624d6.firebaseapp.com",
+  projectId: "seniy-624d6",
+  storageBucket: "seniy-624d6.firebasestorage.app",
+  messagingSenderId: "631207328604",
+  appId: "1:631207328604:web:7867624bd48cbc0baa5f99",
+  shopId: "seniy-main-shop"
+};
+function loadFirebaseConfig() {
+  try {
+    var v = localStorage.getItem(FIREBASE_CFG_KEY);
+    if (v) { var parsed = JSON.parse(v); return parsed && parsed.disabled ? null : parsed; }
+  } catch (e) {}
+  return DEFAULT_FIREBASE_CONFIG;
+}
 function saveFirebaseConfig(cfg) { try { localStorage.setItem(FIREBASE_CFG_KEY, JSON.stringify(cfg)); } catch (e) {} }
 
 function injectScript(src) {
@@ -869,8 +887,8 @@ function openFirebaseSetup() {
   }, function (close) {
     var row = el("div", { class: "flex gap2" });
     if (cfg.apiKey) {
-      var clearBtn = el("button", { class: "btn btn-outline" }, "አላቅ");
-      clearBtn.addEventListener("click", function () { localStorage.removeItem(FIREBASE_CFG_KEY); showToast("የጋራ ዳታቤዝ ግንኙነት ተቋርጧል"); close(); });
+      var clearBtn = el("button", { class: "btn btn-outline" }, "አላቅ (ኦፍላይን ብቻ ተመለስ)");
+      clearBtn.addEventListener("click", function () { saveFirebaseConfig({ disabled: true }); showToast("የጋራ ዳታቤዝ ግንኙነት ተቋርጧል — አሁን ኦፍላይን ብቻ ነው"); location.reload(); });
       row.appendChild(clearBtn);
     }
     var saveBtn = el("button", { class: "btn btn-primary" }, "አገናኝ / አስቀምጥ");
