@@ -124,6 +124,8 @@ var FIREBASE_CFG_KEY = "shop-control-firebase-cfg";
 var PERIOD_LABEL = { day: "የቀን", week: "የሳምንት", month: "የወር", year: "የአመት" };
 var ETH_MONTHS = ["መስከረም","ጥቅምት","ኅዳር","ታኅሳስ","ጥር","የካቲት","መጋቢት","ሚያዝያ","ግንቦት","ሰኔ","ሐምሌ","ነሐሴ","ጳጉሜን"];
 var ETH_WEEKDAYS = ["ሰኞ","ማክሰኞ","ረቡዕ","ሐሙስ","ዓርብ","ቅዳሜ","እሁድ"]; // Monday-first, matches our week range
+var EXPENSE_CATEGORIES = ["ኪራይ", "ደመወዝ", "መብራት/ውሃ", "ትራንስፖርት", "ሌላ"];
+var BANK_NAMES = ["CBE (ንግድ ባንክ)", "አዋሽ ባንክ", "ዳሸን ባንክ", "አቢሲኒያ ባንክ", "ኦሮሚያ ባንክ", "ሌላ"];
 
 /* ================= tiny DOM helper ================= */
 function el(tag, props, children) {
@@ -230,7 +232,8 @@ function freshAllocations() {
     { id: uid(), name: "ወጪ", percent: 20 }
   ];
 }
-function freshData() { return { baseCapitalCents: 0, items: [], sales: [], expenses: [], allocations: freshAllocations() }; }
+function freshData() { return { baseCapitalCents: 0, items: [], sales: [], expenses: [], allocations: freshAllocations(), profile: freshProfile() }; }
+function freshProfile() { return { shopName: "", ownerName: "", email: "", phone: "", tin: "", license: "" }; }
 
 function loadData() {
   try {
@@ -240,6 +243,7 @@ function loadData() {
       if (d && Array.isArray(d.items) && Array.isArray(d.sales) && Array.isArray(d.expenses)) {
         if (!Array.isArray(d.allocations)) d.allocations = freshAllocations();
         if (typeof d.baseCapitalCents !== "number") d.baseCapitalCents = 0;
+        if (!d.profile || typeof d.profile !== "object") d.profile = freshProfile();
         return d;
       }
     }
@@ -255,7 +259,8 @@ function loadData() {
           return {
             baseCapitalCents: Number(o.baseCapitalCents || o.openingCapitalCents) || 0,
             items: o.items || [], sales: o.sales || [], expenses: o.expenses || [],
-            allocations: (Array.isArray(o.allocations) && o.allocations.length) ? o.allocations : freshAllocations()
+            allocations: (Array.isArray(o.allocations) && o.allocations.length) ? o.allocations : freshAllocations(),
+            profile: freshProfile()
           };
         }
       }
@@ -271,7 +276,7 @@ function loadData() {
           items: (o2.items || []).map(function (it) {
             return { id: it.id || uid(), name: it.name, sellPriceCents: toCents(it.price), costPriceCents: 0, openingStock: Number(it.stock) || 0, dateAdded: todayISO(), createdAt: Date.now() };
           }),
-          sales: [], expenses: [], allocations: freshAllocations()
+          sales: [], expenses: [], allocations: freshAllocations(), profile: freshProfile()
         };
       }
     }
@@ -316,6 +321,25 @@ function statsFor(sales, expenses) {
   var topName = null, topQty = 0;
   Object.keys(counts).forEach(function (n) { if (counts[n] > topQty) { topQty = counts[n]; topName = n; } });
   return { revenue: revenue, expenseTotal: expenseTotal, profit: profit, topName: topName, topQty: topQty };
+}
+/* Cash / bank-transfer / on-credit split — every sale is counted in exactly
+   one bucket (whatever it was tagged with), so the three always sum back
+   to total revenue exactly. Sales recorded before this feature existed
+   have no paymentMethod field and default safely to "cash". */
+function paymentBreakdown(sales) {
+  var cash = 0, bank = 0, credit = 0, creditOutstanding = 0, creditCollected = 0;
+  sales.forEach(function (s) {
+    var m = s.paymentMethod || "cash";
+    if (m === "bank") bank += s.totalCents;
+    else if (m === "credit") { credit += s.totalCents; if (s.paid) creditCollected += s.totalCents; else creditOutstanding += s.totalCents; }
+    else cash += s.totalCents;
+  });
+  return { cash: cash, bank: bank, credit: credit, creditOutstanding: creditOutstanding, creditCollected: creditCollected };
+}
+function expenseByCategory(expenses) {
+  var map = {};
+  expenses.forEach(function (e) { var c = e.category || "ሌላ"; map[c] = (map[c] || 0) + e.amountCents; });
+  return map;
 }
 function periodStats(data, period) {
   var range = periodRange(period);
@@ -498,24 +522,37 @@ function openEditCapitalModal() {
   });
 }
 
-function openAddExpenseModal() {
-  var titleInput, amountInput, dateInput, errBox;
-  openSheet("ወጪ መዝግብ", function (body) {
-    titleInput = el("input", { class: "input", placeholder: "ለምሳሌ ኪራይ, ትራንስፖርት" });
-    amountInput = el("input", { class: "input", type: "number", step: "0.01", min: "0", placeholder: "0.00" });
-    dateInput = el("input", { class: "input", type: "date", value: todayISO() });
+function openAddExpenseModal(existing) {
+  var titleInput, amountInput, dateInput, categorySelect, errBox;
+  openSheet(existing ? "ወጪ አርም" : "ወጪ መዝግብ", function (body) {
+    categorySelect = el("select", { class: "input" });
+    EXPENSE_CATEGORIES.forEach(function (c) { categorySelect.appendChild(el("option", { value: c }, c)); });
+    categorySelect.value = existing ? (existing.category || "ሌላ") : "ኪራይ";
+    titleInput = el("input", { class: "input", placeholder: "ማብራሪያ (ካስፈለገ)", value: existing ? (existing.title || "") : "" });
+    amountInput = el("input", { class: "input", type: "number", step: "0.01", min: "0", placeholder: "0.00", value: existing ? (existing.amountCents / 100).toFixed(2) : "" });
+    dateInput = el("input", { class: "input", type: "date", value: existing ? existing.date : todayISO() });
     errBox = el("div", { class: "errmsg" });
-    body.appendChild(Field("የወጪ አይነት", true, titleInput));
+    body.appendChild(Field("የወጪ ምድብ", true, categorySelect));
+    body.appendChild(Field("ማብራሪያ", false, titleInput));
     body.appendChild(Field("መጠን", true, amountInput));
     body.appendChild(Field("ቀን", true, dateInput));
     body.appendChild(errBox);
   }, function (close) {
     var btn = el("button", { class: "btn btn-primary" }, "አስቀምጥ");
     btn.addEventListener("click", guarded(function () {
-      var title = titleInput.value.trim(), amt = toCents(amountInput.value);
-      if (!title || amt <= 0) { errBox.textContent = "እባክዎ ትክክለኛ ስም እና መጠን ያስገቡ"; return; }
-      setData(function (d) { d.expenses.push({ id: uid(), title: title, amountCents: amt, date: dateInput.value || todayISO(), createdAt: Date.now() }); return d; });
-      showToast("ወጪ ተመዝግቧል");
+      var amt = toCents(amountInput.value);
+      if (amt <= 0) { errBox.textContent = "እባክዎ ትክክለኛ መጠን ያስገቡ"; return; }
+      var title = titleInput.value.trim() || categorySelect.value;
+      setData(function (d) {
+        if (existing) {
+          var e = d.expenses.find(function (x) { return x.id === existing.id; });
+          if (e) { e.title = title; e.amountCents = amt; e.date = dateInput.value || todayISO(); e.category = categorySelect.value; }
+        } else {
+          d.expenses.push({ id: uid(), title: title, category: categorySelect.value, amountCents: amt, date: dateInput.value || todayISO(), createdAt: Date.now() });
+        }
+        return d;
+      });
+      showToast(existing ? "ተስተካክሏል" : "ወጪ ተመዝግቧል");
       close();
     }));
     return btn;
@@ -611,6 +648,7 @@ function renderSales(container) {
     clear(restWrap);
     var item = state.data.items.find(function (i) { return i.id === state_.itemId; });
     if (!item) return;
+    if (!state_.paymentMethod) state_.paymentMethod = "cash";
 
     var custInput = el("input", { class: "input", placeholder: "ለምሳሌ አበበ", value: state_.customer });
     custInput.addEventListener("input", function (e) { state_.customer = e.target.value; });
@@ -630,6 +668,40 @@ function renderSales(container) {
     qtyRow.appendChild(minusBtn); qtyRow.appendChild(qtyInput); qtyRow.appendChild(plusBtn);
     restWrap.appendChild(Field("የዕቃ ብዛት (መጠን)", true, qtyRow));
 
+    // --- payment method (cash / bank transfer / on credit) ---
+    var payField = el("div", { class: "field" });
+    payField.appendChild(el("label", {}, "የክፍያ አይነት"));
+    var payRow = el("div", { class: "pill-row", style: { width: "100%" } });
+    var payExtra = el("div", { class: "mt2" });
+    var PAY_OPTS = [{ k: "cash", l: "ካሽ" }, { k: "bank", l: "ባንክ ትራንስፈር" }, { k: "credit", l: "በዱቤ" }];
+    function drawPayExtra() {
+      clear(payExtra);
+      if (state_.paymentMethod === "bank") {
+        var bankSelect = el("select", { class: "input" });
+        BANK_NAMES.forEach(function (b) { bankSelect.appendChild(el("option", { value: b, selected: state_.bankName === b ? "selected" : undefined }, b)); });
+        if (!state_.bankName) state_.bankName = BANK_NAMES[0];
+        bankSelect.value = state_.bankName;
+        bankSelect.addEventListener("change", function (e) { state_.bankName = e.target.value; });
+        payExtra.appendChild(Field("የባንክ ስም", true, bankSelect));
+      } else if (state_.paymentMethod === "credit") {
+        var phoneInput = el("input", { class: "input", type: "tel", placeholder: "የደንበኛ ስልክ ቁጥር", value: state_.customerPhone || "" });
+        phoneInput.addEventListener("input", function (e) { state_.customerPhone = e.target.value; });
+        var dueInput = el("input", { class: "input", type: "date", value: state_.dueDate || "" });
+        dueInput.addEventListener("input", function (e) { state_.dueDate = e.target.value; });
+        payExtra.appendChild(Field("የደንበኛ ስልክ", true, phoneInput));
+        payExtra.appendChild(Field("የክፍያ ቀን ገደብ (Due Date)", true, dueInput));
+      }
+    }
+    PAY_OPTS.forEach(function (o) {
+      var b = el("button", { class: "pill" + (state_.paymentMethod === o.k ? " active" : ""), style: { flex: "1" } }, o.l);
+      b.addEventListener("click", function () { state_.paymentMethod = o.k; drawRest(); });
+      payRow.appendChild(b);
+    });
+    payField.appendChild(payRow);
+    payField.appendChild(payExtra);
+    restWrap.appendChild(payField);
+    drawPayExtra();
+
     var totalAmountSpan = el("span", { style: { fontWeight: "800" } }, fmt(toCents(state_.price) * state_.qty));
     restWrap.appendChild(el("div", { class: "flex items-center justify-between", style: { background: "#f8fafc", borderRadius: "10px", padding: "10px 12px", marginBottom: "12px" } }, [
       el("span", { style: { fontSize: "12px", color: "#64748b", fontWeight: "600" } }, "ጠቅላላ የሽያጭ መጠን"), totalAmountSpan
@@ -645,18 +717,99 @@ function renderSales(container) {
       if (stock < state_.qty) { errBox.textContent = "በቂ ስቶክ የለም! ቀሪ ስቶክ: " + stock; return; }
       var unitPriceCents = toCents(state_.price);
       if (unitPriceCents <= 0) { errBox.textContent = "እባክዎ ትክክለኛ ዋጋ ያስገቡ"; return; }
+      if (state_.paymentMethod === "credit" && (!state_.customerPhone || !state_.dueDate)) { errBox.textContent = "ለዱቤ ሽያጭ የደንበኛ ስልክ እና የክፍያ ቀን ገደብ ያስፈልጋል"; return; }
       submitBtn.disabled = true;
       setData(function (d) {
-        d.sales.push({ id: uid(), itemId: item.id, itemName: item.name, qty: state_.qty, unitPriceCents: unitPriceCents, unitCostCents: item.costPriceCents, totalCents: Math.round(unitPriceCents * state_.qty), customer: state_.customer.trim() || "ስም ያልገለጸ ደንበኛ", date: todayISO(), createdAt: Date.now() });
+        d.sales.push({
+          id: uid(), itemId: item.id, itemName: item.name, qty: state_.qty, unitPriceCents: unitPriceCents, unitCostCents: item.costPriceCents,
+          totalCents: Math.round(unitPriceCents * state_.qty), customer: state_.customer.trim() || "ስም ያልገለጸ ደንበኛ",
+          paymentMethod: state_.paymentMethod, bankName: state_.paymentMethod === "bank" ? state_.bankName : "",
+          customerPhone: state_.paymentMethod === "credit" ? state_.customerPhone : "", dueDate: state_.paymentMethod === "credit" ? state_.dueDate : "",
+          paid: state_.paymentMethod !== "credit",
+          date: todayISO(), createdAt: Date.now()
+        });
         return d;
       });
       showToast("ሽያጭ ተመዝግቧል");
+      state_.itemId = ""; state_.qty = 1; state_.customer = ""; state_.price = ""; state_.paymentMethod = "cash"; state_.bankName = ""; state_.customerPhone = ""; state_.dueDate = "";
+      drawPicker(); drawRest();
     }));
     restWrap.appendChild(submitBtn);
   }
 
   drawPicker();
   container.appendChild(formCard);
+
+  container.appendChild(el("div", { class: "eyebrow mt3 mb2" }, "📜 የቅርብ ጊዜ ሽያጮች"));
+  var historyWrap = el("div", {});
+  container.appendChild(historyWrap);
+  function drawHistory() {
+    clear(historyWrap);
+    var recent = state.data.sales.slice().sort(function (a, b) { return b.createdAt - a.createdAt; }).slice(0, 20);
+    if (recent.length === 0) { historyWrap.appendChild(el("div", { class: "empty" }, "📭 ምንም ሽያጭ አልተመዘገበም")); return; }
+    recent.forEach(function (s) {
+      var payLabel = s.paymentMethod === "bank" ? ("ባንክ · " + s.bankName) : s.paymentMethod === "credit" ? ("ዱቤ · " + (s.paid ? "ተከፍሏል" : "አልተከፈለም")) : "ካሽ";
+      var row = el("div", { class: "item-row" });
+      row.appendChild(el("div", { class: "flex items-center justify-between" }, [
+        el("div", {}, [
+          el("div", { class: "item-name" }, s.itemName + " × " + s.qty),
+          el("div", { class: "item-sub" }, s.customer + " · " + s.date + " · " + payLabel)
+        ]),
+        el("div", { style: { fontWeight: "800", color: "#1e293b" } }, fmt(s.totalCents))
+      ]));
+      var actionsRow = el("div", { class: "flex gap2 mt2" });
+      if (s.paymentMethod === "credit" && !s.paid) {
+        var payBtn = el("button", { class: "btn btn-outline btn-sm" }, "✓ ተከፍሏል ብለህ ምልክት አድርግ");
+        payBtn.addEventListener("click", function () { setData(function (d) { var t = d.sales.find(function (x) { return x.id === s.id; }); if (t) t.paid = true; return d; }); showToast("እንደተከፈለ ተመዝግቧል"); });
+        actionsRow.appendChild(payBtn);
+      }
+      var editBtn = el("button", { class: "btn btn-outline btn-sm" }, "✎ አርም");
+      editBtn.addEventListener("click", function () { openEditSaleModal(s); });
+      var delBtn = el("button", { class: "trash-btn" }, "🗑️ ሰርዝ");
+      delBtn.addEventListener("click", function () {
+        if (confirm("ይህን ሽያጭ መሰረዝ ይፈልጋሉ? ስቶክ እና ካፒታል ራሳቸው ይስተካከላሉ።")) setData(function (d) { d.sales = d.sales.filter(function (x) { return x.id !== s.id; }); return d; });
+      });
+      actionsRow.appendChild(editBtn); actionsRow.appendChild(delBtn);
+      row.appendChild(actionsRow);
+      historyWrap.appendChild(row);
+    });
+  }
+  drawHistory();
+}
+
+function openEditSaleModal(sale) {
+  var qtyInput, priceInput, custInput, errBox;
+  openSheet("ሽያጭ አርም", function (body) {
+    body.appendChild(el("div", { class: "helpmsg" }, sale.itemName + " — ስቶክና ካፒታል ራሳቸው ከዚህ ለውጥ ጋር ይስተካከላሉ።"));
+    custInput = el("input", { class: "input", value: sale.customer });
+    qtyInput = el("input", { class: "input", type: "number", min: "1", value: sale.qty });
+    priceInput = el("input", { class: "input", type: "number", step: "0.01", value: (sale.unitPriceCents / 100).toFixed(2) });
+    errBox = el("div", { class: "errmsg" });
+    body.appendChild(Field("የደንበኛ ስም", false, custInput));
+    body.appendChild(Field("ብዛት", true, qtyInput));
+    body.appendChild(Field("የሽያጭ ዋጋ", true, priceInput));
+    body.appendChild(errBox);
+  }, function (close) {
+    var btn = el("button", { class: "btn btn-primary" }, "አስቀምጥ");
+    btn.addEventListener("click", guarded(function () {
+      var qty = Math.max(1, Number(qtyInput.value) || 1);
+      var priceCents = toCents(priceInput.value);
+      if (priceCents <= 0) { errBox.textContent = "ትክክለኛ ዋጋ ያስገቡ"; return; }
+      // ensure editing doesn't push this item's stock negative (excluding this sale's own qty from the check)
+      var otherSold = state.data.sales.filter(function (s) { return s.itemId === sale.itemId && s.id !== sale.id; }).reduce(function (s, x) { return s + x.qty; }, 0);
+      var item = state.data.items.find(function (i) { return i.id === sale.itemId; });
+      var openingStock = item ? item.openingStock : 0;
+      if (openingStock - otherSold - qty < 0) { errBox.textContent = "ይህ ለውጥ ስቶክ ከ0 በታች ያደርገዋል — ብዛቱን ይቀንሱ"; return; }
+      setData(function (d) {
+        var t = d.sales.find(function (x) { return x.id === sale.id; });
+        if (t) { t.qty = qty; t.unitPriceCents = priceCents; t.totalCents = Math.round(priceCents * qty); t.customer = custInput.value.trim() || "ስም ያልገለጸ ደንበኛ"; }
+        return d;
+      });
+      showToast("ተስተካክሏል");
+      close();
+    }));
+    return btn;
+  });
 }
 
 /* ================= items tab ================= */
@@ -688,7 +841,7 @@ function renderItems(container) {
   function draw(q) {
     clear(listWrap);
     var filtered = state.data.items.filter(function (i) { return i.name.toLowerCase().indexOf((q || "").toLowerCase()) !== -1; });
-    if (filtered.length === 0) { listWrap.appendChild(el("div", { class: "empty" }, "ምንም ዕቃ አልተገኘም")); return; }
+    if (filtered.length === 0) { listWrap.appendChild(el("div", { class: "empty" }, "🗃️ ምንም ዕቃ አልተገኘም")); return; }
     filtered.forEach(function (i) {
       var stock = itemStock(state.data, i.id);
       var shelf = itemSoldOutInfo(state.data, i);
@@ -700,9 +853,11 @@ function renderItems(container) {
           el("div", { style: { fontSize: "11px", fontWeight: "700", marginTop: "2px", color: stock <= 0 ? "#ef4444" : stock <= 5 ? "#f59e0b" : "#64748b" } }, "ቀሪ ስቶክ: " + stock)
         ])
       ]);
-      var delBtn = el("button", { class: "trash-btn" }, "🗑️ ማጥፊያ");
+      var editBtn = el("button", { class: "btn btn-outline btn-sm" }, "✎");
+      editBtn.addEventListener("click", function () { openEditItemModal(i); });
+      var delBtn = el("button", { class: "trash-btn" }, "🗑️");
       delBtn.addEventListener("click", function () { if (confirm("ይህን ዕቃ መሰረዝ ይፈልጋሉ?")) setData(function (d) { d.items = d.items.filter(function (x) { return x.id !== i.id; }); return d; }); });
-      top.appendChild(delBtn);
+      top.appendChild(el("div", { class: "flex gap2" }, [editBtn, delBtn]));
       row.appendChild(top);
       row.appendChild(el("div", { class: "shelf-note" },
         shelf.soldOut ? ("⏱ " + i.dateAdded + " ገብቶ በ" + shelf.days + " ቀናት ውስጥ አልቋል (" + shelf.soldOutDate + ")")
@@ -714,18 +869,222 @@ function renderItems(container) {
   draw("");
 }
 
-/* ================= hamburger menu & reports ================= */
+function openEditItemModal(item) {
+  var nameInput, costInput, sellInput, stockInput, errBox;
+  openSheet("ዕቃ አርም", function (body) {
+    nameInput = el("input", { class: "input", value: item.name });
+    costInput = el("input", { class: "input", type: "number", step: "0.01", value: (item.costPriceCents / 100).toFixed(2) });
+    sellInput = el("input", { class: "input", type: "number", step: "0.01", value: (item.sellPriceCents / 100).toFixed(2) });
+    stockInput = el("input", { class: "input", type: "number", step: "0.01", value: item.openingStock });
+    errBox = el("div", { class: "errmsg" });
+    body.appendChild(el("div", { class: "helpmsg" }, "የመክፈቻ ስቶክን ካስተካከሉ፣ አሁን ያለው ትክክለኛ ቀሪ ስቶክ ራሱ ከዚህ ቁጥር እና ካለፉት ሽያጮች ተነስቶ ይሰላል።"));
+    body.appendChild(Field("የዕቃ ስም", true, nameInput));
+    body.appendChild(Field("የገዢ ዋጋ", false, costInput));
+    body.appendChild(Field("የመሸጫ ዋጋ", true, sellInput));
+    body.appendChild(Field("የመክፈቻ ስቶክ", true, stockInput));
+    body.appendChild(errBox);
+  }, function (close) {
+    var btn = el("button", { class: "btn btn-primary" }, "አስቀምጥ");
+    btn.addEventListener("click", guarded(function () {
+      var name = nameInput.value.trim();
+      var sellCents = toCents(sellInput.value);
+      if (!name || sellCents <= 0) { errBox.textContent = "ትክክለኛ ስም እና የመሸጫ ዋጋ ያስገቡ"; return; }
+      setData(function (d) {
+        var it = d.items.find(function (x) { return x.id === item.id; });
+        if (it) { it.name = name; it.costPriceCents = toCents(costInput.value || 0); it.sellPriceCents = sellCents; it.openingStock = Number(stockInput.value) || 0; }
+        return d;
+      });
+      showToast("ተስተካክሏል");
+      close();
+    }));
+    return btn;
+  });
+}
+
+/* ================= expenses tab (dedicated, categorized) ================= */
+function renderExpenses(container) {
+  container.appendChild(el("div", { class: "eyebrow section" }, "💸 ወጪ መመዝገቢያ"));
+  var addBtn = el("button", { class: "btn btn-primary section" }, "+ ወጪ መዝግብ");
+  addBtn.addEventListener("click", function () { openAddExpenseModal(); });
+  container.appendChild(addBtn);
+
+  var byCat = expenseByCategory(state.data.expenses);
+  if (state.data.expenses.length > 0) {
+    var catCard = el("div", { class: "card section" });
+    catCard.appendChild(el("div", { class: "card-label mb2" }, "🗂️ በምድብ (ጠቅላላ ጊዜ)"));
+    EXPENSE_CATEGORIES.forEach(function (c) {
+      if (!byCat[c]) return;
+      catCard.appendChild(el("div", { class: "list-row" }, [el("span", {}, c), el("span", { style: { fontWeight: "700" } }, fmt(byCat[c]))]));
+    });
+    container.appendChild(catCard);
+  }
+
+  container.appendChild(el("div", { class: "eyebrow mb2" }, "ሁሉም ወጪዎች"));
+  var listWrap = el("div", {});
+  container.appendChild(listWrap);
+  function draw() {
+    clear(listWrap);
+    var list = state.data.expenses.slice().sort(function (a, b) { return b.createdAt - a.createdAt; });
+    if (list.length === 0) { listWrap.appendChild(el("div", { class: "empty" }, "📭 ምንም ወጪ አልተመዘገበም")); return; }
+    list.forEach(function (e) {
+      var row = el("div", { class: "item-row" });
+      row.appendChild(el("div", { class: "flex items-center justify-between" }, [
+        el("div", {}, [el("div", { class: "item-name" }, e.category || "ሌላ"), el("div", { class: "item-sub" }, (e.title || "") + " · " + e.date)]),
+        el("div", { style: { fontWeight: "800", color: "#dc2626" } }, fmt(e.amountCents))
+      ]));
+      var actions = el("div", { class: "flex gap2 mt2" });
+      var editBtn = el("button", { class: "btn btn-outline btn-sm" }, "✎ አርም");
+      editBtn.addEventListener("click", function () { openAddExpenseModal(e); });
+      var delBtn = el("button", { class: "trash-btn" }, "🗑️ ሰርዝ");
+      delBtn.addEventListener("click", function () { if (confirm("ይህን ወጪ መሰረዝ ይፈልጋሉ?")) setData(function (d) { d.expenses = d.expenses.filter(function (x) { return x.id !== e.id; }); return d; }); });
+      actions.appendChild(editBtn); actions.appendChild(delBtn);
+      row.appendChild(actions);
+      listWrap.appendChild(row);
+    });
+  }
+  draw();
+}
+
+/* ================= reports tab (period toggle + bank-ready summary + PDF export) ================= */
+var reportsPeriod = "month";
+function renderReports(container) {
+  container.appendChild(el("div", { class: "eyebrow section" }, "📊 ሪፖርት (ለባንክ ብድር ማመልከቻ ዝግጁ)"));
+
+  var pillRow = el("div", { class: "pill-row section" });
+  [["week", "ሳምንት"], ["month", "ወር"], ["year", "አመት"], ["all", "ጠቅላላ ጊዜ"]].forEach(function (p) {
+    var b = el("button", { class: "pill" + (reportsPeriod === p[0] ? " active" : ""), style: { flex: "1" } }, p[1]);
+    b.addEventListener("click", function () { reportsPeriod = p[0]; renderApp(); });
+    pillRow.appendChild(b);
+  });
+  container.appendChild(pillRow);
+
+  var data = state.data;
+  var sales, expenses;
+  if (reportsPeriod === "all") { sales = data.sales; expenses = data.expenses; }
+  else { var range = periodRange(reportsPeriod); sales = data.sales.filter(function (s) { return inPeriod(s.date, range); }); expenses = data.expenses.filter(function (e) { return inPeriod(e.date, range); }); }
+  var st = statsFor(sales, expenses);
+  var pay = paymentBreakdown(sales);
+  var byCat = expenseByCategory(expenses);
+  var capital = totalCapitalCents(data);
+  var invValue = inventoryValueCents(data);
+
+  var summaryCard = el("div", { class: "card blue section" });
+  summaryCard.appendChild(el("div", { class: "card-label mb2" }, "🏦 ለባንክ ቁልፍ መረጃዎች"));
+  [["ጠቅላላ ገቢ (Gross Revenue)", st.revenue], ["ጠቅላላ ወጪ (Total Expenses)", st.expenseTotal], ["የተጣራ ትርፍ (Net Profit)", st.profit], ["የዕቃ ክምችት እሴት (Inventory Asset Value)", invValue], ["ጠቅላላ ካፒታል (Total Capital)", capital]].forEach(function (row) {
+    summaryCard.appendChild(el("div", { class: "list-row" }, [el("span", {}, row[0]), el("span", { style: { fontWeight: "800", color: row[0].indexOf("ትርፍ") !== -1 ? (row[1] >= 0 ? "#16a34a" : "#dc2626") : "#1e293b" } }, fmt(row[1]))]));
+  });
+  container.appendChild(summaryCard);
+
+  var payCard = el("div", { class: "card violet section" });
+  payCard.appendChild(el("div", { class: "card-label mb2" }, "💳 የክፍያ ፍሰት (ካሽ / ባንክ / ዱቤ)"));
+  payCard.appendChild(el("div", { class: "list-row" }, [el("span", {}, "ካሽ"), el("span", { style: { fontWeight: "700" } }, fmt(pay.cash))]));
+  payCard.appendChild(el("div", { class: "list-row" }, [el("span", {}, "ባንክ ትራንስፈር"), el("span", { style: { fontWeight: "700" } }, fmt(pay.bank))]));
+  payCard.appendChild(el("div", { class: "list-row" }, [el("span", {}, "ዱቤ (ጠቅላላ)"), el("span", { style: { fontWeight: "700" } }, fmt(pay.credit))]));
+  payCard.appendChild(el("div", { class: "list-row out" }, [el("span", {}, "⚠️ ያልተከፈለ ዱቤ (Outstanding)"), el("span", { style: { fontWeight: "700", color: "#dc2626" } }, fmt(pay.creditOutstanding))]));
+  container.appendChild(payCard);
+
+  if (Object.keys(byCat).length > 0) {
+    var catCard = el("div", { class: "card red section" });
+    catCard.appendChild(el("div", { class: "card-label mb2" }, "🗂️ ወጪ በምድብ"));
+    EXPENSE_CATEGORIES.forEach(function (c) { if (byCat[c]) catCard.appendChild(el("div", { class: "list-row" }, [el("span", {}, c), el("span", { style: { fontWeight: "700" } }, fmt(byCat[c]))])); });
+    container.appendChild(catCard);
+  }
+
+  var allocCard = el("div", { class: "card section", style: { borderColor: "#8b5cf6" } });
+  allocCard.appendChild(el("div", { class: "card-label mb2", style: { color: "#6d28d9" } }, "🧮 የትርፍ ክፍፍል"));
+  allocCard.appendChild(renderAllocationBlock(st.profit, data.allocations, "የተመረጠው ጊዜ"));
+  container.appendChild(allocCard);
+
+  var pdfBtn = el("button", { class: "btn btn-navy section" }, "⬇️ ሪፖርቱን ለባንክ በPDF አውርድ");
+  pdfBtn.addEventListener("click", guarded(function () { exportReportPdf(reportsPeriod, sales, expenses, st, pay, byCat, capital, invValue); }));
+  container.appendChild(pdfBtn);
+}
+
+/* ---- PDF export: jsPDF is lazy-loaded from CDN only when this button is pressed,
+   so the app stays 100% dependency-free/offline for everyone who never uses it. ---- */
+function exportReportPdf(period, sales, expenses, st, pay, byCat, capital, invValue) {
+  showToast("PDF በማዘጋጀት ላይ...");
+  injectScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js").then(function () {
+    var jsPDFLib = window.jspdf.jsPDF;
+    var doc = new jsPDFLib();
+    var profile = state.data.profile || {};
+    var y = 18;
+    doc.setFontSize(16); doc.text(profile.shopName || "የሱቅ ስም ያልገባ", 14, y); y += 7;
+    doc.setFontSize(10); doc.setTextColor(90);
+    doc.text("ባለቤት: " + (profile.ownerName || "-") + "   ስልክ: " + (profile.phone || "-"), 14, y); y += 5;
+    doc.text("TIN: " + (profile.tin || "-") + "   የንግድ ፈቃድ ቁ.: " + (profile.license || "-"), 14, y); y += 5;
+    doc.text("ሪፖርት የወጣበት ቀን: " + todayISO() + "   ጊዜ: " + PERIOD_LABEL_FULL(period), 14, y); y += 9;
+    doc.setTextColor(0); doc.setFontSize(12); doc.text("ቁልፍ የገንዘብ መረጃዎች (Key Financials)", 14, y); y += 6;
+    doc.setFontSize(10);
+    var lines = [
+      ["Gross Revenue (ጠቅላላ ገቢ)", fmt(st.revenue)],
+      ["Total Expenses (ጠቅላላ ወጪ)", fmt(st.expenseTotal)],
+      ["Net Profit (የተጣራ ትርፍ)", fmt(st.profit)],
+      ["Inventory Asset Value (የዕቃ እሴት)", fmt(invValue)],
+      ["Total Capital (ጠቅላላ ካፒታል)", fmt(capital)]
+    ];
+    lines.forEach(function (l) { doc.text(l[0] + ":", 14, y); doc.text(l[1], 120, y); y += 6; });
+    y += 4; doc.setFontSize(12); doc.text("Payment Flow (የክፍያ ፍሰት)", 14, y); y += 6; doc.setFontSize(10);
+    [["Cash (ካሽ)", fmt(pay.cash)], ["Bank Transfer (ባንክ)", fmt(pay.bank)], ["On Credit total (ዱቤ ጠቅላላ)", fmt(pay.credit)], ["Outstanding Credit (ያልተከፈለ)", fmt(pay.creditOutstanding)]].forEach(function (l) {
+      doc.text(l[0] + ":", 14, y); doc.text(l[1], 120, y); y += 6;
+    });
+    if (Object.keys(byCat).length > 0) {
+      y += 4; doc.setFontSize(12); doc.text("Expenses by Category (ወጪ በምድብ)", 14, y); y += 6; doc.setFontSize(10);
+      Object.keys(byCat).forEach(function (c) { doc.text(c + ":", 14, y); doc.text(fmt(byCat[c]), 120, y); y += 6; });
+    }
+    doc.setFontSize(8); doc.setTextColor(140);
+    doc.text("ይህ ሪፖርት ራሱ ከንግድ ስራው ትክክለኛ የግብይት መዝገብ ራሱ በራስ-ሰር የተሰላ ነው።", 14, 285);
+    doc.save((profile.shopName || "shop") + "-report-" + todayISO() + ".pdf");
+    showToast("PDF ተዘጋጅቷል");
+  }).catch(function (err) { showToast("PDF ማዘጋጀት አልተቻለም — ኢንተርኔት ያረጋግጡ"); console.error(err); });
+}
+function PERIOD_LABEL_FULL(p) { return p === "week" ? "የዚህ ሳምንት" : p === "month" ? "የዚህ ወር" : p === "year" ? "የዚህ አመት" : "ጠቅላላ ጊዜ"; }
+
+/* ================= business profile tab ================= */
+function renderProfile(container) {
+  container.appendChild(el("div", { class: "eyebrow section" }, "🏢 የንግድ ፕሮፋይል"));
+  var p = state.data.profile || freshProfile();
+  var fields = [
+    ["shopName", "የሱቅ ስም", true], ["ownerName", "የባለቤት ስም", true], ["email", "ኢሜይል", false],
+    ["phone", "ስልክ ቁጥር", true], ["tin", "TIN ቁጥር", false], ["license", "የንግድ ፈቃድ ቁጥር", false]
+  ];
+  var inputs = {};
+  var card = el("div", { class: "card section" });
+  fields.forEach(function (f) {
+    var input = el("input", { class: "input", value: p[f[0]] || "" });
+    inputs[f[0]] = input;
+    card.appendChild(Field(f[1], f[2], input));
+  });
+  var saveBtn = el("button", { class: "btn btn-primary" }, "አስቀምጥ");
+  saveBtn.addEventListener("click", guarded(function () {
+    setData(function (d) {
+      var np = {};
+      fields.forEach(function (f) { np[f[0]] = inputs[f[0]].value.trim(); });
+      d.profile = np;
+      return d;
+    });
+    showToast("የንግድ ፕሮፋይል ተቀምጧል");
+  }));
+  card.appendChild(saveBtn);
+  container.appendChild(card);
+  container.appendChild(el("div", { class: "helpmsg section" }, "ይህ መረጃ በPDF ሪፖርት ራስጌ (Header) ላይ ይታያል — ለባንክ ብድር ማመልከቻ ትክክለኛ እንዲሆን በጥንቃቄ ይሙሉ።"));
+}
+
 function openMainMenu() {
-  openSheet("ዝርዝር ሪፖርቶች", function (body) {
-    var weekly = el("button", { class: "menu-item" }, [el("span", { class: "em" }, "📅"), el("div", {}, [el("div", {}, "ሳምንታዊ ሪፖርት"), el("div", { class: "sub" }, "የዚህ ሳምንት 7ቱ ቀናት በስማቸው")])]);
+  openSheet("ተጨማሪ", function (body) {
+    var profileItem = el("button", { class: "menu-item" }, [el("span", { class: "em" }, "🏢"), el("div", {}, [el("div", {}, "የንግድ ፕሮፋይል"), el("div", { class: "sub" }, "ስም፣ TIN፣ ስልክ — ለPDF ሪፖርት ራስጌ")])]);
+    profileItem.addEventListener("click", function () { state.tab = "profile"; renderApp(); });
+    var reportsItem = el("button", { class: "menu-item" }, [el("span", { class: "em" }, "📊"), el("div", {}, [el("div", {}, "ሪፖርት (ለባንክ)"), el("div", { class: "sub" }, "ሳምንት/ወር/አመት + PDF አውርድ")])]);
+    reportsItem.addEventListener("click", function () { state.tab = "reports"; renderApp(); });
+    var weekly = el("button", { class: "menu-item" }, [el("span", { class: "em" }, "📅"), el("div", {}, [el("div", {}, "ሳምንታዊ ዝርዝር"), el("div", { class: "sub" }, "የዚህ ሳምንት 7ቱ ቀናት በስማቸው")])]);
     weekly.addEventListener("click", openWeeklyReport);
-    var monthly = el("button", { class: "menu-item" }, [el("span", { class: "em" }, "🗓️"), el("div", {}, [el("div", {}, "ወርሃዊ ሪፖርት"), el("div", { class: "sub" }, "12ቱ የኢትዮጵያ ወራት")])]);
+    var monthly = el("button", { class: "menu-item" }, [el("span", { class: "em" }, "🗓️"), el("div", {}, [el("div", {}, "ወርሃዊ ዝርዝር"), el("div", { class: "sub" }, "13ቱ የኢትዮጵያ ወራት")])]);
     monthly.addEventListener("click", openMonthlyReport);
-    var yearly = el("button", { class: "menu-item" }, [el("span", { class: "em" }, "📆"), el("div", {}, [el("div", {}, "አመታዊ ሪፖርት"), el("div", { class: "sub" }, "በኢትዮጵያ ዓ.ም")])]);
+    var yearly = el("button", { class: "menu-item" }, [el("span", { class: "em" }, "📆"), el("div", {}, [el("div", {}, "አመታዊ ዝርዝር"), el("div", { class: "sub" }, "በኢትዮጵያ ዓ.ም")])]);
     yearly.addEventListener("click", openYearlyReport);
     var sync = el("button", { class: "menu-item" }, [el("span", { class: "em" }, "☁️"), el("div", {}, [el("div", {}, "የጋራ ዳታቤዝ (Firebase) ማዋቀሪያ"), el("div", { class: "sub" }, "ብዙ ስልኮች በ real-time እንዲመሳሰሉ")])]);
     sync.addEventListener("click", openFirebaseSetup);
-    body.appendChild(weekly); body.appendChild(monthly); body.appendChild(yearly); body.appendChild(sync);
+    body.appendChild(profileItem); body.appendChild(reportsItem); body.appendChild(weekly); body.appendChild(monthly); body.appendChild(yearly); body.appendChild(sync);
   }, null);
 }
 
@@ -981,7 +1340,7 @@ function openFirebaseSetup() {
 
 /* ================= nav & root ================= */
 function BottomNav() {
-  var items = [{ key: "dashboard", label: "ዳሽቦርድ", em: "🏠" }, { key: "sales", label: "ሽያጭ", em: "📦" }, { key: "items", label: "ዕቃ ጨምር", em: "➕" }];
+  var items = [{ key: "dashboard", label: "ዳሽቦርድ", em: "🏠" }, { key: "sales", label: "ሽያጭ", em: "📦" }, { key: "items", label: "ዕቃዎች", em: "🗃️" }, { key: "expenses", label: "ወጪ", em: "💸" }, { key: "reports", label: "ሪፖርት", em: "📊" }];
   var nav = el("div", { class: "nav" });
   items.forEach(function (it) {
     var active = state.tab === it.key;
@@ -1007,6 +1366,9 @@ function renderApp() {
   if (state.tab === "dashboard") renderDashboard(content);
   else if (state.tab === "sales") renderSales(content);
   else if (state.tab === "items") renderItems(content);
+  else if (state.tab === "expenses") renderExpenses(content);
+  else if (state.tab === "reports") renderReports(content);
+  else if (state.tab === "profile") renderProfile(content);
   app.appendChild(content);
   app.appendChild(BottomNav());
   root.appendChild(app);
