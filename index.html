@@ -843,6 +843,7 @@ function friendlyFirebaseError(code) {
   if (code.indexOf("network") !== -1 || code === "TypeError: Failed to fetch") return "የኢንተርኔት ግንኙነት ችግር አለ — ይሞክሩ እንደገና ኢንተርኔት ካገኙ በኋላ።";
   return code;
 }
+var firebaseUnsubscribe = null;
 function initFirebaseIfConfigured(onDone) {
   var cfg = loadFirebaseConfig();
   if (!cfg || !cfg.apiKey || !cfg.shopId) { firebaseState = "idle"; if (onDone) onDone(); return; }
@@ -851,41 +852,53 @@ function initFirebaseIfConfigured(onDone) {
   injectScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js")
     .then(function () { return injectScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"); })
     .then(function () {
-      if (!firebaseDb) {
-        try { firebase.initializeApp(cfg); } catch (e) { /* already initialized — fine */ }
-        firebaseDb = firebase.firestore();
-        try { firebaseDb.enablePersistence({ synchronizeTabs: true }).catch(function () {}); } catch (e) {}
-      }
-      firebaseDocPath = firebaseDb.collection("shops").doc(cfg.shopId);
-      // Create the shared doc exactly once, without a create-race between two phones:
-      // only write our local data if the doc genuinely doesn't exist yet.
-      firebaseDb.runTransaction(function (tx) {
-        return tx.get(firebaseDocPath).then(function (docSnap) {
-          if (!docSnap.exists) tx.set(firebaseDocPath, state.data);
-        });
-      }).catch(function (err) {
-        firebaseState = "error"; firebaseErrorDetail = (err && err.code) || (err && err.message) || String(err);
-        renderApp();
-      });
-      firebaseDocPath.onSnapshot(function (docSnap) {
-        firebaseState = "connected"; firebaseReady = true; firebaseErrorDetail = "";
-        if (docSnap.exists) {
-          var remote = docSnap.data();
-          if (remote && Array.isArray(remote.items)) {
-            firebaseApplyingRemote = true;
-            state.data = remote;
-            saveLocal(state.data);
-            firebaseApplyingRemote = false;
-          }
+      try {
+        if (!firebaseDb) {
+          try { firebase.initializeApp(cfg); } catch (e) { /* already initialized — fine */ }
+          firebaseDb = firebase.firestore();
+          /* NOTE: we deliberately do NOT call enablePersistence() here.
+             Firestore's IndexedDB offline-persistence layer is the known
+             cause of "FIRESTORE INTERNAL ASSERTION FAILED: Unexpected
+             state" inside restrictive in-app browsers (TikTok/Facebook/etc
+             WebViews have broken IndexedDB support). Our app already keeps
+             its own localStorage cache for offline use, so we don't need
+             Firestore's built-in persistence and avoid this whole bug class. */
         }
-        renderApp();
-        if (onDone) onDone();
-      }, function (err) {
+        if (firebaseUnsubscribe) { firebaseUnsubscribe(); firebaseUnsubscribe = null; }
+        firebaseDocPath = firebaseDb.collection("shops").doc(cfg.shopId);
+        firebaseDb.runTransaction(function (tx) {
+          return tx.get(firebaseDocPath).then(function (docSnap) {
+            if (!docSnap.exists) tx.set(firebaseDocPath, state.data);
+          });
+        }).catch(function (err) {
+          firebaseState = "error"; firebaseErrorDetail = (err && err.code) || (err && err.message) || String(err);
+          renderApp();
+        });
+        firebaseUnsubscribe = firebaseDocPath.onSnapshot(function (docSnap) {
+          firebaseState = "connected"; firebaseReady = true; firebaseErrorDetail = "";
+          if (docSnap.exists) {
+            var remote = docSnap.data();
+            if (remote && Array.isArray(remote.items)) {
+              firebaseApplyingRemote = true;
+              state.data = remote;
+              saveLocal(state.data);
+              firebaseApplyingRemote = false;
+            }
+          }
+          renderApp();
+          if (onDone) onDone();
+        }, function (err) {
+          firebaseState = "error"; firebaseReady = false;
+          firebaseErrorDetail = (err && err.code) || (err && err.message) || String(err);
+          renderApp();
+          if (onDone) onDone();
+        });
+      } catch (err) {
         firebaseState = "error"; firebaseReady = false;
-        firebaseErrorDetail = (err && err.code) || (err && err.message) || String(err);
+        firebaseErrorDetail = (err && err.message) || String(err);
         renderApp();
         if (onDone) onDone();
-      });
+      }
     })
     .catch(function (err) {
       firebaseState = "error"; firebaseReady = false;
