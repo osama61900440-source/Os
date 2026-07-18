@@ -279,7 +279,8 @@ function loadData() {
   return freshData();
 }
 var storageAvailable = true;
-function saveLocal(d) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); } catch (e) { storageAvailable = false; } }
+var storageErrorDetail = "";
+function saveLocal(d) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); storageAvailable = true; } catch (e) { storageAvailable = false; storageErrorDetail = (e && e.message) ? e.message : String(e); } }
 
 /* ================= derived calculations ================= */
 function itemStock(data, itemId) {
@@ -803,6 +804,8 @@ function openYearlyReport() {
 
 /* ================= Firebase (optional, lazy-loaded — app stays 100% offline unless this is set up) ================= */
 var firebaseReady = false, firebaseDb = null, firebaseDocPath = null, firebaseApplyingRemote = false;
+var firebaseState = "idle"; // idle | connecting | connected | error
+var firebaseErrorDetail = "";
 /* Default config supplied by the shop owner — baked in so every phone that
    opens this same file auto-connects to the same shared shop without
    anyone needing to retype it. Still editable via ☰ → ☁️ if ever needed. */
@@ -826,48 +829,87 @@ function saveFirebaseConfig(cfg) { try { localStorage.setItem(FIREBASE_CFG_KEY, 
 
 function injectScript(src) {
   return new Promise(function (resolve, reject) {
+    var existing = document.querySelector('script[src="' + src + '"]');
+    if (existing) { resolve(); return; }
     var s = document.createElement("script");
-    s.src = src; s.onload = resolve; s.onerror = reject;
+    s.src = src; s.onload = resolve; s.onerror = function () { reject(new Error("script load failed: " + src)); };
     document.head.appendChild(s);
   });
 }
-function initFirebaseIfConfigured() {
+function friendlyFirebaseError(code) {
+  if (!code) return "";
+  if (code.indexOf("permission-denied") !== -1) return "ፈቃድ የለም — Firestore Rules ውስጥ 'Publish' መደረጉን ያረጋግጡ (☰ → ☁️ ላይ ያለውን rules እንደገና ይለጥፉ)።";
+  if (code.indexOf("not-found") !== -1 || code.indexOf("unavailable") !== -1) return "Firestore Database አልተፈጠረም — Firebase Console → Firestore Database → Create database ይጫኑ።";
+  if (code.indexOf("network") !== -1 || code === "TypeError: Failed to fetch") return "የኢንተርኔት ግንኙነት ችግር አለ — ይሞክሩ እንደገና ኢንተርኔት ካገኙ በኋላ።";
+  return code;
+}
+function initFirebaseIfConfigured(onDone) {
   var cfg = loadFirebaseConfig();
-  if (!cfg || !cfg.apiKey || !cfg.shopId) return;
+  if (!cfg || !cfg.apiKey || !cfg.shopId) { firebaseState = "idle"; if (onDone) onDone(); return; }
+  firebaseState = "connecting"; firebaseErrorDetail = "";
+  renderApp();
   injectScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js")
     .then(function () { return injectScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"); })
     .then(function () {
-      firebase.initializeApp(cfg);
-      var db = firebase.firestore();
-      try { db.enablePersistence({ synchronizeTabs: true }); } catch (e) {}
-      firebaseDb = db;
-      firebaseDocPath = db.collection("shops").doc(cfg.shopId);
+      if (!firebaseDb) {
+        try { firebase.initializeApp(cfg); } catch (e) { /* already initialized — fine */ }
+        firebaseDb = firebase.firestore();
+        try { firebaseDb.enablePersistence({ synchronizeTabs: true }).catch(function () {}); } catch (e) {}
+      }
+      firebaseDocPath = firebaseDb.collection("shops").doc(cfg.shopId);
+      // Create the shared doc exactly once, without a create-race between two phones:
+      // only write our local data if the doc genuinely doesn't exist yet.
+      firebaseDb.runTransaction(function (tx) {
+        return tx.get(firebaseDocPath).then(function (docSnap) {
+          if (!docSnap.exists) tx.set(firebaseDocPath, state.data);
+        });
+      }).catch(function (err) {
+        firebaseState = "error"; firebaseErrorDetail = (err && err.code) || (err && err.message) || String(err);
+        renderApp();
+      });
       firebaseDocPath.onSnapshot(function (docSnap) {
-        if (!docSnap.exists) { firebaseDocPath.set(state.data); return; }
-        var remote = docSnap.data();
-        if (remote && Array.isArray(remote.items)) {
-          firebaseApplyingRemote = true;
-          state.data = remote;
-          saveLocal(state.data);
-          renderApp();
-          firebaseApplyingRemote = false;
+        firebaseState = "connected"; firebaseReady = true; firebaseErrorDetail = "";
+        if (docSnap.exists) {
+          var remote = docSnap.data();
+          if (remote && Array.isArray(remote.items)) {
+            firebaseApplyingRemote = true;
+            state.data = remote;
+            saveLocal(state.data);
+            firebaseApplyingRemote = false;
+          }
         }
-      }, function (err) { console.error("firebase sync error", err); });
-      firebaseReady = true;
-      renderApp();
+        renderApp();
+        if (onDone) onDone();
+      }, function (err) {
+        firebaseState = "error"; firebaseReady = false;
+        firebaseErrorDetail = (err && err.code) || (err && err.message) || String(err);
+        renderApp();
+        if (onDone) onDone();
+      });
     })
-    .catch(function (err) { console.error("firebase load failed — check internet connection", err); });
+    .catch(function (err) {
+      firebaseState = "error"; firebaseReady = false;
+      firebaseErrorDetail = (err && err.message) || String(err);
+      renderApp();
+      if (onDone) onDone();
+    });
 }
 function cloudPush(data) {
   if (!firebaseReady || !firebaseDocPath || firebaseApplyingRemote) return;
-  firebaseDocPath.set(data).catch(function (err) { console.error("firebase push failed", err); });
+  firebaseDocPath.set(data).catch(function (err) {
+    firebaseState = "error"; firebaseErrorDetail = (err && err.code) || (err && err.message) || String(err);
+    renderApp();
+  });
 }
 function cloudStatus() {
   var cfg = loadFirebaseConfig();
   if (!cfg) return null;
-  return el("div", { class: "section", style: { fontSize: "11px", color: "#64748b", textAlign: "center" } }, [
-    el("span", { class: "sync-dot", style: { background: firebaseReady ? "#22c55e" : "#f59e0b" } }),
-    firebaseReady ? ("የጋራ ዳታቤዝ ተገናኝቷል (ሱቅ: " + cfg.shopId + ")") : "የጋራ ዳታቤዝ በመገናኘት ላይ..."
+  var color = firebaseState === "connected" ? "#22c55e" : firebaseState === "error" ? "#ef4444" : "#f59e0b";
+  var text = firebaseState === "connected" ? ("የጋራ ዳታቤዝ ተገናኝቷል (ሱቅ: " + cfg.shopId + ")")
+    : firebaseState === "error" ? ("⚠️ ግንኙነት አልተሳካም — " + friendlyFirebaseError(firebaseErrorDetail))
+    : "የጋራ ዳታቤዝ በመገናኘት ላይ...";
+  return el("div", { class: "section", style: { fontSize: "11px", color: firebaseState === "error" ? "#dc2626" : "#64748b", textAlign: "center", padding: "0 8px" } }, [
+    el("span", { class: "sync-dot", style: { background: color } }), text
   ]);
 }
 
@@ -876,9 +918,26 @@ function openFirebaseSetup() {
   var fields = ["apiKey", "authDomain", "projectId", "storageBucket", "messagingSenderId", "appId", "shopId"];
   var labels = { apiKey: "apiKey", authDomain: "authDomain", projectId: "projectId", storageBucket: "storageBucket", messagingSenderId: "messagingSenderId", appId: "appId", shopId: "የሱቅ መለያ ኮድ (ሁሉም ስልኮች ተመሳሳይ መስጠት አለባቸው)" };
   var inputs = {};
+  var statusBox;
+  function drawStatus() {
+    if (!statusBox) return;
+    clear(statusBox);
+    var color = firebaseState === "connected" ? "#16a34a" : firebaseState === "error" ? "#dc2626" : "#b45309";
+    var text = firebaseState === "connected" ? "✓ ተገናኝቷል"
+      : firebaseState === "error" ? ("✕ ስህተት: " + friendlyFirebaseError(firebaseErrorDetail))
+      : firebaseState === "connecting" ? "… በመገናኘት ላይ" : "ገና አልተሞከረም";
+    statusBox.appendChild(el("div", { style: { fontSize: "12px", fontWeight: "700", color: color, background: "#f8fafc", padding: "10px", borderRadius: "10px" } }, text));
+  }
   openSheet("☁️ የጋራ ዳታቤዝ (Firebase) ማዋቀሪያ", function (body) {
     body.appendChild(el("div", { class: "helpmsg" },
       "ብዙ ስልኮች በ real-time እንዲመሳሰሉ firebase.google.com ላይ ነጻ አካውንት ፈጥረው Firestore Database ያንቁ፣ Project Settings ውስጥ ያለውን የ config ቁጥሮች እዚህ ይለጥፉ። ይህን ካልሞሉ አፕሊኬሽኑ በራሱ በዚህ ስልክ ላይ ብቻ (ያለ ኢንተርኔት) መስራቱን ይቀጥላል።"));
+    statusBox = el("div", { class: "mb3" });
+    drawStatus();
+    body.appendChild(statusBox);
+    var testBtn = el("button", { class: "btn btn-outline btn-sm", style: { marginBottom: "12px" } }, "🔄 ግንኙነት አሁን ሞክር");
+    testBtn.addEventListener("click", function () { drawStatusConnecting(); initFirebaseIfConfigured(drawStatus); });
+    function drawStatusConnecting() { firebaseState = "connecting"; drawStatus(); }
+    body.appendChild(testBtn);
     fields.forEach(function (f) {
       var input = el("input", { class: "input", value: cfg[f] || "", placeholder: labels[f] });
       inputs[f] = input;
@@ -898,7 +957,8 @@ function openFirebaseSetup() {
       if (!newCfg.apiKey || !newCfg.shopId) { showToast("እባክዎ apiKey እና የሱቅ መለያ ኮድ ያስገቡ"); return; }
       saveFirebaseConfig(newCfg);
       showToast("ተቀምጧል — በመገናኘት ላይ...");
-      initFirebaseIfConfigured();
+      initFirebaseIfConfigured(drawStatus);
+      drawStatus();
       close();
     }));
     row.appendChild(saveBtn);
@@ -927,7 +987,8 @@ function renderApp() {
   hamBtn.addEventListener("click", openMainMenu);
   app.appendChild(el("div", { class: "header" }, [hamBtn, el("h1", {}, "የሱቅ መቆጣጠሪያ ሲስተም"), el("div", { class: "header-spacer" })]));
   if (!storageAvailable) {
-    app.appendChild(el("div", { style: { background: "#fff4e5", color: "#92400e", fontSize: "11px", padding: "8px 16px", textAlign: "center" } }, "ማሳሰቢያ: ውሂብ በራስ-ሰር መቀመጥ አልቻለም። በዚህ ክፍለ-ጊዜ ብቻ ይኖራል።"));
+    app.appendChild(el("div", { style: { background: "#fff4e5", color: "#92400e", fontSize: "11px", padding: "8px 16px", textAlign: "center" } },
+      "ማሳሰቢያ: ውሂብ በዚህ ስልክ ላይ በራስ-ሰር መቀመጥ አልቻለም (ስህተት: " + (storageErrorDetail || "unknown") + ")። Firebase ከተገናኘ ውሂብዎ አይጠፋም፣ ካልሆነ ግን ይህን ገፅ ሲዘጉ ይጠፋል።"));
   }
   var content = el("div", { class: "content" });
   if (state.tab === "dashboard") renderDashboard(content);
