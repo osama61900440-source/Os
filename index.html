@@ -232,8 +232,18 @@ function freshAllocations() {
     { id: uid(), name: "ወጪ", percent: 20 }
   ];
 }
-function freshData() { return { baseCapitalCents: 0, items: [], sales: [], expenses: [], allocations: freshAllocations(), profile: freshProfile() }; }
-function freshProfile() { return { shopName: "", ownerName: "", email: "", phone: "", tin: "", license: "" }; }
+function freshData() { return { baseCapitalCents: 0, items: [], sales: [], expenses: [], allocations: freshAllocations(), profile: freshProfile(), loanCenter: freshLoanCenter() }; }
+function freshProfile() { return { shopName: "", ownerName: "", email: "", phone: "", tin: "", license: "", businessSector: "", digitalId: "", businessRegistration: "", address: "", managerPhoto: "" }; }
+function freshLoanCenter() {
+  return {
+    requestedAmountCents: 0,
+    usageAllocations: [{ id: uid(), purpose: "አዲስ ዕቃ ግዢ", percent: 60 }, { id: uid(), purpose: "ኢንቬንቶሪ ማስፋፊያ", percent: 20 }, { id: uid(), purpose: "ሌላ", percent: 20 }],
+    proformaInvoices: [],
+    cashFlowProjection: [],
+    suppliers: [],
+    marketAnalysis: ""
+  };
+}
 
 function loadData() {
   try {
@@ -244,6 +254,17 @@ function loadData() {
         if (!Array.isArray(d.allocations)) d.allocations = freshAllocations();
         if (typeof d.baseCapitalCents !== "number") d.baseCapitalCents = 0;
         if (!d.profile || typeof d.profile !== "object") d.profile = freshProfile();
+        else { var fp = freshProfile(); for (var pk in fp) if (!(pk in d.profile)) d.profile[pk] = fp[pk]; }
+        if (!d.loanCenter || typeof d.loanCenter !== "object") d.loanCenter = freshLoanCenter();
+        else {
+          var fl = freshLoanCenter();
+          if (typeof d.loanCenter.requestedAmountCents !== "number") d.loanCenter.requestedAmountCents = 0;
+          if (!Array.isArray(d.loanCenter.usageAllocations) || d.loanCenter.usageAllocations.length === 0) d.loanCenter.usageAllocations = fl.usageAllocations;
+          if (!Array.isArray(d.loanCenter.proformaInvoices)) d.loanCenter.proformaInvoices = [];
+          if (!Array.isArray(d.loanCenter.cashFlowProjection)) d.loanCenter.cashFlowProjection = [];
+          if (!Array.isArray(d.loanCenter.suppliers)) d.loanCenter.suppliers = [];
+          if (typeof d.loanCenter.marketAnalysis !== "string") d.loanCenter.marketAnalysis = "";
+        }
         return d;
       }
     }
@@ -260,7 +281,7 @@ function loadData() {
             baseCapitalCents: Number(o.baseCapitalCents || o.openingCapitalCents) || 0,
             items: o.items || [], sales: o.sales || [], expenses: o.expenses || [],
             allocations: (Array.isArray(o.allocations) && o.allocations.length) ? o.allocations : freshAllocations(),
-            profile: freshProfile()
+            profile: freshProfile(), loanCenter: freshLoanCenter()
           };
         }
       }
@@ -276,7 +297,7 @@ function loadData() {
           items: (o2.items || []).map(function (it) {
             return { id: it.id || uid(), name: it.name, sellPriceCents: toCents(it.price), costPriceCents: 0, openingStock: Number(it.stock) || 0, dateAdded: todayISO(), createdAt: Date.now() };
           }),
-          sales: [], expenses: [], allocations: freshAllocations(), profile: freshProfile()
+          sales: [], expenses: [], allocations: freshAllocations(), profile: freshProfile(), loanCenter: freshLoanCenter()
         };
       }
     }
@@ -311,6 +332,21 @@ function inventoryValueCents(data) {
   return data.items.reduce(function (s, it) { return s + Math.max(0, itemStock(data, it.id)) * it.costPriceCents; }, 0);
 }
 function totalCapitalCents(data) { return data.baseCapitalCents + inventoryValueCents(data); }
+/* stock/capital as of a cutoff date — used only for the "value at start of
+   this Ethiopian year vs now" comparison on the PDF report. Same derivation
+   principle as the live numbers, just filtered to a date range, so it can
+   never disagree with the live totals when the cutoff is "today". */
+function itemStockAsOf(data, itemId, cutoffISO) {
+  var item = data.items.find(function (i) { return i.id === itemId; });
+  if (!item) return 0;
+  var sold = data.sales.filter(function (s) { return s.itemId === itemId && s.date <= cutoffISO; }).reduce(function (s, x) { return s + x.qty; }, 0);
+  return item.openingStock - sold;
+}
+function inventoryValueAsOf(data, cutoffISO) {
+  return data.items.filter(function (it) { return it.dateAdded <= cutoffISO; })
+    .reduce(function (s, it) { return s + Math.max(0, itemStockAsOf(data, it.id, cutoffISO)) * it.costPriceCents; }, 0);
+}
+function capitalAsOf(data, cutoffISO) { return data.baseCapitalCents + inventoryValueAsOf(data, cutoffISO); }
 
 function statsFor(sales, expenses) {
   var revenue = sales.reduce(function (s, x) { return s + x.totalCents; }, 0);
@@ -340,6 +376,22 @@ function expenseByCategory(expenses) {
   var map = {};
   expenses.forEach(function (e) { var c = e.category || "ሌላ"; map[c] = (map[c] || 0) + e.amountCents; });
   return map;
+}
+/* "customer traffic" — we don't track unique customer identity reliably (many
+   walk-in sales share no phone/ID), so the honest, defensible proxy for a
+   bank report is the number of separate sales transactions. Clearly labeled
+   as such wherever it's shown so it's never mistaken for verified footfall. */
+function transactionCount(sales) { return sales.length; }
+/* Reconciliation check: cash + bank + credit must equal total revenue.
+   Because every sale is derived and counted in exactly one bucket, this is
+   true by construction — but we still compute and display it explicitly so
+   the figure is auditable, and so it would visibly flag if data were ever
+   corrupted (e.g. a manually edited Firestore document). */
+function verifyPaymentReconciliation(sales) {
+  var pay = paymentBreakdown(sales);
+  var total = sales.reduce(function (s, x) { return s + x.totalCents; }, 0);
+  var sumOfMethods = pay.cash + pay.bank + pay.credit;
+  return { ok: sumOfMethods === total, total: total, sumOfMethods: sumOfMethods, pay: pay };
 }
 function periodStats(data, period) {
   var range = periodRange(period);
@@ -983,6 +1035,11 @@ function renderReports(container) {
   payCard.appendChild(el("div", { class: "list-row out" }, [el("span", {}, "⚠️ ያልተከፈለ ዱቤ (Outstanding)"), el("span", { style: { fontWeight: "700", color: "#dc2626" } }, fmt(pay.creditOutstanding))]));
   container.appendChild(payCard);
 
+  var recon = verifyPaymentReconciliation(sales);
+  container.appendChild(el("div", { class: "section", style: { fontSize: "11.5px", fontWeight: "700", textAlign: "center", padding: "10px", borderRadius: "10px", background: recon.ok ? "#f0fdf4" : "#fef2f2", color: recon.ok ? "#16a34a" : "#dc2626" } },
+    recon.ok ? ("✓ ተረጋግጧል፦ ካሽ + ባንክ + ዱቤ (" + fmt(recon.sumOfMethods) + ") = ጠቅላላ ገቢ (" + fmt(recon.total) + ")")
+      : ("⚠️ ማሳሰቢያ፦ የሽያጭ እና የገቢ ቁጥሮችዎ አልተገጣጠሙም (" + fmt(recon.sumOfMethods) + " ≠ " + fmt(recon.total) + ")፣ እባክዎ ኦዲተሮች ውድቅ እንዳያደርጉት ያስተካክሉ።")));
+
   if (Object.keys(byCat).length > 0) {
     var catCard = el("div", { class: "card red section" });
     catCard.appendChild(el("div", { class: "card-label mb2" }, "🗂️ ወጪ በምድብ"));
@@ -995,61 +1052,255 @@ function renderReports(container) {
   allocCard.appendChild(renderAllocationBlock(st.profit, data.allocations, "የተመረጠው ጊዜ"));
   container.appendChild(allocCard);
 
-  var pdfBtn = el("button", { class: "btn btn-navy section" }, "⬇️ ሪፖርቱን ለባንክ በPDF አውርድ");
-  pdfBtn.addEventListener("click", guarded(function () { exportReportPdf(reportsPeriod, sales, expenses, st, pay, byCat, capital, invValue); }));
+  var pdfBtn = el("button", { class: "btn btn-navy section" }, "⬇️ ባለ 9-ገጽ የኦዲት ሪፖርት (PDF) አውርድ");
+  pdfBtn.addEventListener("click", guarded(function () { exportFullAuditPdf(); }));
   container.appendChild(pdfBtn);
 }
 
 /* ---- PDF export: jsPDF is lazy-loaded from CDN only when this button is pressed,
    so the app stays 100% dependency-free/offline for everyone who never uses it. ---- */
-function exportReportPdf(period, sales, expenses, st, pay, byCat, capital, invValue) {
-  showToast("PDF በማዘጋጀት ላይ...");
+function ethiopianYearStartGregorianISO(ethYear) {
+  var d = ethNewYearGregorianDate(ethYear + 7);
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+function pieChartDataUrl(segments) {
+  var size = 320;
+  var canvas = document.createElement("canvas");
+  canvas.width = size; canvas.height = size;
+  var ctx = canvas.getContext("2d");
+  var colors = ["#3FAE79", "#2563eb", "#f59e0b", "#ef4444", "#8b5cf6", "#14b8a6", "#f97316"];
+  var cx = size / 2, cy = size / 2, r = size / 2 - 12;
+  var total = segments.reduce(function (s, x) { return s + Math.max(0, x.value); }, 0);
+  if (total <= 0) { ctx.fillStyle = "#e2e8f0"; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2 * Math.PI); ctx.fill(); return canvas.toDataURL("image/png"); }
+  var start = -Math.PI / 2;
+  segments.forEach(function (seg, i) {
+    var angle = (Math.max(0, seg.value) / total) * 2 * Math.PI;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, r, start, start + angle); ctx.closePath();
+    ctx.fillStyle = colors[i % colors.length]; ctx.fill();
+    start += angle;
+  });
+  return canvas.toDataURL("image/png");
+}
+function ensureSpace(doc, y, needed) { if (y + needed > 280) { doc.addPage(); return 20; } return y; }
+function drawKV(doc, y, label, value, color) {
+  y = ensureSpace(doc, y, 7);
+  doc.setTextColor(30); doc.text(String(label), 14, y);
+  doc.setTextColor.apply(doc, color ? [color[0], color[1], color[2]] : [30, 30, 30]);
+  doc.text(String(value), 128, y);
+  doc.setTextColor(30);
+  return y + 7;
+}
+function drawSectionTitle(doc, y, title) {
+  y = ensureSpace(doc, y, 10);
+  doc.setFontSize(13); doc.setTextColor(18, 58, 94); doc.text(title, 14, y);
+  doc.setDrawColor(200); doc.line(14, y + 2, 196, y + 2);
+  doc.setFontSize(10); doc.setTextColor(30);
+  return y + 10;
+}
+function drawTable(doc, y, headers, rows, colX) {
+  y = ensureSpace(doc, y, 10);
+  doc.setFontSize(9); doc.setTextColor(90);
+  headers.forEach(function (h, i) { doc.text(h, colX[i], y); });
+  y += 5; doc.setDrawColor(220); doc.line(14, y - 3.5, 196, y - 3.5);
+  doc.setTextColor(30);
+  rows.forEach(function (r) {
+    y = ensureSpace(doc, y, 6);
+    r.forEach(function (cell, i) { doc.text(String(cell), colX[i], y); });
+    y += 6;
+  });
+  return y + 2;
+}
+
+function exportFullAuditPdf() {
+  showToast("ባለ 9-ገጽ PDF በማዘጋጀት ላይ...");
   injectScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js").then(function () {
     var jsPDFLib = window.jspdf.jsPDF;
     var doc = new jsPDFLib();
-    var profile = state.data.profile || {};
-    var y = 18;
-    doc.setFontSize(16); doc.text(profile.shopName || "የሱቅ ስም ያልገባ", 14, y); y += 7;
-    doc.setFontSize(10); doc.setTextColor(90);
-    doc.text("ባለቤት: " + (profile.ownerName || "-") + "   ስልክ: " + (profile.phone || "-"), 14, y); y += 5;
-    doc.text("TIN: " + (profile.tin || "-") + "   የንግድ ፈቃድ ቁ.: " + (profile.license || "-"), 14, y); y += 5;
-    doc.text("ሪፖርት የወጣበት ቀን: " + todayISO() + "   ጊዜ: " + PERIOD_LABEL_FULL(period), 14, y); y += 9;
-    doc.setTextColor(0); doc.setFontSize(12); doc.text("ቁልፍ የገንዘብ መረጃዎች (Key Financials)", 14, y); y += 6;
-    doc.setFontSize(10);
-    var lines = [
-      ["Gross Revenue (ጠቅላላ ገቢ)", fmt(st.revenue)],
-      ["Total Expenses (ጠቅላላ ወጪ)", fmt(st.expenseTotal)],
-      ["Net Profit (የተጣራ ትርፍ)", fmt(st.profit)],
-      ["Inventory Asset Value (የዕቃ እሴት)", fmt(invValue)],
-      ["Total Capital (ጠቅላላ ካፒታል)", fmt(capital)]
-    ];
-    lines.forEach(function (l) { doc.text(l[0] + ":", 14, y); doc.text(l[1], 120, y); y += 6; });
-    y += 4; doc.setFontSize(12); doc.text("Payment Flow (የክፍያ ፍሰት)", 14, y); y += 6; doc.setFontSize(10);
-    [["Cash (ካሽ)", fmt(pay.cash)], ["Bank Transfer (ባንክ)", fmt(pay.bank)], ["On Credit total (ዱቤ ጠቅላላ)", fmt(pay.credit)], ["Outstanding Credit (ያልተከፈለ)", fmt(pay.creditOutstanding)]].forEach(function (l) {
-      doc.text(l[0] + ":", 14, y); doc.text(l[1], 120, y); y += 6;
-    });
-    if (Object.keys(byCat).length > 0) {
-      y += 4; doc.setFontSize(12); doc.text("Expenses by Category (ወጪ በምድብ)", 14, y); y += 6; doc.setFontSize(10);
-      Object.keys(byCat).forEach(function (c) { doc.text(c + ":", 14, y); doc.text(fmt(byCat[c]), 120, y); y += 6; });
+    var data = state.data;
+    var profile = data.profile || freshProfile();
+    var lc = data.loanCenter || freshLoanCenter();
+    var todayEth = gregorianToEthiopian(new Date());
+    var yearStartISO = ethiopianYearStartGregorianISO(todayEth.year);
+    var buckets = ethiopianBuckets(data);
+    var yearSales = [], yearExpenses = [];
+    for (var m = 1; m <= 13; m++) { var b = buckets[todayEth.year + "-" + m]; if (b) { yearSales = yearSales.concat(b.sales); yearExpenses = yearExpenses.concat(b.expenses); } }
+    var yearStats = statsFor(yearSales, yearExpenses);
+    var yearPay = paymentBreakdown(yearSales);
+    var yearByCat = expenseByCategory(yearExpenses);
+    var capitalNow = totalCapitalCents(data);
+    var capitalYearStart = capitalAsOf(data, yearStartISO);
+    var invValueNow = inventoryValueCents(data);
+    var y;
+
+    /* ---- PAGE 1: company profile ---- */
+    y = 20;
+    if (profile.managerPhoto) { try { doc.addImage(profile.managerPhoto, "JPEG", 150, 15, 32, 32); } catch (e) {} }
+    doc.setFontSize(18); doc.setTextColor(18, 58, 94); doc.text(profile.shopName || "የድርጅት ስም ያልገባ", 14, y); y += 9;
+    doc.setFontSize(10); doc.setTextColor(30);
+    y = drawKV(doc, y, "የማናጀር ስም", profile.ownerName || "-");
+    y = drawKV(doc, y, "የስራ ዘርፍ", profile.businessSector || "-");
+    y = drawKV(doc, y, "TIN ቁጥር", profile.tin || "-");
+    y = drawKV(doc, y, "የታደሰ ንግድ ፈቃድ ቁጥር", profile.license || "-");
+    y = drawKV(doc, y, "የጸደቀ የንግድ ምዝገባ ቁጥር", profile.businessRegistration || "-");
+    y = drawKV(doc, y, "የታደሰ ዲጅታል መታወቅያ", profile.digitalId || "-");
+    y = drawKV(doc, y, "የስራ አድራሻ", profile.address || "-");
+    y = drawKV(doc, y, "ኢሜይል", profile.email || "-");
+    y = drawKV(doc, y, "ስልክ ቁጥር", profile.phone || "-");
+    y = drawKV(doc, y, "ሪፖርት የወጣበት ቀን", todayISO() + " (" + ETH_MONTHS[todayEth.month - 1] + " " + todayEth.year + " ዓ.ም)");
+
+    /* ---- PAGE 2: value & capital comparison ---- */
+    doc.addPage(); y = 20;
+    y = drawSectionTitle(doc, y, "ገጽ 2 — የእሴት እና ካፒታል ዝርዝር");
+    y = drawKV(doc, y, "ካፒታል በ" + todayEth.year + " ዓ.ም መጀመሪያ (" + yearStartISO + ")", fmt(capitalYearStart));
+    y = drawKV(doc, y, "ካፒታል አሁን (" + todayISO() + ")", fmt(capitalNow));
+    y = drawKV(doc, y, "የካፒታል ለውጥ (Growth)", fmt(capitalNow - capitalYearStart), capitalNow - capitalYearStart >= 0 ? [22, 163, 74] : [220, 38, 38]);
+    y = drawKV(doc, y, "የአሁኑ የዕቃ ክምችት እሴት (Inventory Asset Value)", fmt(invValueNow));
+
+    /* ---- PAGE 3: customer traffic ---- */
+    doc.addPage(); y = 20;
+    y = drawSectionTitle(doc, y, "ገጽ 3 — የደንበኞች ትራፊክ (በግብይት ብዛት)");
+    doc.setFontSize(8); doc.setTextColor(120);
+    doc.text("* እያንዳንዱ የተመዘገበ ሽያጭ እንደ አንድ የደንበኛ አገልግሎት ተቆጥሯል (transaction count)።", 14, y); y += 7;
+    doc.setFontSize(10); doc.setTextColor(30);
+    var trafficRows = [];
+    for (var mt = 1; mt <= 13; mt++) { var bt = buckets[todayEth.year + "-" + mt]; trafficRows.push([ETH_MONTHS[mt - 1], bt ? transactionCount(bt.sales) : 0]); }
+    y = drawTable(doc, y, ["ወር", "የግብይት ብዛት"], trafficRows, [14, 100]);
+    y = drawKV(doc, y + 2, "የ" + todayEth.year + " ዓ.ም ጠቅላላ የግብይት ብዛት", transactionCount(yearSales));
+
+    /* ---- PAGE 4: payment breakdown by month ---- */
+    doc.addPage(); y = 20;
+    y = drawSectionTitle(doc, y, "ገጽ 4 — ወርሃዊ የክፍያ ዝርዝር (ካሽ / ሞባይል ባንኪንግ)");
+    var payRows = [];
+    for (var mp = 1; mp <= 13; mp++) {
+      var bp = buckets[todayEth.year + "-" + mp];
+      var pp = bp ? paymentBreakdown(bp.sales) : { cash: 0, bank: 0 };
+      payRows.push([ETH_MONTHS[mp - 1], fmt(pp.cash), fmt(pp.bank)]);
     }
-    doc.setFontSize(8); doc.setTextColor(140);
-    doc.text("ይህ ሪፖርት ራሱ ከንግድ ስራው ትክክለኛ የግብይት መዝገብ ራሱ በራስ-ሰር የተሰላ ነው።", 14, 285);
-    doc.save((profile.shopName || "shop") + "-report-" + todayISO() + ".pdf");
+    y = drawTable(doc, y, ["ወር", "ካሽ", "ሞባይል ባንኪንግ"], payRows, [14, 90, 145]);
+    y = drawKV(doc, y + 2, "የ" + todayEth.year + " ዓ.ም ጠቅላላ ካሽ", fmt(yearPay.cash));
+    y = drawKV(doc, y, "የ" + todayEth.year + " ዓ.ም ጠቅላላ ባንክ", fmt(yearPay.bank));
+    y = drawKV(doc, y, "የ" + todayEth.year + " ዓ.ም ጠቅላላ ዱቤ", fmt(yearPay.credit));
+
+    /* ---- PAGE 5: yearly profit & expenses ---- */
+    doc.addPage(); y = 20;
+    y = drawSectionTitle(doc, y, "ገጽ 5 — የ" + todayEth.year + " ዓ.ም ትርፍ እና ወጪ ዝርዝር");
+    y = drawKV(doc, y, "ጠቅላላ ገቢ (Gross Revenue)", fmt(yearStats.revenue));
+    y = drawKV(doc, y, "ጠቅላላ ወጪ (Total Expenses)", fmt(yearStats.expenseTotal));
+    y = drawKV(doc, y, "የተጣራ ትርፍ (Net Profit)", fmt(yearStats.profit), yearStats.profit >= 0 ? [22, 163, 74] : [220, 38, 38]);
+    y += 3; y = drawSectionTitle(doc, y, "ወጪ በምድብ");
+    var catRows = EXPENSE_CATEGORIES.filter(function (c) { return yearByCat[c]; }).map(function (c) { return [c, fmt(yearByCat[c])]; });
+    if (catRows.length) y = drawTable(doc, y, ["ምድብ", "መጠን"], catRows, [14, 100]);
+    var recon = verifyPaymentReconciliation(yearSales);
+    doc.setFontSize(9); doc.setTextColor(recon.ok ? 22 : 220, recon.ok ? 163 : 38, recon.ok ? 74 : 38);
+    doc.text((recon.ok ? "✓ ተረጋግጧል: " : "⚠ አልተገጣጠመም: ") + "ካሽ+ባንክ+ዱቤ (" + fmt(recon.sumOfMethods) + ") vs ጠቅላላ ገቢ (" + fmt(recon.total) + ")", 14, y + 4);
+
+    /* ---- PAGE 6: loan utilization plan ---- */
+    doc.addPage(); y = 20;
+    y = drawSectionTitle(doc, y, "ገጽ 6 — የብድር ፍላጎት እና የአጠቃቀም እቅድ");
+    y = drawKV(doc, y, "የሚጠየቀው የብድር መጠን", fmt(lc.requestedAmountCents));
+    y += 3;
+    var usageRows = lc.usageAllocations.map(function (u) { return [u.purpose, u.percent + "%", fmt(Math.round(lc.requestedAmountCents * (u.percent / 100)))]; });
+    y = drawTable(doc, y, ["አላማ", "መቶኛ", "መጠን"], usageRows, [14, 110, 145]);
+    if (lc.proformaInvoices.length) {
+      y += 3; y = drawSectionTitle(doc, y, "የፕሮፎርማ ኢንቮይስ ዝርዝር");
+      var pfRows = lc.proformaInvoices.map(function (pf) { return [pf.supplier, pf.description || "-", fmt(pf.amountCents)]; });
+      y = drawTable(doc, y, ["አቅራቢ", "ዝርዝር", "ዋጋ"], pfRows, [14, 90, 155]);
+    }
+
+    /* ---- PAGE 7: 12-month cash flow projection ---- */
+    doc.addPage(); y = 20;
+    y = drawSectionTitle(doc, y, "ገጽ 7 — የ12 ወራት የገንዘብ ፍሰት ትንበያ");
+    var cfRows = (lc.cashFlowProjection || []).map(function (r) { return [ETH_MONTHS[r.month - 1], fmt(r.projectedRevenueCents)]; });
+    y = drawTable(doc, y, ["ወር", "የሚጠበቅ ገቢ"], cfRows, [14, 100]);
+    var cfTotal = (lc.cashFlowProjection || []).reduce(function (s, r) { return s + r.projectedRevenueCents; }, 0);
+    y = drawKV(doc, y + 2, "የ12 ወራት ጠቅላላ ትንበያ", fmt(cfTotal));
+
+    /* ---- PAGE 8: suppliers & market analysis ---- */
+    doc.addPage(); y = 20;
+    y = drawSectionTitle(doc, y, "ገጽ 8 — የአቅራቢዎች ዝርዝር እና የገበያ ትንተና");
+    if (lc.suppliers.length) {
+      var supRows = lc.suppliers.map(function (s) { return [s.name, s.address || "-"]; });
+      y = drawTable(doc, y, ["አቅራቢ ስም", "አድራሻ"], supRows, [14, 100]);
+    } else { doc.text("ምንም አቅራቢ አልተመዘገበም", 14, y); y += 8; }
+    y += 3; y = drawSectionTitle(doc, y, "የተወዳዳሪነት ጥንካሬዎች");
+    var mktLines = doc.splitTextToSize(lc.marketAnalysis || "-", 180);
+    doc.text(mktLines, 14, y); y += mktLines.length * 5 + 4;
+    y = drawSectionTitle(doc, y, "ማሳሰቢያዎች");
+    doc.setFontSize(9);
+    doc.text("• የባንክ ስቴትመንት ማያያዣ መመሪያ: ያለፉት 6 ወራት የባንክ ስቴትመንት ኮፒ ከዚህ ሪፖርት ጋር ያያይዙ።", 14, y); y += 6;
+    doc.text("• የግብር ሰነዶች (Tax Clearance) ማመሳከሪያ: የቅርብ ጊዜ ግብር ክፍያ ደረሰኝ ኮፒ ያዘጋጁ።", 14, y); y += 6;
+
+    /* ---- PAGE 9: profit distribution strategy ---- */
+    doc.addPage(); y = 20;
+    y = drawSectionTitle(doc, y, "ገጽ 9 — የትርፍ ክፍፍል ስትራቴጂ");
+    var monthlyAvgProfit = Math.round(yearStats.profit / 12);
+    var allocRows = data.allocations.map(function (a) { return [a.name, a.percent + "%", fmt(Math.round(monthlyAvgProfit * (a.percent / 100))), fmt(Math.round(yearStats.profit * (a.percent / 100)))]; });
+    y = drawTable(doc, y, ["ክፍል", "መቶኛ", "ወርሃዊ (አማካይ)", "አመታዊ"], allocRows, [14, 75, 105, 150]);
+    y += 6;
+    if (yearStats.profit > 0) {
+      try {
+        var pieUrl = pieChartDataUrl(data.allocations.map(function (a) { return { value: yearStats.profit * (a.percent / 100) }; }));
+        y = ensureSpace(doc, y, 80);
+        doc.addImage(pieUrl, "PNG", 60, y, 80, 80);
+        y += 84;
+        data.allocations.forEach(function (a, i) {
+          var colors = ["#3FAE79", "#2563eb", "#f59e0b", "#ef4444", "#8b5cf6", "#14b8a6", "#f97316"];
+          doc.setFillColor(colors[i % colors.length]); doc.rect(20, y - 3, 3, 3, "F");
+          doc.setFontSize(9); doc.setTextColor(30); doc.text(a.name + " (" + a.percent + "%)", 26, y);
+          y += 5;
+        });
+      } catch (e) { doc.text("(ፓይ-ቻርት ሊታይ አልቻለም)", 14, y); }
+    } else {
+      doc.setFontSize(9); doc.setTextColor(180, 90, 0);
+      doc.text("በዚህ አመት ትርፍ ስላልተገኘ ፓይ-ቻርት አልተዘጋጀም።", 14, y);
+    }
+
+    doc.setFontSize(7); doc.setTextColor(150);
+    var totalPages = doc.internal.getNumberOfPages();
+    for (var pg = 1; pg <= totalPages; pg++) { doc.setPage(pg); doc.text("ገጽ " + pg + "/" + totalPages + " — በራስ-ሰር ከንግድ ስራው መዝገብ የተዘጋጀ", 14, 292); }
+
+    doc.save((profile.shopName || "shop") + "-bank-audit-" + todayISO() + ".pdf");
     showToast("PDF ተዘጋጅቷል");
   }).catch(function (err) { showToast("PDF ማዘጋጀት አልተቻለም — ኢንተርኔት ያረጋግጡ"); console.error(err); });
 }
-function PERIOD_LABEL_FULL(p) { return p === "week" ? "የዚህ ሳምንት" : p === "month" ? "የዚህ ወር" : p === "year" ? "የዚህ አመት" : "ጠቅላላ ጊዜ"; }
 
 /* ================= business profile tab ================= */
 function renderProfile(container) {
   container.appendChild(el("div", { class: "eyebrow section" }, "🏢 የንግድ ፕሮፋይል"));
   var p = state.data.profile || freshProfile();
   var fields = [
-    ["shopName", "የሱቅ ስም", true], ["ownerName", "የባለቤት ስም", true], ["email", "ኢሜይል", false],
-    ["phone", "ስልክ ቁጥር", true], ["tin", "TIN ቁጥር", false], ["license", "የንግድ ፈቃድ ቁጥር", false]
+    ["shopName", "የድርጅት ስም", true], ["ownerName", "የማናጀር ስም", true], ["businessSector", "የስራ ዘርፍ", false],
+    ["tin", "TIN ቁጥር", true], ["license", "የታደሰ ንግድ ፈቃድ ቁጥር", true], ["businessRegistration", "የጸደቀ የንግድ ምዝገባ ቁጥር", false],
+    ["digitalId", "የታደሰ ዲጅታል መታወቅያ ቁጥር", false], ["address", "የስራ አድራሻ", true],
+    ["email", "ኢሜይል", false], ["phone", "ስልክ ቁጥር", true]
   ];
   var inputs = {};
   var card = el("div", { class: "card section" });
+
+  var photoPreview = el("img", { src: p.managerPhoto || "", style: { width: "84px", height: "84px", borderRadius: "12px", objectFit: "cover", background: "#f1f5f9", display: p.managerPhoto ? "block" : "none" } });
+  var photoInput = el("input", { type: "file", accept: "image/*", class: "input" });
+  photoInput.addEventListener("change", function (e) {
+    var file = e.target.files[0]; if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function (ev) {
+      var img = new Image();
+      img.onload = function () {
+        var canvas = document.createElement("canvas");
+        var size = 240; canvas.width = size; canvas.height = size;
+        var ctx = canvas.getContext("2d");
+        var scale = Math.max(size / img.width, size / img.height);
+        var w = img.width * scale, h = img.height * scale;
+        ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+        var dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+        photoPreview.src = dataUrl; photoPreview.style.display = "block";
+        photoPreview.dataset.value = dataUrl;
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+  card.appendChild(Field("የማናጀር ፎቶ", false, el("div", { class: "flex items-center gap3" }, [photoPreview, photoInput])));
+
   fields.forEach(function (f) {
     var input = el("input", { class: "input", value: p[f[0]] || "" });
     inputs[f[0]] = input;
@@ -1060,6 +1311,7 @@ function renderProfile(container) {
     setData(function (d) {
       var np = {};
       fields.forEach(function (f) { np[f[0]] = inputs[f[0]].value.trim(); });
+      np.managerPhoto = photoPreview.dataset.value || p.managerPhoto || "";
       d.profile = np;
       return d;
     });
@@ -1067,13 +1319,118 @@ function renderProfile(container) {
   }));
   card.appendChild(saveBtn);
   container.appendChild(card);
-  container.appendChild(el("div", { class: "helpmsg section" }, "ይህ መረጃ በPDF ሪፖርት ራስጌ (Header) ላይ ይታያል — ለባንክ ብድር ማመልከቻ ትክክለኛ እንዲሆን በጥንቃቄ ይሙሉ።"));
+  container.appendChild(el("div", { class: "helpmsg section" }, "ይህ መረጃ በPDF ሪፖርት ገጽ 1 ላይ ይታያል — ለባንክ ብድር ማመልከቻ ትክክለኛ እንዲሆን በጥንቃቄ ይሙሉ።"));
+}
+
+/* ================= bank loan center ================= */
+function renderLoanCenter(container) {
+  container.appendChild(el("div", { class: "eyebrow section" }, "🏦 የባንክ ብድር ማዕከል"));
+  var lc = state.data.loanCenter || freshLoanCenter();
+
+  // ---- ሀ. loan utilization ----
+  var utilCard = el("div", { class: "card blue section" });
+  utilCard.appendChild(el("div", { class: "card-label mb2" }, "ሀ. የብድር ፍላጎት እና አጠቃቀም"));
+  var amtInput = el("input", { class: "input", type: "number", step: "0.01", value: (lc.requestedAmountCents / 100).toFixed(2) });
+  utilCard.appendChild(Field("የሚጠየቀው የብድር መጠን", true, amtInput));
+  var saveAmtBtn = el("button", { class: "btn btn-outline btn-sm" }, "መጠን አስቀምጥ");
+  saveAmtBtn.addEventListener("click", guarded(function () { setData(function (d) { d.loanCenter.requestedAmountCents = toCents(amtInput.value); return d; }); showToast("ተቀምጧል"); }));
+  utilCard.appendChild(saveAmtBtn);
+
+  utilCard.appendChild(el("div", { class: "mt3 mb2", style: { fontSize: "12px", fontWeight: "700", color: "#1e293b" } }, "የገንዘቡ አጠቃቀም ስርጭት (%)"));
+  var usageWrap = el("div", {});
+  utilCard.appendChild(usageWrap);
+  function drawUsage() {
+    clear(usageWrap);
+    var rows = lc.usageAllocations;
+    var tot = rows.reduce(function (s, r) { return s + Number(r.percent); }, 0);
+    rows.forEach(function (r, idx) {
+      var nameInput = el("input", { class: "input alloc-name", value: r.purpose });
+      var pctInput = el("input", { class: "input alloc-pct", type: "number", value: r.percent });
+      var rmBtn = el("button", { class: "trash-btn" }, "✕");
+      rmBtn.addEventListener("click", function () { setData(function (d) { d.loanCenter.usageAllocations.splice(idx, 1); return d; }); });
+      nameInput.addEventListener("change", function (e) { setData(function (d) { d.loanCenter.usageAllocations[idx].purpose = e.target.value; return d; }); });
+      pctInput.addEventListener("change", function (e) { setData(function (d) { d.loanCenter.usageAllocations[idx].percent = Number(e.target.value) || 0; return d; }); });
+      usageWrap.appendChild(el("div", { class: "flex gap2 items-center mb2" }, [nameInput, pctInput, rmBtn]));
+    });
+    usageWrap.appendChild(el("div", { style: { fontSize: "11px", fontWeight: "700", color: Math.abs(tot - 100) > 0.01 ? "#f59e0b" : "#16a34a" } }, "ጠቅላላ: " + tot + "%"));
+  }
+  drawUsage();
+  var addUsageBtn = el("button", { class: "btn btn-outline btn-sm mt2" }, "+ ስርጭት ጨምር");
+  addUsageBtn.addEventListener("click", function () { setData(function (d) { d.loanCenter.usageAllocations.push({ id: uid(), purpose: "አዲስ አላማ", percent: 0 }); return d; }); });
+  utilCard.appendChild(addUsageBtn);
+  container.appendChild(utilCard);
+
+  // proforma invoices
+  var proformaCard = el("div", { class: "card section" });
+  proformaCard.appendChild(el("div", { class: "card-label mb2" }, "📄 የፕሮፎርማ ኢንቮይስ መዝገብ"));
+  var pfSupplier = el("input", { class: "input", placeholder: "አቅራቢ ስም" });
+  var pfDesc = el("input", { class: "input", placeholder: "ዝርዝር (ምን እንደሚገዛ)" });
+  var pfAmt = el("input", { class: "input", type: "number", step: "0.01", placeholder: "የተጠቀሰ ዋጋ" });
+  var addPfBtn = el("button", { class: "btn btn-outline btn-sm" }, "+ ጨምር");
+  addPfBtn.addEventListener("click", guarded(function () {
+    if (!pfSupplier.value.trim() || !pfAmt.value) { showToast("እባክዎ አቅራቢ ስም እና ዋጋ ያስገቡ"); return; }
+    setData(function (d) { d.loanCenter.proformaInvoices.push({ id: uid(), supplier: pfSupplier.value.trim(), description: pfDesc.value.trim(), amountCents: toCents(pfAmt.value), date: todayISO() }); return d; });
+    pfSupplier.value = ""; pfDesc.value = ""; pfAmt.value = "";
+  }));
+  proformaCard.appendChild(pfSupplier); proformaCard.appendChild(el("div", { class: "mt2" }, [pfDesc])); proformaCard.appendChild(el("div", { class: "mt2" }, [pfAmt])); proformaCard.appendChild(el("div", { class: "mt2" }, [addPfBtn]));
+  lc.proformaInvoices.forEach(function (pf) {
+    proformaCard.appendChild(el("div", { class: "list-row", style: { marginTop: "8px" } }, [
+      el("span", {}, pf.supplier + (pf.description ? " · " + pf.description : "")),
+      el("span", { style: { fontWeight: "700" } }, fmt(pf.amountCents))
+    ]));
+  });
+  container.appendChild(proformaCard);
+
+  // ---- ለ. cash flow projection ----
+  var cfCard = el("div", { class: "card green section" });
+  cfCard.appendChild(el("div", { class: "card-label mb2" }, "ለ. የ12 ወራት የገንዘብ ፍሰት ትንበያ"));
+  var todayEth = gregorianToEthiopian(new Date());
+  if (!lc.cashFlowProjection || lc.cashFlowProjection.length !== 12) {
+    var proj = [];
+    for (var m = 0; m < 12; m++) { var mm = ((todayEth.month - 1 + m) % 12) + 1; proj.push({ month: mm, projectedRevenueCents: 0 }); }
+    lc.cashFlowProjection = proj;
+  }
+  lc.cashFlowProjection.forEach(function (row, idx) {
+    var input = el("input", { class: "input", type: "number", step: "0.01", value: (row.projectedRevenueCents / 100).toFixed(2), style: { flex: "1" } });
+    input.addEventListener("change", function (e) { setData(function (d) { d.loanCenter.cashFlowProjection[idx].projectedRevenueCents = toCents(e.target.value); return d; }); });
+    cfCard.appendChild(el("div", { class: "flex items-center gap2 mb2" }, [el("span", { style: { width: "88px", fontSize: "12px", color: "#64748b" } }, ETH_MONTHS[row.month - 1]), input]));
+  });
+  container.appendChild(cfCard);
+
+  // ---- ሐ. suppliers & market ----
+  var mktCard = el("div", { class: "card amber section" });
+  mktCard.appendChild(el("div", { class: "card-label mb2", style: { color: "#b45309" } }, "ሐ. አቅራቢዎች እና የገበያ ሁኔታ"));
+  var supName = el("input", { class: "input", placeholder: "የአቅራቢ ስም" });
+  var supAddr = el("input", { class: "input", placeholder: "አድራሻ" });
+  var addSupBtn = el("button", { class: "btn btn-outline btn-sm" }, "+ አቅራቢ ጨምር");
+  addSupBtn.addEventListener("click", guarded(function () {
+    if (!supName.value.trim()) { showToast("የአቅራቢ ስም ያስገቡ"); return; }
+    setData(function (d) { d.loanCenter.suppliers.push({ id: uid(), name: supName.value.trim(), address: supAddr.value.trim() }); return d; });
+    supName.value = ""; supAddr.value = "";
+  }));
+  mktCard.appendChild(supName); mktCard.appendChild(el("div", { class: "mt2" }, [supAddr])); mktCard.appendChild(el("div", { class: "mt2" }, [addSupBtn]));
+  lc.suppliers.forEach(function (s) {
+    mktCard.appendChild(el("div", { class: "list-row", style: { marginTop: "8px" } }, [el("span", {}, s.name), el("span", { style: { fontSize: "11px", color: "#94a3b8" } }, s.address)]));
+  });
+  var mktText = el("textarea", { class: "input mt3", rows: "4", placeholder: "የሱቁን ተወዳዳሪነት ጥንካሬዎች (ጥራት፣ ዋጋ፣ አካባቢ...)" });
+  mktText.value = lc.marketAnalysis || "";
+  mktCard.appendChild(mktText);
+  var saveMktBtn = el("button", { class: "btn btn-outline btn-sm mt2" }, "መግለጫ አስቀምጥ");
+  saveMktBtn.addEventListener("click", guarded(function () { setData(function (d) { d.loanCenter.marketAnalysis = mktText.value.trim(); return d; }); showToast("ተቀምጧል"); }));
+  mktCard.appendChild(saveMktBtn);
+  container.appendChild(mktCard);
+
+  var pdfBtn = el("button", { class: "btn btn-navy section" }, "⬇️ ባለ 9-ገጽ የኦዲት ሪፖርት (PDF) አውርድ");
+  pdfBtn.addEventListener("click", guarded(function () { exportFullAuditPdf(); }));
+  container.appendChild(pdfBtn);
 }
 
 function openMainMenu() {
   openSheet("ተጨማሪ", function (body) {
     var profileItem = el("button", { class: "menu-item" }, [el("span", { class: "em" }, "🏢"), el("div", {}, [el("div", {}, "የንግድ ፕሮፋይል"), el("div", { class: "sub" }, "ስም፣ TIN፣ ስልክ — ለPDF ሪፖርት ራስጌ")])]);
     profileItem.addEventListener("click", function () { state.tab = "profile"; renderApp(); });
+    var loanItem = el("button", { class: "menu-item" }, [el("span", { class: "em" }, "🏦"), el("div", {}, [el("div", {}, "የባንክ ብድር ማዕከል"), el("div", { class: "sub" }, "የብድር ፍላጎት፣ ትንበያ፣ አቅራቢዎች")])]);
+    loanItem.addEventListener("click", function () { state.tab = "loancenter"; renderApp(); });
     var reportsItem = el("button", { class: "menu-item" }, [el("span", { class: "em" }, "📊"), el("div", {}, [el("div", {}, "ሪፖርት (ለባንክ)"), el("div", { class: "sub" }, "ሳምንት/ወር/አመት + PDF አውርድ")])]);
     reportsItem.addEventListener("click", function () { state.tab = "reports"; renderApp(); });
     var weekly = el("button", { class: "menu-item" }, [el("span", { class: "em" }, "📅"), el("div", {}, [el("div", {}, "ሳምንታዊ ዝርዝር"), el("div", { class: "sub" }, "የዚህ ሳምንት 7ቱ ቀናት በስማቸው")])]);
@@ -1084,7 +1441,7 @@ function openMainMenu() {
     yearly.addEventListener("click", openYearlyReport);
     var sync = el("button", { class: "menu-item" }, [el("span", { class: "em" }, "☁️"), el("div", {}, [el("div", {}, "የጋራ ዳታቤዝ (Firebase) ማዋቀሪያ"), el("div", { class: "sub" }, "ብዙ ስልኮች በ real-time እንዲመሳሰሉ")])]);
     sync.addEventListener("click", openFirebaseSetup);
-    body.appendChild(profileItem); body.appendChild(reportsItem); body.appendChild(weekly); body.appendChild(monthly); body.appendChild(yearly); body.appendChild(sync);
+    body.appendChild(profileItem); body.appendChild(loanItem); body.appendChild(reportsItem); body.appendChild(weekly); body.appendChild(monthly); body.appendChild(yearly); body.appendChild(sync);
   }, null);
 }
 
@@ -1369,14 +1726,7 @@ function renderApp() {
   else if (state.tab === "expenses") renderExpenses(content);
   else if (state.tab === "reports") renderReports(content);
   else if (state.tab === "profile") renderProfile(content);
+  else if (state.tab === "loancenter") renderLoanCenter(content);
   app.appendChild(content);
   app.appendChild(BottomNav());
-  root.appendChild(app);
-}
-
-renderApp();
-initFirebaseIfConfigured(); // no-op (no network call) unless a Firebase config was previously saved
-})();
-</script>
-</body>
-</html>
+  r
