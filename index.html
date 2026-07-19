@@ -495,41 +495,47 @@ function renderDashboard(container) {
 
   container.appendChild(el("div", { class: "eyebrow section" }, "📊 የዛሬ ሁኔታ (" + todayISO() + ")"));
 
-  var capCard = el("div", { class: "card blue section flex items-center justify-between" }, [
-    el("div", {}, [
-      el("div", { class: "card-label" }, "💰 ጠቅላላ ካፒታል (እቃ ክምችት ዋጋ + መነሻ ገንዘብ)"),
-      el("div", { class: "card-value" }, fmt(capital))
-    ])
+  var statGrid = el("div", { class: "grid2 section" });
+
+  var capCard = el("div", { class: "card blue card-sm" }, [
+    el("div", { class: "card-label" }, "💰 ካፒታል"),
+    el("div", { class: "card-value", style: { fontSize: "15px" } }, fmt(capital))
   ]);
-  var editCapBtn = el("button", { class: "icon-btn" }, "✎");
+  var editCapBtn = el("button", { class: "icon-btn", style: { position: "absolute", top: "8px", right: "8px", width: "26px", height: "26px", fontSize: "12px" } }, "✎");
   editCapBtn.addEventListener("click", openEditCapitalModal);
+  capCard.style.position = "relative";
   capCard.appendChild(editCapBtn);
-  container.appendChild(capCard);
+  statGrid.appendChild(capCard);
 
-  container.appendChild(el("div", { class: "card violet section" }, [
-    el("div", { class: "card-label" }, "🧾 የዛሬ ጠቅላላ ሽያጭ (ገቢ)"),
-    el("div", { class: "card-value" }, fmt(stats.revenue))
+  statGrid.appendChild(el("div", { class: "card violet card-sm" }, [
+    el("div", { class: "card-label" }, "🧾 የዛሬ ሽያጭ"),
+    el("div", { class: "card-value", style: { fontSize: "15px" } }, fmt(stats.revenue))
   ]));
 
-  container.appendChild(el("div", { class: "card green section" }, [
-    el("div", { class: "card-label" }, "📈 የዛሬ የተጣራ ትርፍ"),
-    el("div", { class: "card-value", style: { color: stats.profit >= 0 ? "#16a34a" : "#dc2626" } }, fmt(stats.profit))
+  statGrid.appendChild(el("div", { class: "card green card-sm" }, [
+    el("div", { class: "card-label" }, "📈 የዛሬ ትርፍ"),
+    el("div", { class: "card-value", style: { fontSize: "15px", color: stats.profit >= 0 ? "#16a34a" : "#dc2626" } }, fmt(stats.profit))
   ]));
 
-  var expCard = el("div", { class: "card red section" });
-  var expTop = el("div", { class: "flex items-center justify-between" }, [
-    el("div", {}, [el("div", { class: "card-label" }, "📉 የዛሬ ጠቅላላ ወጪ"), el("div", { class: "card-value" }, fmt(stats.expenseTotal))])
+  var expCard = el("div", { class: "card red card-sm", style: { position: "relative" } }, [
+    el("div", { class: "card-label" }, "📉 የዛሬ ወጪ"),
+    el("div", { class: "card-value", style: { fontSize: "15px" } }, fmt(stats.expenseTotal))
   ]);
-  var addExpBtn = el("button", { class: "icon-btn" }, "+");
+  var addExpBtn = el("button", { class: "icon-btn", style: { position: "absolute", top: "8px", right: "8px", width: "26px", height: "26px", fontSize: "14px" } }, "+");
   addExpBtn.addEventListener("click", openAddExpenseModal);
-  expTop.appendChild(addExpBtn);
-  expCard.appendChild(expTop);
+  expCard.appendChild(addExpBtn);
+  statGrid.appendChild(expCard);
+
+  container.appendChild(statGrid);
+
   if (stats.expensesInPeriod.length > 0) {
+    var expListCard = el("div", { class: "card section card-sm" });
+    expListCard.appendChild(el("div", { class: "card-label mb2" }, "የዛሬ ወጪዎች"));
     stats.expensesInPeriod.slice().sort(function (a, b) { return b.createdAt - a.createdAt; }).slice(0, 3).forEach(function (e) {
-      expCard.appendChild(el("div", { class: "list-row" }, [el("span", {}, e.title), el("span", { style: { color: "#dc2626", fontWeight: "700" } }, fmt(e.amountCents))]));
+      expListCard.appendChild(el("div", { class: "list-row" }, [el("span", {}, e.title), el("span", { style: { color: "#dc2626", fontWeight: "700" } }, fmt(e.amountCents))]));
     });
+    container.appendChild(expListCard);
   }
-  container.appendChild(expCard);
 
   container.appendChild(el("div", { class: "card amber section" }, [
     el("div", { class: "card-label", style: { color: "#b45309" } }, "🔥 የዛሬ በጣም የተሸጠው ዕቃ"),
@@ -1057,65 +1063,113 @@ function renderReports(container) {
   container.appendChild(pdfBtn);
 }
 
+
 /* ---- PDF export: jsPDF is lazy-loaded from CDN only when this button is pressed,
-   so the app stays 100% dependency-free/offline for everyone who never uses it. ---- */
+   so the app stays 100% dependency-free/offline for everyone who never uses it.
+
+   IMPORTANT FONT NOTE: jsPDF's built-in fonts (Helvetica etc.) do not contain
+   Ethiopic glyphs at all, so asking it to .text() Amharic directly produces
+   garbage characters (and can even corrupt nearby symbols like the currency
+   mark). To guarantee correct, crisp Amharic rendering with zero risk of a
+   missing/broken font file, every PDF page below is first drawn as a normal
+   HTML5 Canvas image — using the exact same system font that already
+   renders this whole app's Amharic UI correctly — and then that finished
+   page image is placed into the PDF. jsPDF never has to render Ethiopic
+   text itself, so the "è1E 5 ë c" / "¥" corruption can no longer happen. */
+var PDF_FONT = '"Noto Sans Ethiopic","Nyala","Abyssinica SIL","Kefa","Noto Sans",Arial,sans-serif';
+var PDF_PAGE_W = 1000, PDF_PAGE_H = 1414; // matches A4 aspect ratio (210x297mm)
+var PDF_MARGIN = 60;
+
+function pdfPage() {
+  var canvas = document.createElement("canvas");
+  canvas.width = PDF_PAGE_W; canvas.height = PDF_PAGE_H;
+  var ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, PDF_PAGE_W, PDF_PAGE_H);
+  return { canvas: canvas, ctx: ctx, y: PDF_MARGIN, right: PDF_PAGE_W - PDF_MARGIN, left: PDF_MARGIN };
+}
+function pTitle(p, text) {
+  p.ctx.fillStyle = "#123A5E"; p.ctx.font = "700 40px " + PDF_FONT; p.ctx.textAlign = "left";
+  p.ctx.fillText(text, p.left, p.y); p.y += 18;
+  p.ctx.strokeStyle = "#cbd5e1"; p.ctx.lineWidth = 2;
+  p.ctx.beginPath(); p.ctx.moveTo(p.left, p.y); p.ctx.lineTo(p.right, p.y); p.ctx.stroke();
+  p.y += 46;
+}
+function pSection(p, text) {
+  p.ctx.fillStyle = "#123A5E"; p.ctx.font = "700 30px " + PDF_FONT; p.ctx.textAlign = "left";
+  p.ctx.fillText(text, p.left, p.y); p.y += 38;
+}
+function pKV(p, label, value, color) {
+  p.ctx.font = "400 26px " + PDF_FONT; p.ctx.fillStyle = "#334155"; p.ctx.textAlign = "left";
+  p.ctx.fillText(label, p.left, p.y);
+  p.ctx.font = "700 26px " + PDF_FONT; p.ctx.fillStyle = color || "#1e293b"; p.ctx.textAlign = "right";
+  p.ctx.fillText(value, p.right, p.y);
+  p.y += 42;
+}
+function pWrap(p, text, maxWidth) {
+  p.ctx.font = "400 24px " + PDF_FONT;
+  var words = String(text).split(" "), lines = [], cur = "";
+  words.forEach(function (w) {
+    var test = cur ? cur + " " + w : w;
+    if (p.ctx.measureText(test).width > maxWidth && cur) { lines.push(cur); cur = w; } else cur = test;
+  });
+  if (cur) lines.push(cur);
+  return lines;
+}
+function pParagraph(p, text) {
+  var lines = pWrap(p, text, p.right - p.left);
+  p.ctx.fillStyle = "#334155"; p.ctx.textAlign = "left";
+  lines.forEach(function (line) { p.ctx.fillText(line, p.left, p.y); p.y += 34; });
+  p.y += 10;
+}
+function pNote(p, text) {
+  p.ctx.font = "400 20px " + PDF_FONT; p.ctx.fillStyle = "#94a3b8"; p.ctx.textAlign = "left";
+  p.ctx.fillText(text, p.left, p.y); p.y += 32;
+}
+/* simple two/three-column table with a header row and a light divider */
+function pTable(p, headers, rows, colX) {
+  p.ctx.font = "700 22px " + PDF_FONT; p.ctx.fillStyle = "#64748b"; p.ctx.textAlign = "left";
+  headers.forEach(function (h, i) { p.ctx.fillText(h, colX[i], p.y); });
+  p.y += 14;
+  p.ctx.strokeStyle = "#e2e8f0"; p.ctx.lineWidth = 1.5;
+  p.ctx.beginPath(); p.ctx.moveTo(p.left, p.y); p.ctx.lineTo(p.right, p.y); p.ctx.stroke();
+  p.y += 30;
+  p.ctx.font = "400 22px " + PDF_FONT; p.ctx.fillStyle = "#1e293b";
+  rows.forEach(function (r) {
+    r.forEach(function (cell, i) { p.ctx.fillText(String(cell), colX[i], p.y); });
+    p.y += 34;
+  });
+  p.y += 12;
+}
+function pFooter(p, text) {
+  p.ctx.font = "400 18px " + PDF_FONT; p.ctx.fillStyle = "#94a3b8"; p.ctx.textAlign = "left";
+  p.ctx.fillText(text, p.left, PDF_PAGE_H - 30);
+}
+
 function ethiopianYearStartGregorianISO(ethYear) {
   var d = ethNewYearGregorianDate(ethYear + 7);
   return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
 }
-function pieChartDataUrl(segments) {
-  var size = 320;
-  var canvas = document.createElement("canvas");
-  canvas.width = size; canvas.height = size;
-  var ctx = canvas.getContext("2d");
-  var colors = ["#3FAE79", "#2563eb", "#f59e0b", "#ef4444", "#8b5cf6", "#14b8a6", "#f97316"];
-  var cx = size / 2, cy = size / 2, r = size / 2 - 12;
-  var total = segments.reduce(function (s, x) { return s + Math.max(0, x.value); }, 0);
-  if (total <= 0) { ctx.fillStyle = "#e2e8f0"; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2 * Math.PI); ctx.fill(); return canvas.toDataURL("image/png"); }
-  var start = -Math.PI / 2;
-  segments.forEach(function (seg, i) {
-    var angle = (Math.max(0, seg.value) / total) * 2 * Math.PI;
-    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, r, start, start + angle); ctx.closePath();
-    ctx.fillStyle = colors[i % colors.length]; ctx.fill();
-    start += angle;
+
+function loadImageAsync(src) {
+  return new Promise(function (resolve) {
+    if (!src) { resolve(null); return; }
+    var img = new Image();
+    img.onload = function () { resolve(img); };
+    img.onerror = function () { resolve(null); };
+    img.src = src;
   });
-  return canvas.toDataURL("image/png");
-}
-function ensureSpace(doc, y, needed) { if (y + needed > 280) { doc.addPage(); return 20; } return y; }
-function drawKV(doc, y, label, value, color) {
-  y = ensureSpace(doc, y, 7);
-  doc.setTextColor(30); doc.text(String(label), 14, y);
-  doc.setTextColor.apply(doc, color ? [color[0], color[1], color[2]] : [30, 30, 30]);
-  doc.text(String(value), 128, y);
-  doc.setTextColor(30);
-  return y + 7;
-}
-function drawSectionTitle(doc, y, title) {
-  y = ensureSpace(doc, y, 10);
-  doc.setFontSize(13); doc.setTextColor(18, 58, 94); doc.text(title, 14, y);
-  doc.setDrawColor(200); doc.line(14, y + 2, 196, y + 2);
-  doc.setFontSize(10); doc.setTextColor(30);
-  return y + 10;
-}
-function drawTable(doc, y, headers, rows, colX) {
-  y = ensureSpace(doc, y, 10);
-  doc.setFontSize(9); doc.setTextColor(90);
-  headers.forEach(function (h, i) { doc.text(h, colX[i], y); });
-  y += 5; doc.setDrawColor(220); doc.line(14, y - 3.5, 196, y - 3.5);
-  doc.setTextColor(30);
-  rows.forEach(function (r) {
-    y = ensureSpace(doc, y, 6);
-    r.forEach(function (cell, i) { doc.text(String(cell), colX[i], y); });
-    y += 6;
-  });
-  return y + 2;
 }
 
 function exportFullAuditPdf() {
   showToast("ባለ 9-ገጽ PDF በማዘጋጀት ላይ...");
-  injectScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js").then(function () {
+  var profile0 = state.data.profile || freshProfile();
+  Promise.all([
+    injectScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"),
+    loadImageAsync(profile0.managerPhoto)
+  ]).then(function (results) {
+    var managerImg = results[1];
     var jsPDFLib = window.jspdf.jsPDF;
-    var doc = new jsPDFLib();
+    var doc = new jsPDFLib({ unit: "mm", format: "a4" });
     var data = state.data;
     var profile = data.profile || freshProfile();
     var lc = data.loanCenter || freshLoanCenter();
@@ -1130,134 +1184,151 @@ function exportFullAuditPdf() {
     var capitalNow = totalCapitalCents(data);
     var capitalYearStart = capitalAsOf(data, yearStartISO);
     var invValueNow = inventoryValueCents(data);
-    var y;
+    var pages = [];
 
     /* ---- PAGE 1: company profile ---- */
-    y = 20;
-    if (profile.managerPhoto) { try { doc.addImage(profile.managerPhoto, "JPEG", 150, 15, 32, 32); } catch (e) {} }
-    doc.setFontSize(18); doc.setTextColor(18, 58, 94); doc.text(profile.shopName || "የድርጅት ስም ያልገባ", 14, y); y += 9;
-    doc.setFontSize(10); doc.setTextColor(30);
-    y = drawKV(doc, y, "የማናጀር ስም", profile.ownerName || "-");
-    y = drawKV(doc, y, "የስራ ዘርፍ", profile.businessSector || "-");
-    y = drawKV(doc, y, "TIN ቁጥር", profile.tin || "-");
-    y = drawKV(doc, y, "የታደሰ ንግድ ፈቃድ ቁጥር", profile.license || "-");
-    y = drawKV(doc, y, "የጸደቀ የንግድ ምዝገባ ቁጥር", profile.businessRegistration || "-");
-    y = drawKV(doc, y, "የታደሰ ዲጅታል መታወቅያ", profile.digitalId || "-");
-    y = drawKV(doc, y, "የስራ አድራሻ", profile.address || "-");
-    y = drawKV(doc, y, "ኢሜይል", profile.email || "-");
-    y = drawKV(doc, y, "ስልክ ቁጥር", profile.phone || "-");
-    y = drawKV(doc, y, "ሪፖርት የወጣበት ቀን", todayISO() + " (" + ETH_MONTHS[todayEth.month - 1] + " " + todayEth.year + " ዓ.ም)");
+    var p1 = pdfPage();
+    if (managerImg) { try { p1.ctx.drawImage(managerImg, p1.right - 150, PDF_MARGIN - 10, 150, 150); } catch (e) {} }
+    pTitle(p1, profile.shopName || "የድርጅት ስም ያልገባ");
+    pKV(p1, "የማናጀር ስም", profile.ownerName || "-");
+    pKV(p1, "የስራ ዘርፍ", profile.businessSector || "-");
+    pKV(p1, "TIN ቁጥር", profile.tin || "-");
+    pKV(p1, "የታደሰ ንግድ ፈቃድ ቁጥር", profile.license || "-");
+    pKV(p1, "የጸደቀ የንግድ ምዝገባ ቁጥር", profile.businessRegistration || "-");
+    pKV(p1, "የታደሰ ዲጅታል መታወቅያ", profile.digitalId || "-");
+    pKV(p1, "የስራ አድራሻ", profile.address || "-");
+    pKV(p1, "ኢሜይል", profile.email || "-");
+    pKV(p1, "ስልክ ቁጥር", profile.phone || "-");
+    pKV(p1, "ሪፖርት የወጣበት ቀን", todayISO() + " (" + ETH_MONTHS[todayEth.month - 1] + " " + todayEth.year + " ዓ.ም)");
+    pages.push(p1);
 
     /* ---- PAGE 2: value & capital comparison ---- */
-    doc.addPage(); y = 20;
-    y = drawSectionTitle(doc, y, "ገጽ 2 — የእሴት እና ካፒታል ዝርዝር");
-    y = drawKV(doc, y, "ካፒታል በ" + todayEth.year + " ዓ.ም መጀመሪያ (" + yearStartISO + ")", fmt(capitalYearStart));
-    y = drawKV(doc, y, "ካፒታል አሁን (" + todayISO() + ")", fmt(capitalNow));
-    y = drawKV(doc, y, "የካፒታል ለውጥ (Growth)", fmt(capitalNow - capitalYearStart), capitalNow - capitalYearStart >= 0 ? [22, 163, 74] : [220, 38, 38]);
-    y = drawKV(doc, y, "የአሁኑ የዕቃ ክምችት እሴት (Inventory Asset Value)", fmt(invValueNow));
+    var p2 = pdfPage();
+    pTitle(p2, "ገጽ 2 — የእሴት እና ካፒታል ዝርዝር");
+    pKV(p2, "ካፒታል በ" + todayEth.year + " ዓ.ም መጀመሪያ (" + yearStartISO + ")", fmt(capitalYearStart));
+    pKV(p2, "ካፒታል አሁን (" + todayISO() + ")", fmt(capitalNow));
+    pKV(p2, "የካፒታል ለውጥ (Growth)", fmt(capitalNow - capitalYearStart), capitalNow - capitalYearStart >= 0 ? "#16a34a" : "#dc2626");
+    pKV(p2, "የአሁኑ የዕቃ ክምችት እሴት", fmt(invValueNow));
+    pages.push(p2);
 
     /* ---- PAGE 3: customer traffic ---- */
-    doc.addPage(); y = 20;
-    y = drawSectionTitle(doc, y, "ገጽ 3 — የደንበኞች ትራፊክ (በግብይት ብዛት)");
-    doc.setFontSize(8); doc.setTextColor(120);
-    doc.text("* እያንዳንዱ የተመዘገበ ሽያጭ እንደ አንድ የደንበኛ አገልግሎት ተቆጥሯል (transaction count)።", 14, y); y += 7;
-    doc.setFontSize(10); doc.setTextColor(30);
+    var p3 = pdfPage();
+    pTitle(p3, "ገጽ 3 — የደንበኞች ትራፊክ (በግብይት ብዛት)");
+    pNote(p3, "* እያንዳንዱ የተመዘገበ ሽያጭ እንደ አንድ የደንበኛ አገልግሎት ተቆጥሯል።");
+    p3.y += 10;
     var trafficRows = [];
     for (var mt = 1; mt <= 13; mt++) { var bt = buckets[todayEth.year + "-" + mt]; trafficRows.push([ETH_MONTHS[mt - 1], bt ? transactionCount(bt.sales) : 0]); }
-    y = drawTable(doc, y, ["ወር", "የግብይት ብዛት"], trafficRows, [14, 100]);
-    y = drawKV(doc, y + 2, "የ" + todayEth.year + " ዓ.ም ጠቅላላ የግብይት ብዛት", transactionCount(yearSales));
+    pTable(p3, ["ወር", "የግብይት ብዛት"], trafficRows, [p3.left, p3.left + 400]);
+    pKV(p3, "የ" + todayEth.year + " ዓ.ም ጠቅላላ የግብይት ብዛት", String(transactionCount(yearSales)));
+    pages.push(p3);
 
     /* ---- PAGE 4: payment breakdown by month ---- */
-    doc.addPage(); y = 20;
-    y = drawSectionTitle(doc, y, "ገጽ 4 — ወርሃዊ የክፍያ ዝርዝር (ካሽ / ሞባይል ባንኪንግ)");
+    var p4 = pdfPage();
+    pTitle(p4, "ገጽ 4 — ወርሃዊ የክፍያ ዝርዝር (ካሽ / ሞባይል ባንኪንግ)");
     var payRows = [];
     for (var mp = 1; mp <= 13; mp++) {
       var bp = buckets[todayEth.year + "-" + mp];
       var pp = bp ? paymentBreakdown(bp.sales) : { cash: 0, bank: 0 };
       payRows.push([ETH_MONTHS[mp - 1], fmt(pp.cash), fmt(pp.bank)]);
     }
-    y = drawTable(doc, y, ["ወር", "ካሽ", "ሞባይል ባንኪንግ"], payRows, [14, 90, 145]);
-    y = drawKV(doc, y + 2, "የ" + todayEth.year + " ዓ.ም ጠቅላላ ካሽ", fmt(yearPay.cash));
-    y = drawKV(doc, y, "የ" + todayEth.year + " ዓ.ም ጠቅላላ ባንክ", fmt(yearPay.bank));
-    y = drawKV(doc, y, "የ" + todayEth.year + " ዓ.ም ጠቅላላ ዱቤ", fmt(yearPay.credit));
+    pTable(p4, ["ወር", "ካሽ", "ሞባይል ባንኪንግ"], payRows, [p4.left, p4.left + 300, p4.left + 560]);
+    pKV(p4, "የ" + todayEth.year + " ዓ.ም ጠቅላላ ካሽ", fmt(yearPay.cash));
+    pKV(p4, "የ" + todayEth.year + " ዓ.ም ጠቅላላ ባንክ", fmt(yearPay.bank));
+    pKV(p4, "የ" + todayEth.year + " ዓ.ም ጠቅላላ ዱቤ", fmt(yearPay.credit));
+    pages.push(p4);
 
     /* ---- PAGE 5: yearly profit & expenses ---- */
-    doc.addPage(); y = 20;
-    y = drawSectionTitle(doc, y, "ገጽ 5 — የ" + todayEth.year + " ዓ.ም ትርፍ እና ወጪ ዝርዝር");
-    y = drawKV(doc, y, "ጠቅላላ ገቢ (Gross Revenue)", fmt(yearStats.revenue));
-    y = drawKV(doc, y, "ጠቅላላ ወጪ (Total Expenses)", fmt(yearStats.expenseTotal));
-    y = drawKV(doc, y, "የተጣራ ትርፍ (Net Profit)", fmt(yearStats.profit), yearStats.profit >= 0 ? [22, 163, 74] : [220, 38, 38]);
-    y += 3; y = drawSectionTitle(doc, y, "ወጪ በምድብ");
+    var p5 = pdfPage();
+    pTitle(p5, "ገጽ 5 — የ" + todayEth.year + " ዓ.ም ትርፍ እና ወጪ ዝርዝር");
+    pKV(p5, "ጠቅላላ ገቢ (Gross Revenue)", fmt(yearStats.revenue));
+    pKV(p5, "ጠቅላላ ወጪ (Total Expenses)", fmt(yearStats.expenseTotal));
+    pKV(p5, "የተጣራ ትርፍ (Net Profit)", fmt(yearStats.profit), yearStats.profit >= 0 ? "#16a34a" : "#dc2626");
+    p5.y += 10;
+    pSection(p5, "ወጪ በምድብ");
     var catRows = EXPENSE_CATEGORIES.filter(function (c) { return yearByCat[c]; }).map(function (c) { return [c, fmt(yearByCat[c])]; });
-    if (catRows.length) y = drawTable(doc, y, ["ምድብ", "መጠን"], catRows, [14, 100]);
+    if (catRows.length) pTable(p5, ["ምድብ", "መጠን"], catRows, [p5.left, p5.left + 400]);
     var recon = verifyPaymentReconciliation(yearSales);
-    doc.setFontSize(9); doc.setTextColor(recon.ok ? 22 : 220, recon.ok ? 163 : 38, recon.ok ? 74 : 38);
-    doc.text((recon.ok ? "✓ ተረጋግጧል: " : "⚠ አልተገጣጠመም: ") + "ካሽ+ባንክ+ዱቤ (" + fmt(recon.sumOfMethods) + ") vs ጠቅላላ ገቢ (" + fmt(recon.total) + ")", 14, y + 4);
+    p5.ctx.font = "700 22px " + PDF_FONT; p5.ctx.fillStyle = recon.ok ? "#16a34a" : "#dc2626"; p5.ctx.textAlign = "left";
+    p5.ctx.fillText((recon.ok ? "✓ ተረጋግጧል: " : "⚠ አልተገጣጠመም: ") + "ካሽ+ባንክ+ዱቤ = ጠቅላላ ገቢ", p5.left, p5.y);
+    pages.push(p5);
 
     /* ---- PAGE 6: loan utilization plan ---- */
-    doc.addPage(); y = 20;
-    y = drawSectionTitle(doc, y, "ገጽ 6 — የብድር ፍላጎት እና የአጠቃቀም እቅድ");
-    y = drawKV(doc, y, "የሚጠየቀው የብድር መጠን", fmt(lc.requestedAmountCents));
-    y += 3;
+    var p6 = pdfPage();
+    pTitle(p6, "ገጽ 6 — የብድር ፍላጎት እና የአጠቃቀም እቅድ");
+    pKV(p6, "የሚጠየቀው የብድር መጠን", fmt(lc.requestedAmountCents));
+    p6.y += 10;
+    pSection(p6, "የገንዘብ አጠቃቀም ስርጭት");
     var usageRows = lc.usageAllocations.map(function (u) { return [u.purpose, u.percent + "%", fmt(Math.round(lc.requestedAmountCents * (u.percent / 100)))]; });
-    y = drawTable(doc, y, ["አላማ", "መቶኛ", "መጠን"], usageRows, [14, 110, 145]);
+    pTable(p6, ["አላማ", "መቶኛ", "መጠን"], usageRows, [p6.left, p6.left + 460, p6.left + 610]);
     if (lc.proformaInvoices.length) {
-      y += 3; y = drawSectionTitle(doc, y, "የፕሮፎርማ ኢንቮይስ ዝርዝር");
-      var pfRows = lc.proformaInvoices.map(function (pf) { return [pf.supplier, pf.description || "-", fmt(pf.amountCents)]; });
-      y = drawTable(doc, y, ["አቅራቢ", "ዝርዝር", "ዋጋ"], pfRows, [14, 90, 155]);
+      pSection(p6, "የፕሮፎርማ ኢንቮይስ ዝርዝር");
+      var pfList = lc.proformaInvoices.slice(0, 12);
+      var pfRows = pfList.map(function (pf) { return [pf.supplier, pf.description || "-", fmt(pf.amountCents)]; });
+      pTable(p6, ["አቅራቢ", "ዝርዝር", "ዋጋ"], pfRows, [p6.left, p6.left + 300, p6.left + 660]);
+      if (lc.proformaInvoices.length > 12) pNote(p6, "+ " + (lc.proformaInvoices.length - 12) + " ተጨማሪ ኢንቮይስ (ሙሉ ዝርዝር በአፑ ውስጥ ይታያል)");
     }
+    pages.push(p6);
 
     /* ---- PAGE 7: 12-month cash flow projection ---- */
-    doc.addPage(); y = 20;
-    y = drawSectionTitle(doc, y, "ገጽ 7 — የ12 ወራት የገንዘብ ፍሰት ትንበያ");
+    var p7 = pdfPage();
+    pTitle(p7, "ገጽ 7 — የ12 ወራት የገንዘብ ፍሰት ትንበያ");
     var cfRows = (lc.cashFlowProjection || []).map(function (r) { return [ETH_MONTHS[r.month - 1], fmt(r.projectedRevenueCents)]; });
-    y = drawTable(doc, y, ["ወር", "የሚጠበቅ ገቢ"], cfRows, [14, 100]);
+    pTable(p7, ["ወር", "የሚጠበቅ ገቢ"], cfRows, [p7.left, p7.left + 400]);
     var cfTotal = (lc.cashFlowProjection || []).reduce(function (s, r) { return s + r.projectedRevenueCents; }, 0);
-    y = drawKV(doc, y + 2, "የ12 ወራት ጠቅላላ ትንበያ", fmt(cfTotal));
+    pKV(p7, "የ12 ወራት ጠቅላላ ትንበያ", fmt(cfTotal));
+    pages.push(p7);
 
     /* ---- PAGE 8: suppliers & market analysis ---- */
-    doc.addPage(); y = 20;
-    y = drawSectionTitle(doc, y, "ገጽ 8 — የአቅራቢዎች ዝርዝር እና የገበያ ትንተና");
+    var p8 = pdfPage();
+    pTitle(p8, "ገጽ 8 — የአቅራቢዎች ዝርዝር እና የገበያ ትንተና");
     if (lc.suppliers.length) {
-      var supRows = lc.suppliers.map(function (s) { return [s.name, s.address || "-"]; });
-      y = drawTable(doc, y, ["አቅራቢ ስም", "አድራሻ"], supRows, [14, 100]);
-    } else { doc.text("ምንም አቅራቢ አልተመዘገበም", 14, y); y += 8; }
-    y += 3; y = drawSectionTitle(doc, y, "የተወዳዳሪነት ጥንካሬዎች");
-    var mktLines = doc.splitTextToSize(lc.marketAnalysis || "-", 180);
-    doc.text(mktLines, 14, y); y += mktLines.length * 5 + 4;
-    y = drawSectionTitle(doc, y, "ማሳሰቢያዎች");
-    doc.setFontSize(9);
-    doc.text("• የባንክ ስቴትመንት ማያያዣ መመሪያ: ያለፉት 6 ወራት የባንክ ስቴትመንት ኮፒ ከዚህ ሪፖርት ጋር ያያይዙ።", 14, y); y += 6;
-    doc.text("• የግብር ሰነዶች (Tax Clearance) ማመሳከሪያ: የቅርብ ጊዜ ግብር ክፍያ ደረሰኝ ኮፒ ያዘጋጁ።", 14, y); y += 6;
+      var supList = lc.suppliers.slice(0, 10);
+      var supRows = supList.map(function (s) { return [s.name, s.address || "-"]; });
+      pTable(p8, ["አቅራቢ ስም", "አድራሻ"], supRows, [p8.left, p8.left + 400]);
+      if (lc.suppliers.length > 10) pNote(p8, "+ " + (lc.suppliers.length - 10) + " ተጨማሪ አቅራቢ (ሙሉ ዝርዝር በአፑ ውስጥ ይታያል)");
+    } else { pNote(p8, "ምንም አቅራቢ አልተመዘገበም"); p8.y += 10; }
+    pSection(p8, "የተወዳዳሪነት ጥንካሬዎች");
+    pParagraph(p8, lc.marketAnalysis || "-");
+    pSection(p8, "ማሳሰቢያዎች");
+    pNote(p8, "• የባንክ ስቴትመንት ማያያዣ መመሪያ: ያለፉት 6 ወራት የባንክ ስቴትመንት ኮፒ ከዚህ ሪፖርት ጋር ያያይዙ።");
+    pNote(p8, "• የግብር ሰነዶች (Tax Clearance) ማመሳከሪያ: የቅርብ ጊዜ ግብር ክፍያ ደረሰኝ ኮፒ ያዘጋጁ።");
+    pages.push(p8);
 
-    /* ---- PAGE 9: profit distribution strategy ---- */
-    doc.addPage(); y = 20;
-    y = drawSectionTitle(doc, y, "ገጽ 9 — የትርፍ ክፍፍል ስትራቴጂ");
+    /* ---- PAGE 9: profit distribution strategy + pie chart ---- */
+    var p9 = pdfPage();
+    pTitle(p9, "ገጽ 9 — የትርፍ ክፍፍል ስትራቴጂ");
     var monthlyAvgProfit = Math.round(yearStats.profit / 12);
     var allocRows = data.allocations.map(function (a) { return [a.name, a.percent + "%", fmt(Math.round(monthlyAvgProfit * (a.percent / 100))), fmt(Math.round(yearStats.profit * (a.percent / 100)))]; });
-    y = drawTable(doc, y, ["ክፍል", "መቶኛ", "ወርሃዊ (አማካይ)", "አመታዊ"], allocRows, [14, 75, 105, 150]);
-    y += 6;
+    pTable(p9, ["ክፍል", "መቶኛ", "ወርሃዊ (አማካይ)", "አመታዊ"], allocRows, [p9.left, p9.left + 260, p9.left + 420, p9.left + 660]);
+    p9.y += 20;
     if (yearStats.profit > 0) {
-      try {
-        var pieUrl = pieChartDataUrl(data.allocations.map(function (a) { return { value: yearStats.profit * (a.percent / 100) }; }));
-        y = ensureSpace(doc, y, 80);
-        doc.addImage(pieUrl, "PNG", 60, y, 80, 80);
-        y += 84;
-        data.allocations.forEach(function (a, i) {
-          var colors = ["#3FAE79", "#2563eb", "#f59e0b", "#ef4444", "#8b5cf6", "#14b8a6", "#f97316"];
-          doc.setFillColor(colors[i % colors.length]); doc.rect(20, y - 3, 3, 3, "F");
-          doc.setFontSize(9); doc.setTextColor(30); doc.text(a.name + " (" + a.percent + "%)", 26, y);
-          y += 5;
-        });
-      } catch (e) { doc.text("(ፓይ-ቻርት ሊታይ አልቻለም)", 14, y); }
+      var pieColors = ["#3FAE79", "#2563eb", "#f59e0b", "#ef4444", "#8b5cf6", "#14b8a6", "#f97316"];
+      var cx = p9.left + 160, cy = p9.y + 160, r = 150;
+      var start = -Math.PI / 2;
+      data.allocations.forEach(function (a, i) {
+        var angle = (Math.max(0, a.percent) / 100) * 2 * Math.PI;
+        p9.ctx.beginPath(); p9.ctx.moveTo(cx, cy); p9.ctx.arc(cx, cy, r, start, start + angle); p9.ctx.closePath();
+        p9.ctx.fillStyle = pieColors[i % pieColors.length]; p9.ctx.fill();
+        start += angle;
+      });
+      var ly = p9.y + 40;
+      data.allocations.forEach(function (a, i) {
+        p9.ctx.fillStyle = pieColors[i % pieColors.length]; p9.ctx.fillRect(cx + 220, ly - 18, 26, 26);
+        p9.ctx.font = "400 22px " + PDF_FONT; p9.ctx.fillStyle = "#1e293b"; p9.ctx.textAlign = "left";
+        p9.ctx.fillText(a.name + " (" + a.percent + "%)", cx + 258, ly);
+        ly += 40;
+      });
     } else {
-      doc.setFontSize(9); doc.setTextColor(180, 90, 0);
-      doc.text("በዚህ አመት ትርፍ ስላልተገኘ ፓይ-ቻርት አልተዘጋጀም።", 14, y);
+      p9.ctx.font = "700 24px " + PDF_FONT; p9.ctx.fillStyle = "#b45309"; p9.ctx.textAlign = "left";
+      p9.ctx.fillText("በዚህ አመት ትርፍ ስላልተገኘ ፓይ-ቻርት አልተዘጋጀም።", p9.left, p9.y + 20);
     }
+    pages.push(p9);
 
-    doc.setFontSize(7); doc.setTextColor(150);
-    var totalPages = doc.internal.getNumberOfPages();
-    for (var pg = 1; pg <= totalPages; pg++) { doc.setPage(pg); doc.text("ገጽ " + pg + "/" + totalPages + " — በራስ-ሰር ከንግድ ስራው መዝገብ የተዘጋጀ", 14, 292); }
+    pages.forEach(function (p, idx) {
+      pFooter(p, "ገጽ " + (idx + 1) + "/" + pages.length + " — በራስ-ሰር ከንግድ ስራው መዝገብ የተዘጋጀ · " + todayISO());
+      if (idx > 0) doc.addPage();
+      doc.addImage(p.canvas.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, 210, 297);
+    });
 
     doc.save((profile.shopName || "shop") + "-bank-audit-" + todayISO() + ".pdf");
     showToast("PDF ተዘጋጅቷል");
@@ -1677,56 +1748,3 @@ function openFirebaseSetup() {
     if (cfg.apiKey) {
       var clearBtn = el("button", { class: "btn btn-outline" }, "አላቅ (ኦፍላይን ብቻ ተመለስ)");
       clearBtn.addEventListener("click", function () { saveFirebaseConfig({ disabled: true }); showToast("የጋራ ዳታቤዝ ግንኙነት ተቋርጧል — አሁን ኦፍላይን ብቻ ነው"); location.reload(); });
-      row.appendChild(clearBtn);
-    }
-    var saveBtn = el("button", { class: "btn btn-primary" }, "አገናኝ / አስቀምጥ");
-    saveBtn.addEventListener("click", guarded(function () {
-      var newCfg = {};
-      fields.forEach(function (f) { newCfg[f] = inputs[f].value.trim(); });
-      if (!newCfg.apiKey || !newCfg.shopId) { showToast("እባክዎ apiKey እና የሱቅ መለያ ኮድ ያስገቡ"); return; }
-      saveFirebaseConfig(newCfg);
-      showToast("ተቀምጧል — በመገናኘት ላይ...");
-      initFirebaseIfConfigured(drawStatus);
-      drawStatus();
-      close();
-    }));
-    row.appendChild(saveBtn);
-    return row;
-  });
-}
-
-/* ================= nav & root ================= */
-function BottomNav() {
-  var items = [{ key: "dashboard", label: "ዳሽቦርድ", em: "🏠" }, { key: "sales", label: "ሽያጭ", em: "📦" }, { key: "items", label: "ዕቃዎች", em: "🗃️" }, { key: "expenses", label: "ወጪ", em: "💸" }, { key: "reports", label: "ሪፖርት", em: "📊" }];
-  var nav = el("div", { class: "nav" });
-  items.forEach(function (it) {
-    var active = state.tab === it.key;
-    var b = el("button", { class: "navbtn" + (active ? " active" : "") }, [el("span", { class: "em" }, it.em), el("span", { class: "lbl" }, it.label)]);
-    b.addEventListener("click", function () { state.tab = it.key; renderApp(); });
-    nav.appendChild(b);
-  });
-  return el("div", { class: "navwrap" }, [nav]);
-}
-
-function renderApp() {
-  var root = document.getElementById("root");
-  clear(root);
-  var app = el("div", { class: "app" });
-  var hamBtn = el("button", { class: "hamburger" }, "☰");
-  hamBtn.addEventListener("click", openMainMenu);
-  app.appendChild(el("div", { class: "header" }, [hamBtn, el("h1", {}, "የሱቅ መቆጣጠሪያ ሲስተም"), el("div", { class: "header-spacer" })]));
-  if (!storageAvailable) {
-    app.appendChild(el("div", { style: { background: "#fff4e5", color: "#92400e", fontSize: "11px", padding: "8px 16px", textAlign: "center" } },
-      "ማሳሰቢያ: ውሂብ በዚህ ስልክ ላይ በራስ-ሰር መቀመጥ አልቻለም (ስህተት: " + (storageErrorDetail || "unknown") + ")። Firebase ከተገናኘ ውሂብዎ አይጠፋም፣ ካልሆነ ግን ይህን ገፅ ሲዘጉ ይጠፋል።"));
-  }
-  var content = el("div", { class: "content" });
-  if (state.tab === "dashboard") renderDashboard(content);
-  else if (state.tab === "sales") renderSales(content);
-  else if (state.tab === "items") renderItems(content);
-  else if (state.tab === "expenses") renderExpenses(content);
-  else if (state.tab === "reports") renderReports(content);
-  else if (state.tab === "profile") renderProfile(content);
-  else if (state.tab === "loancenter") renderLoanCenter(content);
-  app.appendChild(content);
-  app.appendChild(BottomNav());
-  r
