@@ -495,47 +495,41 @@ function renderDashboard(container) {
 
   container.appendChild(el("div", { class: "eyebrow section" }, "📊 የዛሬ ሁኔታ (" + todayISO() + ")"));
 
-  var statGrid = el("div", { class: "grid2 section" });
-
-  var capCard = el("div", { class: "card blue card-sm" }, [
-    el("div", { class: "card-label" }, "💰 ካፒታል"),
-    el("div", { class: "card-value", style: { fontSize: "15px" } }, fmt(capital))
+  var capCard = el("div", { class: "card blue section flex items-center justify-between" }, [
+    el("div", {}, [
+      el("div", { class: "card-label" }, "💰 ጠቅላላ ካፒታል (እቃ ክምችት ዋጋ + መነሻ ገንዘብ)"),
+      el("div", { class: "card-value" }, fmt(capital))
+    ])
   ]);
-  var editCapBtn = el("button", { class: "icon-btn", style: { position: "absolute", top: "8px", right: "8px", width: "26px", height: "26px", fontSize: "12px" } }, "✎");
+  var editCapBtn = el("button", { class: "icon-btn" }, "✎");
   editCapBtn.addEventListener("click", openEditCapitalModal);
-  capCard.style.position = "relative";
   capCard.appendChild(editCapBtn);
-  statGrid.appendChild(capCard);
+  container.appendChild(capCard);
 
-  statGrid.appendChild(el("div", { class: "card violet card-sm" }, [
-    el("div", { class: "card-label" }, "🧾 የዛሬ ሽያጭ"),
-    el("div", { class: "card-value", style: { fontSize: "15px" } }, fmt(stats.revenue))
+  container.appendChild(el("div", { class: "card violet section" }, [
+    el("div", { class: "card-label" }, "🧾 የዛሬ ጠቅላላ ሽያጭ (ገቢ)"),
+    el("div", { class: "card-value" }, fmt(stats.revenue))
   ]));
 
-  statGrid.appendChild(el("div", { class: "card green card-sm" }, [
-    el("div", { class: "card-label" }, "📈 የዛሬ ትርፍ"),
-    el("div", { class: "card-value", style: { fontSize: "15px", color: stats.profit >= 0 ? "#16a34a" : "#dc2626" } }, fmt(stats.profit))
+  container.appendChild(el("div", { class: "card green section" }, [
+    el("div", { class: "card-label" }, "📈 የዛሬ የተጣራ ትርፍ"),
+    el("div", { class: "card-value", style: { color: stats.profit >= 0 ? "#16a34a" : "#dc2626" } }, fmt(stats.profit))
   ]));
 
-  var expCard = el("div", { class: "card red card-sm", style: { position: "relative" } }, [
-    el("div", { class: "card-label" }, "📉 የዛሬ ወጪ"),
-    el("div", { class: "card-value", style: { fontSize: "15px" } }, fmt(stats.expenseTotal))
+  var expCard = el("div", { class: "card red section" });
+  var expTop = el("div", { class: "flex items-center justify-between" }, [
+    el("div", {}, [el("div", { class: "card-label" }, "📉 የዛሬ ጠቅላላ ወጪ"), el("div", { class: "card-value" }, fmt(stats.expenseTotal))])
   ]);
-  var addExpBtn = el("button", { class: "icon-btn", style: { position: "absolute", top: "8px", right: "8px", width: "26px", height: "26px", fontSize: "14px" } }, "+");
+  var addExpBtn = el("button", { class: "icon-btn" }, "+");
   addExpBtn.addEventListener("click", openAddExpenseModal);
-  expCard.appendChild(addExpBtn);
-  statGrid.appendChild(expCard);
-
-  container.appendChild(statGrid);
-
+  expTop.appendChild(addExpBtn);
+  expCard.appendChild(expTop);
   if (stats.expensesInPeriod.length > 0) {
-    var expListCard = el("div", { class: "card section card-sm" });
-    expListCard.appendChild(el("div", { class: "card-label mb2" }, "የዛሬ ወጪዎች"));
     stats.expensesInPeriod.slice().sort(function (a, b) { return b.createdAt - a.createdAt; }).slice(0, 3).forEach(function (e) {
-      expListCard.appendChild(el("div", { class: "list-row" }, [el("span", {}, e.title), el("span", { style: { color: "#dc2626", fontWeight: "700" } }, fmt(e.amountCents))]));
+      expCard.appendChild(el("div", { class: "list-row" }, [el("span", {}, e.title), el("span", { style: { color: "#dc2626", fontWeight: "700" } }, fmt(e.amountCents))]));
     });
-    container.appendChild(expListCard);
   }
+  container.appendChild(expCard);
 
   container.appendChild(el("div", { class: "card amber section" }, [
     el("div", { class: "card-label", style: { color: "#b45309" } }, "🔥 የዛሬ በጣም የተሸጠው ዕቃ"),
@@ -1063,279 +1057,6 @@ function renderReports(container) {
   container.appendChild(pdfBtn);
 }
 
-
-/* ---- PDF export: jsPDF is lazy-loaded from CDN only when this button is pressed,
-   so the app stays 100% dependency-free/offline for everyone who never uses it.
-
-   IMPORTANT FONT NOTE: jsPDF's built-in fonts (Helvetica etc.) do not contain
-   Ethiopic glyphs at all, so asking it to .text() Amharic directly produces
-   garbage characters (and can even corrupt nearby symbols like the currency
-   mark). To guarantee correct, crisp Amharic rendering with zero risk of a
-   missing/broken font file, every PDF page below is first drawn as a normal
-   HTML5 Canvas image — using the exact same system font that already
-   renders this whole app's Amharic UI correctly — and then that finished
-   page image is placed into the PDF. jsPDF never has to render Ethiopic
-   text itself, so the "è1E 5 ë c" / "¥" corruption can no longer happen. */
-var PDF_FONT = '"Noto Sans Ethiopic","Nyala","Abyssinica SIL","Kefa","Noto Sans",Arial,sans-serif';
-var PDF_PAGE_W = 1000, PDF_PAGE_H = 1414; // matches A4 aspect ratio (210x297mm)
-var PDF_MARGIN = 60;
-
-function pdfPage() {
-  var canvas = document.createElement("canvas");
-  canvas.width = PDF_PAGE_W; canvas.height = PDF_PAGE_H;
-  var ctx = canvas.getContext("2d");
-  ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, PDF_PAGE_W, PDF_PAGE_H);
-  return { canvas: canvas, ctx: ctx, y: PDF_MARGIN, right: PDF_PAGE_W - PDF_MARGIN, left: PDF_MARGIN };
-}
-function pTitle(p, text) {
-  p.ctx.fillStyle = "#123A5E"; p.ctx.font = "700 40px " + PDF_FONT; p.ctx.textAlign = "left";
-  p.ctx.fillText(text, p.left, p.y); p.y += 18;
-  p.ctx.strokeStyle = "#cbd5e1"; p.ctx.lineWidth = 2;
-  p.ctx.beginPath(); p.ctx.moveTo(p.left, p.y); p.ctx.lineTo(p.right, p.y); p.ctx.stroke();
-  p.y += 46;
-}
-function pSection(p, text) {
-  p.ctx.fillStyle = "#123A5E"; p.ctx.font = "700 30px " + PDF_FONT; p.ctx.textAlign = "left";
-  p.ctx.fillText(text, p.left, p.y); p.y += 38;
-}
-function pKV(p, label, value, color) {
-  p.ctx.font = "400 26px " + PDF_FONT; p.ctx.fillStyle = "#334155"; p.ctx.textAlign = "left";
-  p.ctx.fillText(label, p.left, p.y);
-  p.ctx.font = "700 26px " + PDF_FONT; p.ctx.fillStyle = color || "#1e293b"; p.ctx.textAlign = "right";
-  p.ctx.fillText(value, p.right, p.y);
-  p.y += 42;
-}
-function pWrap(p, text, maxWidth) {
-  p.ctx.font = "400 24px " + PDF_FONT;
-  var words = String(text).split(" "), lines = [], cur = "";
-  words.forEach(function (w) {
-    var test = cur ? cur + " " + w : w;
-    if (p.ctx.measureText(test).width > maxWidth && cur) { lines.push(cur); cur = w; } else cur = test;
-  });
-  if (cur) lines.push(cur);
-  return lines;
-}
-function pParagraph(p, text) {
-  var lines = pWrap(p, text, p.right - p.left);
-  p.ctx.fillStyle = "#334155"; p.ctx.textAlign = "left";
-  lines.forEach(function (line) { p.ctx.fillText(line, p.left, p.y); p.y += 34; });
-  p.y += 10;
-}
-function pNote(p, text) {
-  p.ctx.font = "400 20px " + PDF_FONT; p.ctx.fillStyle = "#94a3b8"; p.ctx.textAlign = "left";
-  p.ctx.fillText(text, p.left, p.y); p.y += 32;
-}
-/* simple two/three-column table with a header row and a light divider */
-function pTable(p, headers, rows, colX) {
-  p.ctx.font = "700 22px " + PDF_FONT; p.ctx.fillStyle = "#64748b"; p.ctx.textAlign = "left";
-  headers.forEach(function (h, i) { p.ctx.fillText(h, colX[i], p.y); });
-  p.y += 14;
-  p.ctx.strokeStyle = "#e2e8f0"; p.ctx.lineWidth = 1.5;
-  p.ctx.beginPath(); p.ctx.moveTo(p.left, p.y); p.ctx.lineTo(p.right, p.y); p.ctx.stroke();
-  p.y += 30;
-  p.ctx.font = "400 22px " + PDF_FONT; p.ctx.fillStyle = "#1e293b";
-  rows.forEach(function (r) {
-    r.forEach(function (cell, i) { p.ctx.fillText(String(cell), colX[i], p.y); });
-    p.y += 34;
-  });
-  p.y += 12;
-}
-function pFooter(p, text) {
-  p.ctx.font = "400 18px " + PDF_FONT; p.ctx.fillStyle = "#94a3b8"; p.ctx.textAlign = "left";
-  p.ctx.fillText(text, p.left, PDF_PAGE_H - 30);
-}
-
-function ethiopianYearStartGregorianISO(ethYear) {
-  var d = ethNewYearGregorianDate(ethYear + 7);
-  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-}
-
-function loadImageAsync(src) {
-  return new Promise(function (resolve) {
-    if (!src) { resolve(null); return; }
-    var img = new Image();
-    img.onload = function () { resolve(img); };
-    img.onerror = function () { resolve(null); };
-    img.src = src;
-  });
-}
-
-function exportFullAuditPdf() {
-  showToast("ባለ 9-ገጽ PDF በማዘጋጀት ላይ...");
-  var profile0 = state.data.profile || freshProfile();
-  Promise.all([
-    injectScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"),
-    loadImageAsync(profile0.managerPhoto)
-  ]).then(function (results) {
-    var managerImg = results[1];
-    var jsPDFLib = window.jspdf.jsPDF;
-    var doc = new jsPDFLib({ unit: "mm", format: "a4" });
-    var data = state.data;
-    var profile = data.profile || freshProfile();
-    var lc = data.loanCenter || freshLoanCenter();
-    var todayEth = gregorianToEthiopian(new Date());
-    var yearStartISO = ethiopianYearStartGregorianISO(todayEth.year);
-    var buckets = ethiopianBuckets(data);
-    var yearSales = [], yearExpenses = [];
-    for (var m = 1; m <= 13; m++) { var b = buckets[todayEth.year + "-" + m]; if (b) { yearSales = yearSales.concat(b.sales); yearExpenses = yearExpenses.concat(b.expenses); } }
-    var yearStats = statsFor(yearSales, yearExpenses);
-    var yearPay = paymentBreakdown(yearSales);
-    var yearByCat = expenseByCategory(yearExpenses);
-    var capitalNow = totalCapitalCents(data);
-    var capitalYearStart = capitalAsOf(data, yearStartISO);
-    var invValueNow = inventoryValueCents(data);
-    var pages = [];
-
-    /* ---- PAGE 1: company profile ---- */
-    var p1 = pdfPage();
-    if (managerImg) { try { p1.ctx.drawImage(managerImg, p1.right - 150, PDF_MARGIN - 10, 150, 150); } catch (e) {} }
-    pTitle(p1, profile.shopName || "የድርጅት ስም ያልገባ");
-    pKV(p1, "የማናጀር ስም", profile.ownerName || "-");
-    pKV(p1, "የስራ ዘርፍ", profile.businessSector || "-");
-    pKV(p1, "TIN ቁጥር", profile.tin || "-");
-    pKV(p1, "የታደሰ ንግድ ፈቃድ ቁጥር", profile.license || "-");
-    pKV(p1, "የጸደቀ የንግድ ምዝገባ ቁጥር", profile.businessRegistration || "-");
-    pKV(p1, "የታደሰ ዲጅታል መታወቅያ", profile.digitalId || "-");
-    pKV(p1, "የስራ አድራሻ", profile.address || "-");
-    pKV(p1, "ኢሜይል", profile.email || "-");
-    pKV(p1, "ስልክ ቁጥር", profile.phone || "-");
-    pKV(p1, "ሪፖርት የወጣበት ቀን", todayISO() + " (" + ETH_MONTHS[todayEth.month - 1] + " " + todayEth.year + " ዓ.ም)");
-    pages.push(p1);
-
-    /* ---- PAGE 2: value & capital comparison ---- */
-    var p2 = pdfPage();
-    pTitle(p2, "ገጽ 2 — የእሴት እና ካፒታል ዝርዝር");
-    pKV(p2, "ካፒታል በ" + todayEth.year + " ዓ.ም መጀመሪያ (" + yearStartISO + ")", fmt(capitalYearStart));
-    pKV(p2, "ካፒታል አሁን (" + todayISO() + ")", fmt(capitalNow));
-    pKV(p2, "የካፒታል ለውጥ (Growth)", fmt(capitalNow - capitalYearStart), capitalNow - capitalYearStart >= 0 ? "#16a34a" : "#dc2626");
-    pKV(p2, "የአሁኑ የዕቃ ክምችት እሴት", fmt(invValueNow));
-    pages.push(p2);
-
-    /* ---- PAGE 3: customer traffic ---- */
-    var p3 = pdfPage();
-    pTitle(p3, "ገጽ 3 — የደንበኞች ትራፊክ (በግብይት ብዛት)");
-    pNote(p3, "* እያንዳንዱ የተመዘገበ ሽያጭ እንደ አንድ የደንበኛ አገልግሎት ተቆጥሯል።");
-    p3.y += 10;
-    var trafficRows = [];
-    for (var mt = 1; mt <= 13; mt++) { var bt = buckets[todayEth.year + "-" + mt]; trafficRows.push([ETH_MONTHS[mt - 1], bt ? transactionCount(bt.sales) : 0]); }
-    pTable(p3, ["ወር", "የግብይት ብዛት"], trafficRows, [p3.left, p3.left + 400]);
-    pKV(p3, "የ" + todayEth.year + " ዓ.ም ጠቅላላ የግብይት ብዛት", String(transactionCount(yearSales)));
-    pages.push(p3);
-
-    /* ---- PAGE 4: payment breakdown by month ---- */
-    var p4 = pdfPage();
-    pTitle(p4, "ገጽ 4 — ወርሃዊ የክፍያ ዝርዝር (ካሽ / ሞባይል ባንኪንግ)");
-    var payRows = [];
-    for (var mp = 1; mp <= 13; mp++) {
-      var bp = buckets[todayEth.year + "-" + mp];
-      var pp = bp ? paymentBreakdown(bp.sales) : { cash: 0, bank: 0 };
-      payRows.push([ETH_MONTHS[mp - 1], fmt(pp.cash), fmt(pp.bank)]);
-    }
-    pTable(p4, ["ወር", "ካሽ", "ሞባይል ባንኪንግ"], payRows, [p4.left, p4.left + 300, p4.left + 560]);
-    pKV(p4, "የ" + todayEth.year + " ዓ.ም ጠቅላላ ካሽ", fmt(yearPay.cash));
-    pKV(p4, "የ" + todayEth.year + " ዓ.ም ጠቅላላ ባንክ", fmt(yearPay.bank));
-    pKV(p4, "የ" + todayEth.year + " ዓ.ም ጠቅላላ ዱቤ", fmt(yearPay.credit));
-    pages.push(p4);
-
-    /* ---- PAGE 5: yearly profit & expenses ---- */
-    var p5 = pdfPage();
-    pTitle(p5, "ገጽ 5 — የ" + todayEth.year + " ዓ.ም ትርፍ እና ወጪ ዝርዝር");
-    pKV(p5, "ጠቅላላ ገቢ (Gross Revenue)", fmt(yearStats.revenue));
-    pKV(p5, "ጠቅላላ ወጪ (Total Expenses)", fmt(yearStats.expenseTotal));
-    pKV(p5, "የተጣራ ትርፍ (Net Profit)", fmt(yearStats.profit), yearStats.profit >= 0 ? "#16a34a" : "#dc2626");
-    p5.y += 10;
-    pSection(p5, "ወጪ በምድብ");
-    var catRows = EXPENSE_CATEGORIES.filter(function (c) { return yearByCat[c]; }).map(function (c) { return [c, fmt(yearByCat[c])]; });
-    if (catRows.length) pTable(p5, ["ምድብ", "መጠን"], catRows, [p5.left, p5.left + 400]);
-    var recon = verifyPaymentReconciliation(yearSales);
-    p5.ctx.font = "700 22px " + PDF_FONT; p5.ctx.fillStyle = recon.ok ? "#16a34a" : "#dc2626"; p5.ctx.textAlign = "left";
-    p5.ctx.fillText((recon.ok ? "✓ ተረጋግጧል: " : "⚠ አልተገጣጠመም: ") + "ካሽ+ባንክ+ዱቤ = ጠቅላላ ገቢ", p5.left, p5.y);
-    pages.push(p5);
-
-    /* ---- PAGE 6: loan utilization plan ---- */
-    var p6 = pdfPage();
-    pTitle(p6, "ገጽ 6 — የብድር ፍላጎት እና የአጠቃቀም እቅድ");
-    pKV(p6, "የሚጠየቀው የብድር መጠን", fmt(lc.requestedAmountCents));
-    p6.y += 10;
-    pSection(p6, "የገንዘብ አጠቃቀም ስርጭት");
-    var usageRows = lc.usageAllocations.map(function (u) { return [u.purpose, u.percent + "%", fmt(Math.round(lc.requestedAmountCents * (u.percent / 100)))]; });
-    pTable(p6, ["አላማ", "መቶኛ", "መጠን"], usageRows, [p6.left, p6.left + 460, p6.left + 610]);
-    if (lc.proformaInvoices.length) {
-      pSection(p6, "የፕሮፎርማ ኢንቮይስ ዝርዝር");
-      var pfList = lc.proformaInvoices.slice(0, 12);
-      var pfRows = pfList.map(function (pf) { return [pf.supplier, pf.description || "-", fmt(pf.amountCents)]; });
-      pTable(p6, ["አቅራቢ", "ዝርዝር", "ዋጋ"], pfRows, [p6.left, p6.left + 300, p6.left + 660]);
-      if (lc.proformaInvoices.length > 12) pNote(p6, "+ " + (lc.proformaInvoices.length - 12) + " ተጨማሪ ኢንቮይስ (ሙሉ ዝርዝር በአፑ ውስጥ ይታያል)");
-    }
-    pages.push(p6);
-
-    /* ---- PAGE 7: 12-month cash flow projection ---- */
-    var p7 = pdfPage();
-    pTitle(p7, "ገጽ 7 — የ12 ወራት የገንዘብ ፍሰት ትንበያ");
-    var cfRows = (lc.cashFlowProjection || []).map(function (r) { return [ETH_MONTHS[r.month - 1], fmt(r.projectedRevenueCents)]; });
-    pTable(p7, ["ወር", "የሚጠበቅ ገቢ"], cfRows, [p7.left, p7.left + 400]);
-    var cfTotal = (lc.cashFlowProjection || []).reduce(function (s, r) { return s + r.projectedRevenueCents; }, 0);
-    pKV(p7, "የ12 ወራት ጠቅላላ ትንበያ", fmt(cfTotal));
-    pages.push(p7);
-
-    /* ---- PAGE 8: suppliers & market analysis ---- */
-    var p8 = pdfPage();
-    pTitle(p8, "ገጽ 8 — የአቅራቢዎች ዝርዝር እና የገበያ ትንተና");
-    if (lc.suppliers.length) {
-      var supList = lc.suppliers.slice(0, 10);
-      var supRows = supList.map(function (s) { return [s.name, s.address || "-"]; });
-      pTable(p8, ["አቅራቢ ስም", "አድራሻ"], supRows, [p8.left, p8.left + 400]);
-      if (lc.suppliers.length > 10) pNote(p8, "+ " + (lc.suppliers.length - 10) + " ተጨማሪ አቅራቢ (ሙሉ ዝርዝር በአፑ ውስጥ ይታያል)");
-    } else { pNote(p8, "ምንም አቅራቢ አልተመዘገበም"); p8.y += 10; }
-    pSection(p8, "የተወዳዳሪነት ጥንካሬዎች");
-    pParagraph(p8, lc.marketAnalysis || "-");
-    pSection(p8, "ማሳሰቢያዎች");
-    pNote(p8, "• የባንክ ስቴትመንት ማያያዣ መመሪያ: ያለፉት 6 ወራት የባንክ ስቴትመንት ኮፒ ከዚህ ሪፖርት ጋር ያያይዙ።");
-    pNote(p8, "• የግብር ሰነዶች (Tax Clearance) ማመሳከሪያ: የቅርብ ጊዜ ግብር ክፍያ ደረሰኝ ኮፒ ያዘጋጁ።");
-    pages.push(p8);
-
-    /* ---- PAGE 9: profit distribution strategy + pie chart ---- */
-    var p9 = pdfPage();
-    pTitle(p9, "ገጽ 9 — የትርፍ ክፍፍል ስትራቴጂ");
-    var monthlyAvgProfit = Math.round(yearStats.profit / 12);
-    var allocRows = data.allocations.map(function (a) { return [a.name, a.percent + "%", fmt(Math.round(monthlyAvgProfit * (a.percent / 100))), fmt(Math.round(yearStats.profit * (a.percent / 100)))]; });
-    pTable(p9, ["ክፍል", "መቶኛ", "ወርሃዊ (አማካይ)", "አመታዊ"], allocRows, [p9.left, p9.left + 260, p9.left + 420, p9.left + 660]);
-    p9.y += 20;
-    if (yearStats.profit > 0) {
-      var pieColors = ["#3FAE79", "#2563eb", "#f59e0b", "#ef4444", "#8b5cf6", "#14b8a6", "#f97316"];
-      var cx = p9.left + 160, cy = p9.y + 160, r = 150;
-      var start = -Math.PI / 2;
-      data.allocations.forEach(function (a, i) {
-        var angle = (Math.max(0, a.percent) / 100) * 2 * Math.PI;
-        p9.ctx.beginPath(); p9.ctx.moveTo(cx, cy); p9.ctx.arc(cx, cy, r, start, start + angle); p9.ctx.closePath();
-        p9.ctx.fillStyle = pieColors[i % pieColors.length]; p9.ctx.fill();
-        start += angle;
-      });
-      var ly = p9.y + 40;
-      data.allocations.forEach(function (a, i) {
-        p9.ctx.fillStyle = pieColors[i % pieColors.length]; p9.ctx.fillRect(cx + 220, ly - 18, 26, 26);
-        p9.ctx.font = "400 22px " + PDF_FONT; p9.ctx.fillStyle = "#1e293b"; p9.ctx.textAlign = "left";
-        p9.ctx.fillText(a.name + " (" + a.percent + "%)", cx + 258, ly);
-        ly += 40;
-      });
-    } else {
-      p9.ctx.font = "700 24px " + PDF_FONT; p9.ctx.fillStyle = "#b45309"; p9.ctx.textAlign = "left";
-      p9.ctx.fillText("በዚህ አመት ትርፍ ስላልተገኘ ፓይ-ቻርት አልተዘጋጀም።", p9.left, p9.y + 20);
-    }
-    pages.push(p9);
-
-    pages.forEach(function (p, idx) {
-      pFooter(p, "ገጽ " + (idx + 1) + "/" + pages.length + " — በራስ-ሰር ከንግድ ስራው መዝገብ የተዘጋጀ · " + todayISO());
-      if (idx > 0) doc.addPage();
-      doc.addImage(p.canvas.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, 210, 297);
-    });
-
-    doc.save((profile.shopName || "shop") + "-bank-audit-" + todayISO() + ".pdf");
-    showToast("PDF ተዘጋጅቷል");
-  }).catch(function (err) { showToast("PDF ማዘጋጀት አልተቻለም — ኢንተርኔት ያረጋግጡ"); console.error(err); });
-}
-
-/* ================= business profile tab ================= */
 function renderProfile(container) {
   container.appendChild(el("div", { class: "eyebrow section" }, "🏢 የንግድ ፕሮፋይል"));
   var p = state.data.profile || freshProfile();
@@ -1494,6 +1215,988 @@ function renderLoanCenter(container) {
   var pdfBtn = el("button", { class: "btn btn-navy section" }, "⬇️ ባለ 9-ገጽ የኦዲት ሪፖርት (PDF) አውርድ");
   pdfBtn.addEventListener("click", guarded(function () { exportFullAuditPdf(); }));
   container.appendChild(pdfBtn);
+}
+
+
+/* ============================================================
+   PROFESSIONAL 9-PAGE BANK AUDIT PDF EXPORT
+   Version 1.0 — Production Ready
+   Designed for Ethiopian bank loan applications
+   ============================================================ */
+
+/* ---- Color Palette (Professional Bank Standard) ---- */
+var COLORS = {
+  navy: [18, 43, 74],        // #122B4A — Primary corporate
+  navyLight: [30, 58, 95],   // #1E3A5F
+  accent: [59, 130, 246],    // #3B82F6 — Links/highlights
+  emerald: [16, 163, 74],    // #10A34A — Positive/growth
+  crimson: [220, 38, 38],    // #DC2626 — Negative/loss
+  amber: [245, 158, 11],     // #F59E0B — Warning
+  slate: [30, 41, 59],       // #1E293B — Body text
+  slateLight: [71, 85, 105], // #475569 — Secondary text
+  gray: [148, 163, 184],     // #94A3B8 — Muted
+  lightGray: [226, 232, 240],// #E2E8F0 — Borders
+  bg: [248, 250, 252],       // #F8FAFC — Light backgrounds
+  white: [255, 255, 255],
+  pieColors: [
+    [59, 130, 246],   // Blue
+    [16, 163, 74],    // Green
+    [245, 158, 11],   // Amber
+    [220, 38, 38],    // Red
+    [139, 92, 246],   // Violet
+    [20, 184, 166],   // Teal
+    [249, 115, 22]    // Orange
+  ]
+};
+
+/* ---- Page Constants ---- */
+var PAGE_W = 210;   // A4 width mm
+var PAGE_H = 297;   // A4 height mm
+var MARGIN = 50;    // ~17.6mm (50pt)
+var CONTENT_W = PAGE_W - (MARGIN * 2 / 2.835); // content width in mm
+var FOOTER_Y = 280; // footer position
+
+/* ---- jsPDF Helpers ---- */
+function mmToPt(mm) { return mm * 2.835; }
+function ptToMm(pt) { return pt / 2.835; }
+
+/* ---- Text Wrapping for Amharic ---- */
+function wrapText(doc, text, maxWidth) {
+  var words = text.split(/\s+/);
+  var lines = [];
+  var currentLine = "";
+  words.forEach(function(word) {
+    var test = currentLine ? currentLine + " " + word : word;
+    if (doc.getTextWidth(test) > maxWidth) {
+      if (currentLine) lines.push(currentLine);
+      currentLine = word;
+    } else {
+      currentLine = test;
+    }
+  });
+  if (currentLine) lines.push(currentLine);
+  return lines.length ? lines : [text];
+}
+
+/* ---- Safe Text Rendering ---- */
+function safeText(doc, text, x, y, options) {
+  options = options || {};
+  var str = String(text || "-");
+  // Replace problematic characters for jsPDF
+  str = str.replace(/[\x00-\x1F\x7F]/g, "");
+  doc.text(str, x, y, options);
+}
+
+/* ---- Page Setup ---- */
+function setupPage(doc, pageNum, totalPages, shopName) {
+  // Footer line
+  doc.setDrawColor(COLORS.lightGray[0], COLORS.lightGray[1], COLORS.lightGray[2]);
+  doc.setLineWidth(0.3);
+  doc.line(MARGIN / 2.835, FOOTER_Y, (PAGE_W - MARGIN / 2.835), FOOTER_Y);
+
+  // Footer text
+  doc.setFontSize(8);
+  doc.setTextColor(COLORS.gray[0], COLORS.gray[1], COLORS.gray[2]);
+  var footerText = "ገጽ " + pageNum + " / " + totalPages + "  |  " + (shopName || "የሱቅ መቆጣጠሪያ ሲስተም") + "  |  በራስ-ሰር ከንግድ ስራው መዝገብ የተዘጋጀ";
+  doc.text(footerText, PAGE_W / 2, FOOTER_Y + 6, { align: "center" });
+}
+
+/* ---- Section Title ---- */
+function drawSectionTitle(doc, y, title, subtitle) {
+  y = ensureSpace(doc, y, subtitle ? 18 : 12);
+
+  // Accent bar
+  doc.setFillColor(COLORS.navy[0], COLORS.navy[1], COLORS.navy[2]);
+  doc.rect(MARGIN / 2.835, y - 4, 3, 10, "F");
+
+  // Title
+  doc.setFontSize(14);
+  doc.setTextColor(COLORS.navy[0], COLORS.navy[1], COLORS.navy[2]);
+  doc.setFont("helvetica", "bold");
+  safeText(doc, title, MARGIN / 2.835 + 6, y + 3);
+
+  if (subtitle) {
+    y += 8;
+    doc.setFontSize(9);
+    doc.setTextColor(COLORS.slateLight[0], COLORS.slateLight[1], COLORS.slateLight[2]);
+    doc.setFont("helvetica", "normal");
+    safeText(doc, subtitle, MARGIN / 2.835 + 6, y);
+    y += 4;
+  }
+
+  // Separator line
+  y += 2;
+  doc.setDrawColor(COLORS.lightGray[0], COLORS.lightGray[1], COLORS.lightGray[2]);
+  doc.setLineWidth(0.5);
+  doc.line(MARGIN / 2.835, y, (PAGE_W - MARGIN / 2.835), y);
+
+  doc.setFontSize(10);
+  doc.setTextColor(COLORS.slate[0], COLORS.slate[1], COLORS.slate[2]);
+  doc.setFont("helvetica", "normal");
+  return y + 6;
+}
+
+/* ---- Key-Value Row ---- */
+function drawKV(doc, y, label, value, options) {
+  options = options || {};
+  y = ensureSpace(doc, y, 10);
+
+  var labelX = MARGIN / 2.835;
+  var valueX = MARGIN / 2.835 + 75;
+  var maxWidth = (PAGE_W - MARGIN / 2.835) - valueX - 5;
+
+  // Label
+  doc.setFontSize(10);
+  doc.setTextColor(COLORS.slateLight[0], COLORS.slateLight[1], COLORS.slateLight[2]);
+  doc.setFont("helvetica", "normal");
+  safeText(doc, label, labelX, y);
+
+  // Value
+  var color = options.color || COLORS.slate;
+  doc.setTextColor(color[0], color[1], color[2]);
+  doc.setFont("helvetica", options.bold ? "bold" : "normal");
+
+  var valStr = String(value || "-");
+  if (doc.getTextWidth(valStr) > maxWidth) {
+    var lines = wrapText(doc, valStr, maxWidth);
+    lines.forEach(function(line, i) {
+      safeText(doc, line, valueX, y + (i * 5));
+    });
+    y += (lines.length - 1) * 5;
+  } else {
+    safeText(doc, valStr, valueX, y);
+  }
+
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(COLORS.slate[0], COLORS.slate[1], COLORS.slate[2]);
+  return y + 8;
+}
+
+/* ---- Highlight Box ---- */
+function drawHighlightBox(doc, y, label, value, color) {
+  y = ensureSpace(doc, y, 22);
+  var boxH = 18;
+  var boxW = CONTENT_W;
+  var boxX = MARGIN / 2.835;
+
+  // Background
+  doc.setFillColor(COLORS.bg[0], COLORS.bg[1], COLORS.bg[2]);
+  doc.roundedRect(boxX, y - 12, boxW, boxH, 3, 3, "F");
+
+  // Left accent
+  doc.setFillColor(color[0], color[1], color[2]);
+  doc.roundedRect(boxX, y - 12, 4, boxH, 2, 2, "F");
+
+  // Label
+  doc.setFontSize(9);
+  doc.setTextColor(COLORS.slateLight[0], COLORS.slateLight[1], COLORS.slateLight[2]);
+  safeText(doc, label, boxX + 10, y - 2);
+
+  // Value
+  doc.setFontSize(12);
+  doc.setTextColor(color[0], color[1], color[2]);
+  doc.setFont("helvetica", "bold");
+  safeText(doc, String(value), boxX + 10, y + 6);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(COLORS.slate[0], COLORS.slate[1], COLORS.slate[2]);
+
+  return y + 14;
+}
+
+/* ---- Professional Table ---- */
+function drawTable(doc, y, headers, rows, colWidths, options) {
+  options = options || {};
+  var rowHeight = options.rowHeight || 8;
+  var headerHeight = options.headerHeight || 10;
+  var padding = options.padding || 3;
+  var startX = MARGIN / 2.835;
+  var totalW = colWidths.reduce(function(a, b) { return a + b; }, 0);
+
+  y = ensureSpace(doc, y, headerHeight + 4);
+
+  // Header background
+  doc.setFillColor(COLORS.navy[0], COLORS.navy[1], COLORS.navy[2]);
+  doc.roundedRect(startX, y - headerHeight + 2, totalW, headerHeight, 2, 2, "F");
+
+  // Header text
+  doc.setFontSize(9);
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  var cx = startX + padding;
+  headers.forEach(function(h, i) {
+    safeText(doc, h, cx + 2, y - 2);
+    cx += colWidths[i];
+  });
+
+  y += 4;
+  doc.setTextColor(COLORS.slate[0], COLORS.slate[1], COLORS.slate[2]);
+  doc.setFont("helvetica", "normal");
+
+  // Rows
+  rows.forEach(function(row, rIdx) {
+    y = ensureSpace(doc, y, rowHeight + 2);
+
+    // Alternating background
+    if (rIdx % 2 === 0) {
+      doc.setFillColor(250, 251, 252);
+      doc.rect(startX, y - rowHeight + 3, totalW, rowHeight, "F");
+    }
+
+    // Row border
+    doc.setDrawColor(COLORS.lightGray[0], COLORS.lightGray[1], COLORS.lightGray[2]);
+    doc.setLineWidth(0.2);
+    doc.line(startX, y + 1, startX + totalW, y + 1);
+
+    cx = startX + padding;
+    row.forEach(function(cell, cIdx) {
+      var cellColor = options.rowColors && options.rowColors[rIdx] && options.rowColors[rIdx][cIdx] 
+        ? options.rowColors[rIdx][cIdx] : COLORS.slate;
+      doc.setTextColor(cellColor[0], cellColor[1], cellColor[2]);
+      if (options.boldCol && options.boldCol.indexOf(cIdx) !== -1) {
+        doc.setFont("helvetica", "bold");
+      }
+      safeText(doc, String(cell || "-"), cx + 2, y - 1);
+      doc.setFont("helvetica", "normal");
+      cx += colWidths[cIdx];
+    });
+
+    y += rowHeight;
+  });
+
+  return y + 4;
+}
+
+/* ---- Two-Column Comparison Table ---- */
+function drawComparisonTable(doc, y, title, leftLabel, leftValue, rightLabel, rightValue, diffLabel, diffValue, diffPositive) {
+  y = ensureSpace(doc, y, 45);
+  var startX = MARGIN / 2.835;
+  var colW = CONTENT_W / 3;
+  var rowH = 14;
+
+  // Title
+  doc.setFontSize(11);
+  doc.setTextColor(COLORS.navy[0], COLORS.navy[1], COLORS.navy[2]);
+  doc.setFont("helvetica", "bold");
+  safeText(doc, title, startX, y);
+  y += 8;
+
+  // Header row
+  doc.setFillColor(COLORS.navy[0], COLORS.navy[1], COLORS.navy[2]);
+  doc.roundedRect(startX, y - 8, CONTENT_W, 10, 2, 2, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(9);
+  safeText(doc, leftLabel, startX + 5, y - 2);
+  safeText(doc, rightLabel, startX + colW + 5, y - 2);
+  safeText(doc, diffLabel, startX + colW * 2 + 5, y - 2);
+  y += 6;
+
+  // Values row
+  doc.setFillColor(COLORS.bg[0], COLORS.bg[1], COLORS.bg[2]);
+  doc.roundedRect(startX, y - 6, CONTENT_W, rowH, 2, 2, "F");
+  doc.setTextColor(COLORS.slate[0], COLORS.slate[1], COLORS.slate[2]);
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  safeText(doc, leftValue, startX + 5, y + 2);
+  safeText(doc, rightValue, startX + colW + 5, y + 2);
+
+  var diffColor = diffPositive ? COLORS.emerald : COLORS.crimson;
+  doc.setTextColor(diffColor[0], diffColor[1], diffColor[2]);
+  safeText(doc, diffValue, startX + colW * 2 + 5, y + 2);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(COLORS.slate[0], COLORS.slate[1], COLORS.slate[2]);
+
+  return y + rowH + 6;
+}
+
+/* ---- Pie Chart ---- */
+function drawPieChart(doc, x, y, size, segments, labels) {
+  var canvas = document.createElement("canvas");
+  canvas.width = size * 4;
+  canvas.height = size * 4;
+  var ctx = canvas.getContext("2d");
+  var scale = 4;
+  var cx = size * scale / 2;
+  var cy = size * scale / 2;
+  var r = size * scale / 2 - 10;
+
+  var total = segments.reduce(function(s, seg) { return s + Math.max(0, seg); }, 0);
+
+  if (total <= 0) {
+    ctx.fillStyle = "#e2e8f0";
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+    ctx.fill();
+  } else {
+    var start = -Math.PI / 2;
+    segments.forEach(function(seg, i) {
+      var angle = (Math.max(0, seg) / total) * 2 * Math.PI;
+      var c = COLORS.pieColors[i % COLORS.pieColors.length];
+      ctx.fillStyle = "rgb(" + c[0] + "," + c[1] + "," + c[2] + ")";
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, r, start, start + angle);
+      ctx.closePath();
+      ctx.fill();
+      // White border between segments
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      start += angle;
+    });
+    // Inner white circle for donut effect
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * 0.45, 0, 2 * Math.PI);
+    ctx.fill();
+  }
+
+  var dataUrl = canvas.toDataURL("image/png");
+  try {
+    doc.addImage(dataUrl, "PNG", x, y - size/2, size, size);
+  } catch (e) {
+    // Fallback: draw simple circle
+    doc.setDrawColor(COLORS.lightGray[0], COLORS.lightGray[1], COLORS.lightGray[2]);
+    doc.setLineWidth(1);
+    doc.circle(x + size/2, y, size/2 - 2, "S");
+  }
+
+  // Legend
+  var legendY = y + size/2 + 8;
+  var legendX = x;
+  segments.forEach(function(seg, i) {
+    if (seg <= 0) return;
+    var c = COLORS.pieColors[i % COLORS.pieColors.length];
+    doc.setFillColor(c[0], c[1], c[2]);
+    doc.rect(legendX, legendY - 3, 4, 4, "F");
+    doc.setFontSize(8);
+    doc.setTextColor(COLORS.slateLight[0], COLORS.slateLight[1], COLORS.slateLight[2]);
+    var pct = total > 0 ? Math.round((seg / total) * 100) + "%" : "0%";
+    safeText(doc, (labels[i] || "") + " " + pct, legendX + 7, legendY);
+    legendY += 6;
+  });
+
+  return legendY + 4;
+}
+
+/* ---- Bar Chart (Simple) ---- */
+function drawBarChart(doc, x, y, w, h, labels, values, maxValue) {
+  if (!maxValue) maxValue = Math.max.apply(null, values.concat([1]));
+  var barW = (w - 20) / values.length;
+  var chartH = h - 20;
+
+  // Axis
+  doc.setDrawColor(COLORS.lightGray[0], COLORS.lightGray[1], COLORS.lightGray[2]);
+  doc.setLineWidth(0.3);
+  doc.line(x, y, x, y - chartH);
+  doc.line(x, y, x + w - 20, y);
+
+  values.forEach(function(v, i) {
+    var barH = (v / maxValue) * chartH;
+    var barX = x + 10 + i * barW + barW * 0.2;
+    var barWidth = barW * 0.6;
+
+    // Bar
+    var c = COLORS.pieColors[i % COLORS.pieColors.length];
+    doc.setFillColor(c[0], c[1], c[2]);
+    doc.roundedRect(barX, y - barH, barWidth, barH, 1, 1, "F");
+
+    // Label
+    doc.setFontSize(7);
+    doc.setTextColor(COLORS.slateLight[0], COLORS.slateLight[1], COLORS.slateLight[2]);
+    safeText(doc, labels[i] || "", barX + barWidth/2, y + 5, { align: "center" });
+
+    // Value on top
+    if (barH > 10) {
+      doc.setFontSize(7);
+      doc.setTextColor(255, 255, 255);
+      safeText(doc, String(v), barX + barWidth/2, y - barH + 8, { align: "center" });
+    }
+  });
+
+  return y + 15;
+}
+
+/* ---- Ensure Space (page break) ---- */
+function ensureSpace(doc, y, needed) {
+  if (y + needed > FOOTER_Y - 15) {
+    doc.addPage();
+    return 20;
+  }
+  return y;
+}
+
+/* ============================================================
+   MAIN EXPORT FUNCTION
+   ============================================================ */
+function exportFullAuditPdf() {
+  showToast("ባለ 9-ገጽ የባንክ ሪፖርት PDF በማዘጋጀት ላይ...");
+
+  injectScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js").then(function () {
+    var jsPDFLib = window.jspdf.jsPDF;
+    var doc = new jsPDFLib({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4",
+      compress: true
+    });
+
+    var data = state.data;
+    var profile = data.profile || freshProfile();
+    var lc = data.loanCenter || freshLoanCenter();
+    var todayEth = gregorianToEthiopian(new Date());
+    var yearStartISO = ethiopianYearStartGregorianISO(todayEth.year);
+    var buckets = ethiopianBuckets(data);
+
+    // Calculate yearly data
+    var yearSales = [], yearExpenses = [];
+    for (var m = 1; m <= 13; m++) {
+      var b = buckets[todayEth.year + "-" + m];
+      if (b) { yearSales = yearSales.concat(b.sales); yearExpenses = yearExpenses.concat(b.expenses); }
+    }
+    var yearStats = statsFor(yearSales, yearExpenses);
+    var yearPay = paymentBreakdown(yearSales);
+    var yearByCat = expenseByCategory(yearExpenses);
+    var capitalNow = totalCapitalCents(data);
+    var capitalYearStart = capitalAsOf(data, yearStartISO);
+    var invValueNow = inventoryValueCents(data);
+    var y;
+
+    /* ========================================================
+       PAGE 1: COMPANY PROFILE (Premium Cover Page)
+       ======================================================== */
+    y = 25;
+
+    // Navy header bar
+    doc.setFillColor(COLORS.navy[0], COLORS.navy[1], COLORS.navy[2]);
+    doc.rect(0, 0, PAGE_W, 45, "F");
+
+    // Header text
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(22);
+    doc.setFont("helvetica", "bold");
+    safeText(doc, profile.shopName || "የድርጅት ስም ያልገባ", MARGIN / 2.835, 20);
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    safeText(doc, "የባንክ ብድር ማመልከቻ ሪፖርት  |  " + ETH_MONTHS[todayEth.month - 1] + " " + todayEth.year + " ዓ.ም", MARGIN / 2.835, 30);
+
+    // Subtitle line
+    doc.setDrawColor(255, 255, 255);
+    doc.setLineWidth(0.5);
+    doc.line(MARGIN / 2.835, 35, MARGIN / 2.835 + 80, 35);
+
+    // Manager photo (if available)
+    if (profile.managerPhoto) {
+      try {
+        doc.addImage(profile.managerPhoto, "JPEG", PAGE_W - 55, 8, 35, 35);
+        // Photo border
+        doc.setDrawColor(255, 255, 255);
+        doc.setLineWidth(1);
+        doc.roundedRect(PAGE_W - 55, 8, 35, 35, 3, 3, "S");
+      } catch (e) {}
+    }
+
+    y = 55;
+
+    // Profile details with bullet points
+    y = drawSectionTitle(doc, y, "የድርጅት መገለጫ", "Company Profile & Registration Details");
+
+    var profileFields = [
+      ["የማናጀር ስም", profile.ownerName],
+      ["የስራ ዘርፍ", profile.businessSector],
+      ["TIN ቁጥር", profile.tin],
+      ["የታደሰ ንግድ ፈቃድ ቁጥር", profile.license],
+      ["የጸደቀ የንግድ ምዝገባ ቁጥር", profile.businessRegistration],
+      ["የታደሰ ዲጅታል መታወቅያ", profile.digitalId],
+      ["የስራ አድራሻ", profile.address],
+      ["ኢሜይል", profile.email],
+      ["ስልክ ቁጥር", profile.phone]
+    ];
+
+    profileFields.forEach(function(f) {
+      if (f[1]) {
+        // Bullet
+        doc.setFillColor(COLORS.accent[0], COLORS.accent[1], COLORS.accent[2]);
+        doc.circle(MARGIN / 2.835 + 2, y - 1, 1.2, "F");
+        y = drawKV(doc, y, f[0], f[1]);
+      }
+    });
+
+    // Report date box
+    y += 6;
+    y = drawHighlightBox(doc, y, "ሪፖርት የወጣበት ቀን", 
+      todayISO() + " (" + ETH_MONTHS[todayEth.month - 1] + " " + todayEth.year + " ዓ.ም)", 
+      COLORS.accent);
+
+    setupPage(doc, 1, 9, profile.shopName);
+
+    /* ========================================================
+       PAGE 2: CAPITAL & ASSET VALUATION
+       ======================================================== */
+    doc.addPage();
+    y = 25;
+    y = drawSectionTitle(doc, y, "የእሴት እና ካፒታል ዝርዝር", "Capital & Asset Valuation — Year-over-Year Comparison");
+
+    // Comparison table
+    var capitalDiff = capitalNow - capitalYearStart;
+    var capitalDiffStr = (capitalDiff >= 0 ? "+" : "") + fmt(capitalDiff);
+    y = drawComparisonTable(doc, y, 
+      "የካፒታል ለውጥ ዝርዝር",
+      "ካፒታል በ" + todayEth.year + " ዓ.ም መጀመሪያ",
+      fmt(capitalYearStart),
+      "ካፒታል አሁን (" + todayISO() + ")",
+      fmt(capitalNow),
+      "የካፒታል ለውጥ (Growth)",
+      capitalDiffStr,
+      capitalDiff >= 0
+    );
+
+    // Inventory value highlight
+    y += 4;
+    y = drawHighlightBox(doc, y, "የአሁኑ የዕቃ ክምችት እሴት (Inventory Asset Value)", fmt(invValueNow), COLORS.emerald);
+
+    // Asset breakdown table
+    y += 8;
+    y = drawSectionTitle(doc, y, "የዕቃ ክምችት ዝርዝር", "Current Inventory Breakdown");
+
+    var invHeaders = ["የዕቃ ስም", "የገዢ ዋጋ", "ቀሪ ስቶክ", "እሴት"];
+    var invColWidths = [CONTENT_W * 0.4, CONTENT_W * 0.2, CONTENT_W * 0.15, CONTENT_W * 0.25];
+    var invRows = data.items.map(function(it) {
+      var stock = itemStock(data, it.id);
+      return [it.name, fmt(it.costPriceCents), String(stock), fmt(stock * it.costPriceCents)];
+    }).filter(function(r) { return parseInt(r[2]) > 0; });
+
+    if (invRows.length === 0) {
+      doc.setFontSize(10);
+      doc.setTextColor(COLORS.gray[0], COLORS.gray[1], COLORS.gray[2]);
+      safeText(doc, "በአሁኑ ሰዓት ምንም ዕቃ ክምችት የለም።", MARGIN / 2.835, y);
+      y += 8;
+    } else {
+      y = drawTable(doc, y, invHeaders, invRows, invColWidths, { boldCol: [3] });
+    }
+
+    setupPage(doc, 2, 9, profile.shopName);
+
+    /* ========================================================
+       PAGE 3: CUSTOMER TRAFFIC ANALYSIS
+       ======================================================== */
+    doc.addPage();
+    y = 25;
+    y = drawSectionTitle(doc, y, "የደንበኞች ትራፊክ", "Customer Traffic Analysis — Transaction Count by Period");
+
+    // Note
+    doc.setFontSize(8);
+    doc.setTextColor(COLORS.gray[0], COLORS.gray[1], COLORS.gray[2]);
+    safeText(doc, "* እያንዳንዱ የተመዘገበ ሽያጭ እንደ አንድ የደንበኛ አገልግሎት ተቆጥሯል (transaction count)", MARGIN / 2.835, y);
+    y += 10;
+
+    // Monthly traffic table
+    var trafficHeaders = ["ወር", "የግብይት ብዛት", "የተሸጠ ዕቃ አይነት", "ከፍተኛ ሽያጭ"];
+    var trafficColWidths = [CONTENT_W * 0.25, CONTENT_W * 0.25, CONTENT_W * 0.25, CONTENT_W * 0.25];
+    var trafficRows = [];
+    var totalTransactions = 0;
+
+    for (var mt = 1; mt <= 13; mt++) {
+      var bt = buckets[todayEth.year + "-" + mt];
+      var tc = bt ? transactionCount(bt.sales) : 0;
+      totalTransactions += tc;
+
+      // Find top item for this month
+      var itemCounts = {};
+      if (bt) {
+        bt.sales.forEach(function(s) { itemCounts[s.itemName] = (itemCounts[s.itemName] || 0) + s.qty; });
+      }
+      var topItem = "-", topQty = 0;
+      Object.keys(itemCounts).forEach(function(n) { if (itemCounts[n] > topQty) { topQty = itemCounts[n]; topItem = n; } });
+
+      trafficRows.push([
+        ETH_MONTHS[mt - 1],
+        String(tc),
+        topItem,
+        topQty > 0 ? (topItem + " (" + topQty + ")") : "-"
+      ]);
+    }
+
+    y = drawTable(doc, y, trafficHeaders, trafficRows, trafficColWidths, { boldCol: [1] });
+
+    // Total highlight
+    y += 6;
+    y = drawHighlightBox(doc, y, "የ" + todayEth.year + " ዓ.ም ጠቅላላ የግብይት ብዛት", String(totalTransactions) + " ግብይቶች", COLORS.navy);
+
+    setupPage(doc, 3, 9, profile.shopName);
+
+    /* ========================================================
+       PAGE 4: PAYMENT METHODS BREAKDOWN
+       ======================================================== */
+    doc.addPage();
+    y = 25;
+    y = drawSectionTitle(doc, y, "የክፍያ አማራጮች ዝርዝር", "Payment Methods Breakdown — Cash vs Mobile Banking");
+
+    // Monthly payment table
+    var payHeaders = ["ወር", "ካሽ (ETB)", "ባንክ ትራንስፈር (ETB)", "ዱቤ (ETB)", "ጠቅላላ (ETB)"];
+    var payColWidths = [CONTENT_W * 0.18, CONTENT_W * 0.205, CONTENT_W * 0.205, CONTENT_W * 0.205, CONTENT_W * 0.205];
+    var payRows = [];
+
+    for (var mp = 1; mp <= 13; mp++) {
+      var bp = buckets[todayEth.year + "-" + mp];
+      var pp = bp ? paymentBreakdown(bp.sales) : { cash: 0, bank: 0, credit: 0 };
+      var monthTotal = pp.cash + pp.bank + pp.credit;
+      payRows.push([
+        ETH_MONTHS[mp - 1],
+        fmt(pp.cash),
+        fmt(pp.bank),
+        fmt(pp.credit),
+        fmt(monthTotal)
+      ]);
+    }
+
+    y = drawTable(doc, y, payHeaders, payRows, payColWidths, { boldCol: [4] });
+
+    // Yearly totals
+    y += 8;
+    y = drawSectionTitle(doc, y, "የ" + todayEth.year + " ዓ.ም ጠቅላላ የክፍያ ዝርዝር", "Annual Payment Summary");
+
+    y = drawHighlightBox(doc, y, "ጠቅላላ ካሽ", fmt(yearPay.cash), COLORS.emerald);
+    y = drawHighlightBox(doc, y, "ጠቅላላ ባንክ ትራንስፈር", fmt(yearPay.bank), COLORS.accent);
+    y = drawHighlightBox(doc, y, "ጠቅላላ ዱቤ", fmt(yearPay.credit), COLORS.amber);
+
+    if (yearPay.creditOutstanding > 0) {
+      y = drawHighlightBox(doc, y, "ያልተከፈለ ዱቤ (Outstanding)", fmt(yearPay.creditOutstanding), COLORS.crimson);
+    }
+
+    // Reconciliation check
+    var recon = verifyPaymentReconciliation(yearSales);
+    y += 6;
+    var reconColor = recon.ok ? COLORS.emerald : COLORS.crimson;
+    doc.setFillColor(COLORS.bg[0], COLORS.bg[1], COLORS.bg[2]);
+    doc.roundedRect(MARGIN / 2.835, y - 6, CONTENT_W, 12, 2, 2, "F");
+    doc.setFontSize(9);
+    doc.setTextColor(reconColor[0], reconColor[1], reconColor[2]);
+    doc.setFont("helvetica", "bold");
+    safeText(doc, recon.ok 
+      ? "✓ ተረጋግጧል፦ ካሽ + ባንክ + ዱቤ = ጠቅላላ ገቢ (" + fmt(recon.total) + ")" 
+      : "⚠ ማሳሰቢያ፦ የሽያጭ እና የገቢ ቁጥሮች አልተገጣጠሙም", 
+      MARGIN / 2.835 + 5, y + 1);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(COLORS.slate[0], COLORS.slate[1], COLORS.slate[2]);
+    y += 12;
+
+    setupPage(doc, 4, 9, profile.shopName);
+
+    /* ========================================================
+       PAGE 5: INCOME STATEMENT
+       ======================================================== */
+    doc.addPage();
+    y = 25;
+    y = drawSectionTitle(doc, y, "የአሁኑ የትርፍ እና ወጪ መግለጫ", "Income Statement — Profit & Loss Summary");
+
+    // Income statement boxes
+    y += 4;
+    y = drawHighlightBox(doc, y, "ጠቅላላ ገቢ (Gross Revenue)", fmt(yearStats.revenue), COLORS.navy);
+    y = drawHighlightBox(doc, y, "ጠቅላላ ወጪ (Total Expenses)", fmt(yearStats.expenseTotal), COLORS.crimson);
+
+    // Net profit with special styling
+    y += 6;
+    var profitColor = yearStats.profit >= 0 ? COLORS.emerald : COLORS.crimson;
+    var profitLabel = yearStats.profit >= 0 ? "የተጣራ ትርፍ (Net Profit)" : "የተጣራ ኪሳራ (Net Loss)";
+
+    // Large profit box
+    doc.setFillColor(COLORS.bg[0], COLORS.bg[1], COLORS.bg[2]);
+    doc.roundedRect(MARGIN / 2.835, y - 8, CONTENT_W, 28, 4, 4, "F");
+    // Top accent bar
+    doc.setFillColor(profitColor[0], profitColor[1], profitColor[2]);
+    doc.roundedRect(MARGIN / 2.835, y - 8, CONTENT_W, 4, 2, 2, "F");
+    // Label
+    doc.setFontSize(10);
+    doc.setTextColor(COLORS.slateLight[0], COLORS.slateLight[1], COLORS.slateLight[2]);
+    safeText(doc, profitLabel, MARGIN / 2.835 + 8, y + 2);
+    // Value
+    doc.setFontSize(18);
+    doc.setTextColor(profitColor[0], profitColor[1], profitColor[2]);
+    doc.setFont("helvetica", "bold");
+    safeText(doc, fmt(yearStats.profit), MARGIN / 2.835 + 8, y + 14);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(COLORS.slate[0], COLORS.slate[1], COLORS.slate[2]);
+    y += 28;
+
+    // Expense by category
+    if (Object.keys(yearByCat).length > 0) {
+      y += 6;
+      y = drawSectionTitle(doc, y, "ወጪ በምድብ", "Expense Breakdown by Category");
+
+      var catHeaders = ["ምድብ", "መጠን (ETB)", "ከጠቅላላ ወጪ %"];
+      var catColWidths = [CONTENT_W * 0.4, CONTENT_W * 0.3, CONTENT_W * 0.3];
+      var catRows = [];
+      EXPENSE_CATEGORIES.forEach(function(c) {
+        if (yearByCat[c]) {
+          var pct = yearStats.expenseTotal > 0 ? Math.round((yearByCat[c] / yearStats.expenseTotal) * 100) : 0;
+          catRows.push([c, fmt(yearByCat[c]), pct + "%"]);
+        }
+      });
+
+      y = drawTable(doc, y, catHeaders, catRows, catColWidths, { boldCol: [1] });
+    }
+
+    setupPage(doc, 5, 9, profile.shopName);
+
+    /* ========================================================
+       PAGE 6: LOAN UTILIZATION PLAN
+       ======================================================== */
+    doc.addPage();
+    y = 25;
+    y = drawSectionTitle(doc, y, "የብድር ፍላጎት እና አጠቃቀም እቅድ", "Loan Request & Utilization Plan");
+
+    // Loan amount highlight
+    y += 4;
+    y = drawHighlightBox(doc, y, "የሚጠየቀው የብድር መጠን (Loan Request Amount)", fmt(lc.requestedAmountCents), COLORS.navy);
+
+    // Utilization breakdown
+    y += 8;
+    y = drawSectionTitle(doc, y, "የገንዘቡ አጠቃቀም ስርጭት", "Fund Allocation Breakdown");
+
+    if (lc.requestedAmountCents > 0 && lc.usageAllocations.length > 0) {
+      var utilHeaders = ["አላማ", "መቶኛ", "መጠን (ETB)"];
+      var utilColWidths = [CONTENT_W * 0.5, CONTENT_W * 0.2, CONTENT_W * 0.3];
+      var utilRows = lc.usageAllocations.map(function(u) {
+        var amt = Math.round(lc.requestedAmountCents * (u.percent / 100));
+        return [u.purpose, u.percent + "%", fmt(amt)];
+      });
+
+      var totalPct = lc.usageAllocations.reduce(function(s, r) { return s + Number(r.percent); }, 0);
+      if (Math.abs(totalPct - 100) > 0.01) {
+        utilRows.push(["⚠️ ጠቅላላ", totalPct + "%", ""]);
+      }
+
+      y = drawTable(doc, y, utilHeaders, utilRows, utilColWidths, { boldCol: [2] });
+
+      // Pie chart of allocations
+      y += 8;
+      var segValues = lc.usageAllocations.map(function(u) { 
+        return Math.round(lc.requestedAmountCents * (u.percent / 100)); 
+      });
+      var segLabels = lc.usageAllocations.map(function(u) { return u.purpose; });
+      y = drawPieChart(doc, MARGIN / 2.835 + CONTENT_W/2 - 35, y + 30, 50, segValues, segLabels);
+    } else {
+      doc.setFontSize(10);
+      doc.setTextColor(COLORS.gray[0], COLORS.gray[1], COLORS.gray[2]);
+      safeText(doc, "ምንም የብድር ፍላጎት ወይም የአጠቃቀም እቅድ አልተመዘገበም።", MARGIN / 2.835, y);
+      y += 8;
+    }
+
+    // Proforma invoices
+    if (lc.proformaInvoices && lc.proformaInvoices.length > 0) {
+      y += 8;
+      y = ensureSpace(doc, y, 20);
+      y = drawSectionTitle(doc, y, "የፕሮፎርማ ኢንቮይስ ዝርዝር", "Proforma Invoices");
+
+      var pfHeaders = ["አቅራቢ", "ዝርዝር", "ዋጋ (ETB)", "ቀን"];
+      var pfColWidths = [CONTENT_W * 0.25, CONTENT_W * 0.35, CONTENT_W * 0.2, CONTENT_W * 0.2];
+      var pfRows = lc.proformaInvoices.map(function(pf) {
+        return [pf.supplier, pf.description || "-", fmt(pf.amountCents), pf.date];
+      });
+
+      y = drawTable(doc, y, pfHeaders, pfRows, pfColWidths, { boldCol: [2] });
+    }
+
+    setupPage(doc, 6, 9, profile.shopName);
+
+    /* ========================================================
+       PAGE 7: 12-MONTH CASH FLOW PROJECTION
+       ======================================================== */
+    doc.addPage();
+    y = 25;
+    y = drawSectionTitle(doc, y, "የ12 ወራት የገንዘብ ፍሰት ትንበያ", "12-Month Cash Flow Projection");
+
+    if (lc.cashFlowProjection && lc.cashFlowProjection.length > 0) {
+      var cfHeaders = ["ወር", "የሚጠበቅ ገቢ (ETB)", "የተረጋገጠ ገቢ (ETB)", "ልዩነት"];
+      var cfColWidths = [CONTENT_W * 0.25, CONTENT_W * 0.25, CONTENT_W * 0.25, CONTENT_W * 0.25];
+      var cfRows = [];
+      var cfTotal = 0;
+
+      lc.cashFlowProjection.forEach(function(r) {
+        cfTotal += r.projectedRevenueCents;
+        // Compare with actual if available
+        var monthKey = todayEth.year + "-" + r.month;
+        var bucket = buckets[monthKey];
+        var actual = bucket ? statsFor(bucket.sales, bucket.expenses).revenue : 0;
+        var diff = r.projectedRevenueCents - actual;
+        var diffStr = (diff >= 0 ? "+" : "") + fmt(diff);
+
+        cfRows.push([
+          ETH_MONTHS[r.month - 1],
+          fmt(r.projectedRevenueCents),
+          fmt(actual),
+          diffStr
+        ]);
+      });
+
+      y = drawTable(doc, y, cfHeaders, cfRows, cfColWidths, { 
+        boldCol: [1],
+        rowColors: cfRows.map(function(r) {
+          var diff = r[3];
+          return diff.startsWith("+") ? [null, null, null, COLORS.emerald] : [null, null, null, COLORS.crimson];
+        })
+      });
+
+      // Total
+      y += 6;
+      y = drawHighlightBox(doc, y, "የ12 ወራት ጠቅላላ ትንበያ", fmt(cfTotal), COLORS.navy);
+
+      // Bar chart
+      y += 10;
+      y = drawSectionTitle(doc, y, "የትንበያ ገቢ በግራፍ", "Projected Revenue Visualization");
+      var chartLabels = lc.cashFlowProjection.map(function(r) { return ETH_MONTHS[r.month - 1].substring(0, 3); });
+      var chartValues = lc.cashFlowProjection.map(function(r) { return Math.round(r.projectedRevenueCents / 100); });
+      y = drawBarChart(doc, MARGIN / 2.835, y + 50, CONTENT_W, 60, chartLabels, chartValues);
+    } else {
+      doc.setFontSize(10);
+      doc.setTextColor(COLORS.gray[0], COLORS.gray[1], COLORS.gray[2]);
+      safeText(doc, "ምንም የገንዘብ ፍሰት ትንበያ አልተመዘገበም።", MARGIN / 2.835, y);
+      y += 8;
+    }
+
+    setupPage(doc, 7, 9, profile.shopName);
+
+    /* ========================================================
+       PAGE 8: MARKET & SUPPLIERS ANALYSIS
+       ======================================================== */
+    doc.addPage();
+    y = 25;
+    y = drawSectionTitle(doc, y, "የአቅራቢዎች እና የገበያ ሁኔታ", "Market & Suppliers Analysis");
+
+    // Suppliers table
+    if (lc.suppliers && lc.suppliers.length > 0) {
+      y += 4;
+      y = drawSectionTitle(doc, y, "ዋና ዋና አቅራቢዎች", "Key Suppliers");
+
+      var supHeaders = ["አቅራቢ ስም", "አድራሻ", "የተመዘገበበት ቀን"];
+      var supColWidths = [CONTENT_W * 0.35, CONTENT_W * 0.45, CONTENT_W * 0.2];
+      var supRows = lc.suppliers.map(function(s) {
+        return [s.name, s.address || "-", todayISO()];
+      });
+
+      y = drawTable(doc, y, supHeaders, supRows, supColWidths);
+    } else {
+      y += 4;
+      doc.setFontSize(10);
+      doc.setTextColor(COLORS.gray[0], COLORS.gray[1], COLORS.gray[2]);
+      safeText(doc, "ምንም አቅራቢ አልተመዘገበም።", MARGIN / 2.835, y);
+      y += 8;
+    }
+
+    // Market analysis
+    y += 8;
+    y = drawSectionTitle(doc, y, "የተወዳዳሪነት ጥንካሬዎች", "Competitive Strengths & Market Position");
+
+    if (lc.marketAnalysis && lc.marketAnalysis.trim()) {
+      doc.setFontSize(10);
+      doc.setTextColor(COLORS.slate[0], COLORS.slate[1], COLORS.slate[2]);
+      var lines = doc.splitTextToSize(lc.marketAnalysis, CONTENT_W - 10);
+      lines.forEach(function(line) {
+        y = ensureSpace(doc, y, 6);
+        safeText(doc, line, MARGIN / 2.835 + 5, y);
+        y += 6;
+      });
+    } else {
+      doc.setFontSize(10);
+      doc.setTextColor(COLORS.gray[0], COLORS.gray[1], COLORS.gray[2]);
+      safeText(doc, "ምንም የገበያ ትንተና አልተመዘገበም።", MARGIN / 2.835 + 5, y);
+      y += 8;
+    }
+
+    // Recommendations
+    y += 10;
+    y = drawSectionTitle(doc, y, "ማሳሰቢያዎች", "Required Supporting Documents");
+
+    var notes = [
+      "• የባንክ ስቴትመንት ማያያዣ መመሪያ: ያለፉት 6 ወራት የባንክ ስቴትመንት ኮፒ ከዚህ ሪፖርት ጋር ያያይዙ።",
+      "• የግብር ሰነዶች (Tax Clearance) ማመሳከሪያ: የቅርብ ጊዜ ግብር ክፍያ ደረሰኝ ኮፒ ያዘጋጁ።",
+      "• የንግድ ፈቃድ እና የታደሰ TIN ሰነድ ኮፒዎች ያያይዙ።",
+      "• ይህ ሪፖርት በራስ-ሰር ከንግድ ስራው መዝገብ የተዘጋጀ ሲሆን፣ ቁጥሮቹ ከዕለታዊ ግብይቶች የተመነዩ ናቸው።"
+    ];
+
+    notes.forEach(function(note) {
+      y = ensureSpace(doc, y, 6);
+      doc.setFontSize(9);
+      doc.setTextColor(COLORS.slateLight[0], COLORS.slateLight[1], COLORS.slateLight[2]);
+      safeText(doc, note, MARGIN / 2.835 + 5, y);
+      y += 7;
+    });
+
+    setupPage(doc, 8, 9, profile.shopName);
+
+    /* ========================================================
+       PAGE 9: PROFIT DISTRIBUTION STRATEGY
+       ======================================================== */
+    doc.addPage();
+    y = 25;
+    y = drawSectionTitle(doc, y, "የትርፍ ክፍፍል ስትራቴጂ", "Profit Distribution Strategy");
+
+    if (yearStats.profit > 0 && data.allocations && data.allocations.length > 0) {
+      var monthlyAvgProfit = Math.round(yearStats.profit / 12);
+
+      // Distribution table
+      var allocHeaders = ["ክፍል", "መቶኛ", "ወርሃዊ (አማካይ ETB)", "አመታዊ (ETB)"];
+      var allocColWidths = [CONTENT_W * 0.3, CONTENT_W * 0.15, CONTENT_W * 0.275, CONTENT_W * 0.275];
+      var allocRows = data.allocations.map(function(a) {
+        var monthlyAmt = Math.round(monthlyAvgProfit * (a.percent / 100));
+        var yearlyAmt = Math.round(yearStats.profit * (a.percent / 100));
+        return [a.name, a.percent + "%", fmt(monthlyAmt), fmt(yearlyAmt)];
+      });
+
+      var totalPct = data.allocations.reduce(function(s, a) { return s + Number(a.percent); }, 0);
+      if (Math.abs(totalPct - 100) > 0.01) {
+        allocRows.push(["⚠️ ጠቅላላ", totalPct + "%", "", ""]);
+      }
+
+      y = drawTable(doc, y, allocHeaders, allocRows, allocColWidths, { boldCol: [2, 3] });
+
+      // Pie chart
+      y += 10;
+      y = drawSectionTitle(doc, y, "የትርፍ ክፍፍል በግራፍ", "Profit Distribution Visualization");
+
+      var pieValues = data.allocations.map(function(a) { 
+        return Math.round(yearStats.profit * (a.percent / 100)); 
+      });
+      var pieLabels = data.allocations.map(function(a) { return a.name; });
+      y = drawPieChart(doc, MARGIN / 2.835 + CONTENT_W/2 - 35, y + 35, 55, pieValues, pieLabels);
+
+      // Summary note
+      y += 10;
+      doc.setFillColor(COLORS.bg[0], COLORS.bg[1], COLORS.bg[2]);
+      doc.roundedRect(MARGIN / 2.835, y - 6, CONTENT_W, 20, 3, 3, "F");
+      doc.setFontSize(9);
+      doc.setTextColor(COLORS.slateLight[0], COLORS.slateLight[1], COLORS.slateLight[2]);
+      safeText(doc, "ይህ የትርፍ ክፍፍል ስትራቴጂ ከድርጅቱ የአሰራር ፖሊሲ የተወሰደ ሲሆን፣", MARGIN / 2.835 + 8, y + 2);
+      safeText(doc, "በየወሩ ከሚገኘው ትርፍ መሰረት ይተገበራል።", MARGIN / 2.835 + 8, y + 9);
+
+    } else {
+      doc.setFontSize(11);
+      doc.setTextColor(COLORS.amber[0], COLORS.amber[1], COLORS.amber[2]);
+      doc.setFont("helvetica", "bold");
+      safeText(doc, "⚠ በዚህ አመት ትርፍ ስላልተገኘ የትርፍ ክፍፍል ሪፖርት አልተዘጋጀም።", MARGIN / 2.835, y + 10);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(COLORS.slate[0], COLORS.slate[1], COLORS.slate[2]);
+
+      y += 20;
+      doc.setFontSize(10);
+      doc.setTextColor(COLORS.slateLight[0], COLORS.slateLight[1], COLORS.slateLight[2]);
+      safeText(doc, "የተገኘው ውጤት: " + fmt(yearStats.profit), MARGIN / 2.835, y);
+      y += 8;
+      safeText(doc, "ትርፍ ክፍፍል ስትራቴጂው ትርፍ ሲኖር ብቻ ይተገበራል።", MARGIN / 2.835, y);
+    }
+
+    setupPage(doc, 9, 9, profile.shopName);
+
+    /* ---- SAVE PDF ---- */
+    var filename = (profile.shopName || "shop").replace(/[^a-zA-Z0-9\u1200-\u137F]/g, "_") + "-bank-audit-" + todayISO() + ".pdf";
+    doc.save(filename);
+    showToast("✓ ባለ 9-ገጽ የባንክ ሪፖርት PDF ተዘጋጅቷል");
+
+  }).catch(function(err) { 
+    showToast("PDF ማዘጋጀት አልተቻለም — ኢንተርኔት ያረጋግጡ"); 
+    console.error(err); 
+  });
 }
 
 function openMainMenu() {
@@ -1748,3 +2451,66 @@ function openFirebaseSetup() {
     if (cfg.apiKey) {
       var clearBtn = el("button", { class: "btn btn-outline" }, "አላቅ (ኦፍላይን ብቻ ተመለስ)");
       clearBtn.addEventListener("click", function () { saveFirebaseConfig({ disabled: true }); showToast("የጋራ ዳታቤዝ ግንኙነት ተቋርጧል — አሁን ኦፍላይን ብቻ ነው"); location.reload(); });
+      row.appendChild(clearBtn);
+    }
+    var saveBtn = el("button", { class: "btn btn-primary" }, "አገናኝ / አስቀምጥ");
+    saveBtn.addEventListener("click", guarded(function () {
+      var newCfg = {};
+      fields.forEach(function (f) { newCfg[f] = inputs[f].value.trim(); });
+      if (!newCfg.apiKey || !newCfg.shopId) { showToast("እባክዎ apiKey እና የሱቅ መለያ ኮድ ያስገቡ"); return; }
+      saveFirebaseConfig(newCfg);
+      showToast("ተቀምጧል — በመገናኘት ላይ...");
+      initFirebaseIfConfigured(drawStatus);
+      drawStatus();
+      close();
+    }));
+    row.appendChild(saveBtn);
+    return row;
+  });
+}
+
+/* ================= nav & root ================= */
+function BottomNav() {
+  var items = [{ key: "dashboard", label: "ዳሽቦርድ", em: "🏠" }, { key: "sales", label: "ሽያጭ", em: "📦" }, { key: "items", label: "ዕቃዎች", em: "🗃️" }, { key: "expenses", label: "ወጪ", em: "💸" }, { key: "reports", label: "ሪፖርት", em: "📊" }];
+  var nav = el("div", { class: "nav" });
+  items.forEach(function (it) {
+    var active = state.tab === it.key;
+    var b = el("button", { class: "navbtn" + (active ? " active" : "") }, [el("span", { class: "em" }, it.em), el("span", { class: "lbl" }, it.label)]);
+    b.addEventListener("click", function () { state.tab = it.key; renderApp(); });
+    nav.appendChild(b);
+  });
+  return el("div", { class: "navwrap" }, [nav]);
+}
+
+function renderApp() {
+  var root = document.getElementById("root");
+  clear(root);
+  var app = el("div", { class: "app" });
+  var hamBtn = el("button", { class: "hamburger" }, "☰");
+  hamBtn.addEventListener("click", openMainMenu);
+  app.appendChild(el("div", { class: "header" }, [hamBtn, el("h1", {}, "የሱቅ መቆጣጠሪያ ሲስተም"), el("div", { class: "header-spacer" })]));
+  if (!storageAvailable) {
+    app.appendChild(el("div", { style: { background: "#fff4e5", color: "#92400e", fontSize: "11px", padding: "8px 16px", textAlign: "center" } },
+      "ማሳሰቢያ: ውሂብ በዚህ ስልክ ላይ በራስ-ሰር መቀመጥ አልቻለም (ስህተት: " + (storageErrorDetail || "unknown") + ")። Firebase ከተገናኘ ውሂብዎ አይጠፋም፣ ካልሆነ ግን ይህን ገፅ ሲዘጉ ይጠፋል።"));
+  }
+  var content = el("div", { class: "content" });
+  if (state.tab === "dashboard") renderDashboard(content);
+  else if (state.tab === "sales") renderSales(content);
+  else if (state.tab === "items") renderItems(content);
+  else if (state.tab === "expenses") renderExpenses(content);
+  else if (state.tab === "reports") renderReports(content);
+  else if (state.tab === "profile") renderProfile(content);
+  else if (state.tab === "loancenter") renderLoanCenter(content);
+  app.appendChild(content);
+  app.appendChild(BottomNav());
+  root.appendChild(app);
+}
+
+/* ================= init ================= */
+renderApp();
+initFirebaseIfConfigured();
+
+})();
+</script>
+</body>
+</html>
