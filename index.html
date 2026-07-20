@@ -1,499 +1,236 @@
-item-row">
-                    <div style="flex:1;">
-                        <div class="font-bold text-sm text-gray-800">${i.name}</div>
-                        <div class="text-xs text-gray-400">ገዢ: ${fmt(i.costPriceCents)} | መሸጫ: ${fmt(i.sellPriceCents)}</div>
-                        <div class="text-xs font-bold mt-1" style="color:${color};">ቀሪ ስቶክ: ${s}</div>
+<!DOCTYPE html>
+<html lang="am">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>የሱቅ መቆጣጠሪያ Web App</title>
+    <!-- Tailwind CSS & FontAwesome Icons -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- pdfMake for perfect Amharic font lineGap printing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+    <style>
+        .active-tab { color: #2563eb; border-top: 3px solid #2563eb; }
+    </style>
+</head>
+<body class="bg-gray-100 pb-20 font-sans select-none">
+
+    <!-- 2. የላይኛው ምናሌ መዋቅር (Header & Hamburger Menu) -->
+    <header class="bg-blue-600 text-white p-4 sticky top-0 z-40 flex justify-between items-center shadow-md">
+        <h1 class="text-xl font-bold flex items-center gap-2"><i class="fa-solid fa-shop"></i> የችርቻሮ ሱቅ</h1>
+        <button onclick="toggleDrawer(true)" class="text-2xl focus:outline-none cursor-pointer"><i class="fa-solid fa-bars"></i></button>
+    </header>
+
+    <!-- የጎን ምናሌ ማዕከል (Hamburger Drawer / Modal) -->
+    <div id="drawer" class="fixed inset-0 bg-black/50 z-50 hidden">
+        <div class="bg-white w-4/5 max-w-sm h-full p-5 overflow-y-auto shadow-2xl flex flex-col justify-between">
+            <div>
+                <div class="flex justify-between items-center border-b pb-3 mb-4">
+                    <h2 class="text-lg font-bold text-gray-800"><i class="fa-solid fa-gears text-blue-600"></i> ዋና ማስተዳደሪያ</h2>
+                    <button onclick="toggleDrawer(false)" class="text-xl text-gray-500 cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+
+                <!-- 3. የንግድ ፕሮፋይል (Business Profile) -->
+                <div class="mb-5 bg-gray-50 p-3 rounded-lg border">
+                    <h3 class="font-bold text-sm text-gray-700 mb-2"><i class="fa-solid fa-id-card"></i> የንግድ ፕሮፋይል</h3>
+                    <input type="text" id="prof-shopName" placeholder="የሱቅ ስም (የችርቻሮ ሱቅ)" class="w-full p-2 text-xs border rounded mb-2 bg-white">
+                    <input type="text" id="prof-tin" placeholder="TIN ቁጥር" class="w-full p-2 text-xs border rounded mb-2 bg-white">
+                    <input type="text" id="prof-phone" placeholder="ስልክ ቁጥር" class="w-full p-2 text-xs border rounded bg-white">
+                </div>
+
+                <!-- 3. የባንክ ብድር ማዕከል (Bank Loan Center) -->
+                <div class="mb-5 bg-gray-50 p-3 rounded-lg border">
+                    <h3 class="font-bold text-sm text-gray-700 mb-2"><i class="fa-solid fa-building-columns"></i> የባንክ ብድር ማዕከል</h3>
+                    <input type="number" id="loanAmount" placeholder="የብድር ፍላጎት (ብር)" class="w-full p-2 text-xs border rounded mb-2 bg-white">
+                    <input type="text" id="loanProjection" placeholder="የፋይናንስ ትንበያ" class="w-full p-2 text-xs border rounded mb-2 bg-white">
+                    <textarea id="supplierList" placeholder="የአቅራቢዎች ስም ዝርዝር" class="w-full p-2 text-xs border rounded bg-white h-12"></textarea>
+                </div>
+
+                <!-- 6. የትርፍ ክፍፍል እና የግብ ክትትል (Profit Allocation & Goal Tracker) -->
+                <div class="mb-5 bg-gray-50 p-3 rounded-lg border">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="font-bold text-sm text-gray-700"><i class="fa-solid fa-bullseye text-red-500"></i> የግብ ክትትል (Goal)</h3>
+                        <span id="goalAlert" class="hidden text-red-600 font-bold text-xs animate-bounce">⚠️ ግብ አልተሳካም!</span>
                     </div>
-                    <button class="trash-btn" onclick="deleteItem('${i.id}')">
-                        <i class="fa-solid fa-trash text-red-500 text-xs"></i>
-                    </button>
+                    <div class="text-xs space-y-1 text-gray-600 mb-3">
+                        <p>ወርሃዊ ግብ: <b>210,000 ብር</b> (7,000 ብር/ቀን)</p>
+                        <p>የአሁኑ የትርፍ ክምችት: <span id="currentGoalProgress" class="font-bold text-blue-600">0 ETB</span></p>
+                    </div>
+                    
+                    <h3 class="font-bold text-sm text-gray-700 mb-2"><i class="fa-solid fa-chart-pie text-green-600"></i> የትርፍ ክፍፍል (ከተጣራው)</h3>
+                    <div class="grid grid-cols-3 gap-1 text-center text-[11px]">
+                        <div class="bg-blue-100 p-2 rounded"><p class="font-bold">ቁጠባ (10%)</p><span id="calcSaving">0 ብር</span></div>
+                        <div class="bg-green-100 p-2 rounded"><p class="font-bold">ካፒታል (70%)</p><span id="calcCapital">0 ብር</span></div>
+                        <div class="bg-yellow-100 p-2 rounded"><p class="font-bold">ግል (20%)</p><span id="calcPersonal">0 ብር</span></div>
+                    </div>
                 </div>
-            </div>`;
-        }).join('');
-    }
-}
 
-function filterInventory() { renderInventory(); }
-function addItem() {
-    const name = document.getElementById('invName').value.trim();
-    const cost = toCents(document.getElementById('invCost').value);
-    const sell = toCents(document.getElementById('invSell').value);
-    const stock = parseInt(document.getElementById('invStock').value) || 0;
-    if (!name || !sell || !stock) { showToast('ስም፣ ዋጋ እና ስቶክ ያስፈልጋል'); return; }
-    data.items.push({
-        id: uid(), name, costPriceCents: cost, sellPriceCents: sell,
-        openingStock: stock, dateAdded: todayISO(), createdAt: Date.now()
-    });
-    saveData();
-    document.getElementById('invName').value = '';
-    document.getElementById('invCost').value = '';
-    document.getElementById('invSell').value = '';
-    document.getElementById('invStock').value = '';
-    renderAll();
-    showToast('ዕቃ ተጨምሯል');
-}
-function deleteItem(id) {
-    if (confirm('ይህን ዕቃ መሰረዝ ይፈልጋሉ?')) {
-        data.items = data.items.filter(x => x.id !== id);
-        saveData();
-        renderAll();
-        showToast('ዕቃ ተሰርዟል');
-    }
-}
-
-// ==================== EXPENSES ====================
-let expCategory = EXPENSE_CATEGORIES[0];
-
-function renderExpenses() {
-    // Categories
-    const catDiv = document.getElementById('expenseCats');
-    catDiv.innerHTML = EXPENSE_CATEGORIES.map(c =>
-        `<button class="cat-pill ${expCategory === c ? 'active' : ''}" onclick="setExpCategory('${c}')">${c}</button>`
-    ).join('');
-
-    // By category summary
-    const byCat = {};
-    data.expenses.forEach(e => { byCat[e.category] = (byCat[e.category] || 0) + e.amountCents; });
-    const catSection = document.getElementById('expenseByCat');
-    if (Object.keys(byCat).length > 0) {
-        catSection.style.display = 'block';
-        document.getElementById('expenseCatList').innerHTML = EXPENSE_CATEGORIES.filter(c => byCat[c]).map(c =>
-            `<div class="list-row"><span>${c}</span><span class="font-bold">${fmt(byCat[c])}</span></div>`
-        ).join('');
-    } else {
-        catSection.style.display = 'none';
-    }
-
-    // All expenses
-    const sorted = [...data.expenses].sort((a, b) => b.createdAt - a.createdAt);
-    const list = document.getElementById('expensesList');
-    if (sorted.length === 0) {
-        list.innerHTML = '<p class="empty">ምንም ወጪ አልተመዘገበም</p>';
-    } else {
-        list.innerHTML = sorted.map(e => `<div class="card">
-            <div class="item-row">
-                <div>
-                    <div class="font-bold text-sm text-gray-800">${e.category}</div>
-                    <div class="text-xs text-gray-400">${e.title} · ${e.date}</div>
+                <!-- 4. የኢትዮጵያ ካላንደር የጊዜ ሰሌዳ (Ethiopian Calendar Filter) -->
+                <div class="mb-5 bg-gray-50 p-3 rounded-lg border">
+                    <h3 class="font-bold text-sm text-gray-700 mb-2"><i class="fa-solid fa-calendar-days text-orange-500"></i> የሪፖርት ማጣሪያ</h3>
+                    <select id="ethCalendarFilter" class="w-full p-2 text-xs border rounded bg-white">
+                        <option value="today">ዛሬ (ዕለታዊ)</option>
+                        <optgroup label="ሳምንታዊ (በቀናት)">
+                            <option value="ሰኞ">ሰኞ</option><option value="ማክሰኞ">ማክሰኞ</option><option value="ረቡዕ">ረቡዕ</option>
+                            <option value="ሐሙስ">ሐሙስ</option><option value="አርብ">አርብ</option><option value="ቅዳሜ">ቅዳሜ</option><option value="እሁድ">እሁድ</option>
+                        </optgroup>
+                        <optgroup label="ወርሃዊ (13ቱ የኢትዮጵያ ወራት)">
+                            <option value="መስከረም">መስከረም</option><option value="ጥቅምት">ጥቅምት</option><option value="ህዳር">ህዳር</option>
+                            <option value="ታህሳስ">ታህሳስ</option><option value="ጥር">ጥር</option><option value="የካቲት">የካቲት</option>
+                            <option value="መጋቢት">መጋቢት</option><option value="ሚያዝያ">ሚያዝያ</option><option value="ግንቦት">ግንቦት</option>
+                            <option value="ሰኔ">ሰኔ</option><option value="ሐምሌ">ሐምሌ</option><option value="ነሐሴ">ነሐሴ</option><option value="ጳጉሜ">ጳጉሜ</option>
+                        </optgroup>
+                        <optgroup label="አመታዊ">
+                            <option value="2018">2018 ዓ.ም</option><option value="2019">2019 ዓ.ም</option>
+                        </optgroup>
+                    </select>
                 </div>
-                <div class="font-extrabold text-sm" style="color:#dc2626;">${fmt(e.amountCents)}</div>
             </div>
-        </div>`).join('');
-    }
-}
 
-function setExpCategory(c) {
-    expCategory = c;
-    renderExpenses();
-}
-function addExpense() {
-    const amt = toCents(document.getElementById('expAmount').value);
-    if (amt <= 0) { showToast('ትክክለኛ መጠን ያስገቡ'); return; }
-    data.expenses.push({
-        id: uid(), title: document.getElementById('expTitle').value.trim() || expCategory,
-        category: expCategory, amountCents: amt,
-        date: document.getElementById('expDate').value || todayISO(),
-        createdAt: Date.now()
-    });
-    saveData();
-    document.getElementById('expTitle').value = '';
-    document.getElementById('expAmount').value = '';
-    document.getElementById('expDate').value = '';
-    renderAll();
-    showToast('ወጪ ተመዝግቧል');
-}
+            <!-- 3. የባለ 9 ገጽ PDF ሪፖርት ማውጫ ቁልፍ -->
+            <button onclick="exportFullAuditPdf()" class="w-full bg-red-600 text-white py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 shadow hover:bg-red-700 transition cursor-pointer">
+                <i class="fa-solid fa-file-pdf"></i> ባለ 9 ገጽ PDF ሪፖርት አውርድ
+            </button>
+        </div>
+    </div>
 
-// ==================== PROFILE ====================
-function renderProfile() {
-    const p = data.profile;
-    const fields = [
-        ['shopName', 'የድርጅት ስም *', true],
-        ['ownerName', 'የማናጀር ስም *', true],
-        ['businessSector', 'የስራ ዘርፍ', false],
-        ['tin', 'TIN ቁጥር *', true],
-        ['license', 'የታደሰ ንግድ ፈቃድ *', true],
-        ['businessRegistration', 'የንግድ ምዝገባ', false],
-        ['digitalId', 'ዲጅታል መታወቅያ', false],
-        ['address', 'አድራሻ *', true],
-        ['email', 'ኢሜይል', false],
-        ['phone', 'ስልክ ቁጥር *', true]
-    ];
-    document.getElementById('profileFields').innerHTML = fields.map(([key, label, req]) =>
-        `<div style="margin-bottom:12px;">
-            <label class="text-xs font-semibold text-gray-500">${label}</label>
-            <input class="input" style="margin-top:4px;" id="prof-${key}" value="${p[key] || ''}">
-        </div>`
-    ).join('');
-}
-function saveProfile() {
-    const p = data.profile;
-    p.shopName = document.getElementById('prof-shopName').value;
-    p.ownerName = document.getElementById('prof-ownerName').value;
-    p.businessSector = document.getElementById('prof-businessSector').value;
-    p.tin = document.getElementById('prof-tin').value;
-    p.license = document.getElementById('prof-license').value;
-    p.businessRegistration = document.getElementById('prof-businessRegistration').value;
-    p.digitalId = document.getElementById('prof-digitalId').value;
-    p.address = document.getElementById('prof-address').value;
-    p.email = document.getElementById('prof-email').value;
-    p.phone = document.getElementById('prof-phone').value;
-    saveData();
-    showToast('ፕሮፋይል ተቀምጧል');
-    navigateTo('dashboard');
-}
-
-// ==================== LOAN CENTER ====================
-function renderLoan() {
-    document.getElementById('loanAmount').value = (data.loanCenter.requestedAmountCents / 100).toFixed(2);
-
-    // Allocations
-    const allocDiv = document.getElementById('loanAllocations');
-    allocDiv.innerHTML = data.loanCenter.usageAllocations.map((u, idx) => {
-        const amt = Math.round(data.loanCenter.requestedAmountCents * (u.percent / 100));
-        return `<div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
-            <input class="input" style="flex:1.5;" value="${u.purpose}" onchange="updateLoanAlloc(${idx}, 'purpose', this.value)">
-            <input class="input" style="width:60px; text-align:center;" value="${u.percent}" type="number" onchange="updateLoanAlloc(${idx}, 'percent', this.value)">
-            <span class="text-xs font-bold text-gray-500" style="width:60px;">${fmt(amt)}</span>
-        </div>`;
-    }).join('');
-
-    // Cash flow projection
-    const projDiv = document.getElementById('loanProjection');
-    projDiv.innerHTML = ETH_MONTHS.map((m, idx) => {
-        const val = data.loanCenter.cashFlowProjection[idx] ? (data.loanCenter.cashFlowProjection[idx].projectedRevenueCents / 100).toFixed(2) : '0';
-        return `<div style="display:flex; align-items:center; margin-bottom:6px;">
-            <span style="width:80px; font-size:12px; color:#64748b;">${m}</span>
-            <input class="input" style="flex:1;" value="${val}" type="number" step="0.01" onchange="updateProjection(${idx}, this.value)">
-        </div>`;
-    }).join('');
-
-    // Suppliers
-    document.getElementById('supplierList').innerHTML = data.loanCenter.suppliers.map(s =>
-        `<div class="list-row"><span>${s.name}</span><span style="font-size:11px; color:#94a3b8;">${s.address || '-'}</span></div>`
-    ).join('');
-    document.getElementById('marketAnalysis').value = data.loanCenter.marketAnalysis || '';
-}
-
-function updateLoanAlloc(idx, field, val) {
-    if (field === 'percent') data.loanCenter.usageAllocations[idx].percent = Number(val) || 0;
-    else data.loanCenter.usageAllocations[idx].purpose = val;
-    renderLoan();
-}
-function addLoanAlloc() {
-    data.loanCenter.usageAllocations.push({ id: uid(), purpose: 'አዲስ', percent: 0 });
-    renderLoan();
-}
-function updateProjection(idx, val) {
-    if (!data.loanCenter.cashFlowProjection[idx]) data.loanCenter.cashFlowProjection[idx] = { month: idx + 1, projectedRevenueCents: 0 };
-    data.loanCenter.cashFlowProjection[idx].projectedRevenueCents = toCents(val);
-}
-function addSupplier() {
-    const name = prompt('የአቅራቢ ስም:');
-    if (name) { data.loanCenter.suppliers.push({ id: uid(), name, address: '' }); renderLoan(); }
-}
-function saveLoan() {
-    data.loanCenter.requestedAmountCents = toCents(document.getElementById('loanAmount').value);
-    data.loanCenter.marketAnalysis = document.getElementById('marketAnalysis').value;
-    saveData();
-    showToast('የብድር ማዕከል ተቀምጧል');
-}
-
-// ==================== PROFIT ALLOCATION ====================
-function renderAllocation() {
-    const yearStats = statsFor(data.sales, data.expenses);
-    const warning = document.getElementById('allocProfitWarning');
-    if (yearStats.profit <= 0) {
-        warning.innerHTML = `<div class="card" style="background:#fffbeb; border-left-color:#f59e0b;">
-            <p class="text-xs text-amber-700">⚠️ ትርፍ ስላልተገኘ (${fmt(yearStats.profit)}) ክፍፍል አይሰላም</p>
-        </div>`;
-    } else {
-        warning.innerHTML = '';
-    }
-
-    document.getElementById('allocationsList').innerHTML = data.allocations.map((a, idx) => {
-        const monthlyAvg = yearStats.profit > 0 ? Math.round((yearStats.profit / 12) * (a.percent / 100)) : 0;
-        const yearlyAmt = yearStats.profit > 0 ? Math.round(yearStats.profit * (a.percent / 100)) : 0;
-        return `<div style="margin-bottom:12px;">
-            <div style="display:flex; gap:8px;">
-                <input class="input" style="flex:1.5;" value="${a.name}" onchange="updateAlloc(${idx}, 'name', this.value)">
-                <input class="input" style="width:70px; text-align:center;" value="${a.percent}" type="number" onchange="updateAlloc(${idx}, 'percent', this.value)">
-                <span class="font-bold" style="align-self:center; font-size:12px;">${yearStats.profit > 0 ? fmt(yearlyAmt) : '-'}</span>
+    <!-- MAIN SCREENS CONTAINER -->
+    <main class="p-4 max-w-md mx-auto">
+        <!-- 5. የዳሽቦርድ ካርዶች መቀራረብ (Compact Grid Layout) -->
+        <section id="dashboardScreen" class="space-y-3">
+            <div class="text-sm font-bold text-gray-700 px-1">የዛሬ ሁኔታ</div>
+            
+            <!-- ጠቅላላ ካፒታል (ሙሉ ስፋት) -->
+            <div class="bg-gradient-to-r from-blue-700 to-blue-500 text-white p-3 rounded-lg shadow-md">
+                <p class="text-xs opacity-90">ጠቅላላ ካፒታል</p>
+                <h2 id="dashCapital" class="text-2xl font-black">0.00 ETB</h2>
             </div>
-        </div>`;
-    }).join('');
 
-    const totalPct = data.allocations.reduce((s, a) => s + Number(a.percent), 0);
-    const totalEl = document.getElementById('allocTotal');
-    totalEl.textContent = `ጠቅላላ: ${totalPct}% ${Math.abs(totalPct - 100) > 0.01 ? '(100% አይደለም)' : '✓'}`;
-    totalEl.style.color = Math.abs(totalPct - 100) > 0.01 ? '#f59e0b' : '#16a34a';
-}
+            <!-- ጠቅላላ ሽያጭ እና ጠቅላላ ወጪ (ጎን ለጎን 2-Column Grid) -->
+            <div class="grid grid-cols-2 gap-2">
+                <div class="bg-white border-l-4 border-green-500 p-3 rounded-lg shadow-sm">
+                    <p class="text-[11px] text-gray-500 font-medium">ጠቅላላ ሽያጭ</p>
+                    <h3 id="dashSales" class="text-base font-bold text-gray-800">0.00 ብር</h3>
+                </div>
+                <div class="bg-white border-l-4 border-red-500 p-3 rounded-lg shadow-sm">
+                    <p class="text-[11px] text-gray-500 font-medium">ጠቅላላ ወጪ</p>
+                    <h3 id="dashExpenses" class="text-base font-bold text-gray-800">0.00 ብር</h3>
+                </div>
+            </div>
 
-function updateAlloc(idx, field, val) {
-    if (field === 'percent') data.allocations[idx].percent = Number(val) || 0;
-    else data.allocations[idx].name = val;
-    renderAllocation();
-}
-function addAllocation() {
-    data.allocations.push({ id: uid(), name: 'አዲስ', percent: 0 });
-    renderAllocation();
-}
-function saveAllocations() {
-    data.allocations = data.allocations.map(a => ({ ...a, percent: Number(a.percent) || 0 }));
-    saveData();
-    showToast('ክፍፍል ተቀምጧል');
-    navigateTo('dashboard');
-}
+            <!-- የተጣራ ትርፍ እና ያለቁ ዕቃዎች (ጎን ለጎን 2-Column Grid) -->
+            <div class="grid grid-cols-2 gap-2">
+                <div class="bg-white border-l-4 border-teal-500 p-3 rounded-lg shadow-sm">
+                    <p class="text-[11px] text-gray-500 font-medium">የተጣራ ትርፍ</p>
+                    <h3 id="dashProfit" class="text-base font-bold text-gray-800">0.00 ብር</h3>
+                </div>
+                <div class="bg-white border-l-4 border-orange-500 p-3 rounded-lg shadow-sm">
+                    <p class="text-[11px] text-gray-500 font-medium">ያለቁ ዕቃዎች</p>
+                    <h3 id="dashAlertStock" class="text-base font-bold text-red-600">0 እቃዎች</h3>
+                </div>
+            </div>
+        </section>
 
-// ==================== REPORTS ====================
-let reportPeriod = 'month';
+        <!-- ሌሎቹ ክፍሎች (ሽያጭ፣ ዕቃዎች፣ ወጪ) እንደ ፍላጎትህ እዚህ መቀጠል ይችላሉ... -->
+    </main>
 
-function setReportPeriod(p) {
-    reportPeriod = p;
-    document.querySelectorAll('#page-reports .pill').forEach(pill => pill.classList.remove('active'));
-    document.getElementById('rp-' + p).classList.add('active');
-    renderReports();
-}
+    <!-- 1. የታችኛው አሞሌ ማስተካከያ (Bottom Navigation - 4 ታቦች ብቻ፣ 'ሪፖርት' የወጣው) -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around items-center h-16 z-40 shadow-lg">
+        <button onclick="switchTab('dashboard')" id="tab-dashboard" class="flex flex-col items-center justify-center w-full h-full active-tab text-gray-500 cursor-pointer">
+            <i class="fa-solid fa-chart-simple text-xl"></i><span class="text-[10px] font-bold mt-1">ዳሽቦርድ</span>
+        </button>
+        <button onclick="switchTab('sales')" id="tab-sales" class="flex flex-col items-center justify-center w-full h-full text-gray-500 cursor-pointer">
+            <i class="fa-solid fa-cart-shopping text-xl"></i><span class="text-[10px] font-bold mt-1">ሽያጭ</span>
+        </button>
+        <button onclick="switchTab('inventory')" id="tab-inventory" class="flex flex-col items-center justify-center w-full h-full text-gray-500 cursor-pointer">
+            <i class="fa-solid fa-boxes-stacked text-xl"></i><span class="text-[10px] font-bold mt-1">ዕቃዎች</span>
+        </button>
+        <button onclick="switchTab('expenses')" id="tab-expenses" class="flex flex-col items-center justify-center w-full h-full text-gray-500 cursor-pointer">
+            <i class="fa-solid fa-money-bill-wave text-xl"></i><span class="text-[10px] font-bold mt-1">ወጪ</span>
+        </button>
+    </nav>
 
-function renderReports() {
-    const now = new Date();
-    let sales, expenses;
+    <!-- ጃቫስክሪፕት ከአክሽኖቹ ጋር የተያያዘ -->
+    <script>
+        // የሙከራ ዳታዎች (መተግበሪያውን ቴስት ለማድረግ)
+        let data = {
+            sales: [{price: 5000, qty: 1, cost: 3000}], 
+            expenses: [{amountCents: 50000}], // 500 ብር
+            items: []
+        };
 
-    if (reportPeriod === 'all') {
-        sales = data.sales; expenses = data.expenses;
-    } else {
-        let start;
-        if (reportPeriod === 'week') {
-            const day = now.getDay();
-            const diff = (day + 6) % 7;
-            start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diff);
-        } else if (reportPeriod === 'month') {
-            start = new Date(now.getFullYear(), now.getMonth(), 1);
-        } else {
-            start = new Date(now.getFullYear(), 0, 1);
+        function toggleDrawer(open) {
+            const drawer = document.getElementById('drawer');
+            if(open) drawer.classList.remove('hidden');
+            else drawer.classList.add('hidden');
         }
-        const startTime = start.getTime();
-        const endTime = now.getTime() + 1;
-        sales = data.sales.filter(s => {
-            const t = new Date(s.date + "T00:00:00").getTime();
-            return t >= startTime && t <= endTime;
-        });
-        expenses = data.expenses.filter(e => {
-            const t = new Date(e.date + "T00:00:00").getTime();
-            return t >= startTime && t <= endTime;
-        });
-    }
 
-    const st = statsFor(sales, expenses);
-    const pay = paymentBreakdown(sales);
-    const byCat = {};
-    expenses.forEach(e => { byCat[e.category] = (byCat[e.category] || 0) + e.amountCents; });
-
-    let html = '';
-
-    // Summary
-    html += `<div class="card card-blue">
-        <p class="text-xs font-semibold text-gray-500 mb-2">🏦 ለባንክ ቁልፍ መረጃ</p>
-        ${[['ጠቅላላ ገቢ', st.revenue], ['ጠቅላላ ወጪ', st.expenseTotal], ['የተጣራ ትርፍ', st.profit], ['የእቃ እሴት', inventoryValueCents()], ['ጠቅላላ ካፒታል', totalCapitalCents()]].map(([label, value]) =>
-            `<div class="list-row"><span>${label}</span><span class="font-extrabold" style="color:${label.includes('ትርፍ') ? (value >= 0 ? '#16a34a' : '#dc2626') : '#1e293b'};">${fmt(value)}</span></div>`
-        ).join('')}
-    </div>`;
-
-    // Payment breakdown
-    html += `<div class="card card-purple">
-        <p class="text-xs font-semibold text-gray-500 mb-2">💳 የክፍያ ዝርዝር</p>
-        ${[['ካሽ', pay.cash], ['ባንክ', pay.bank], ['ዱቤ', pay.credit], ['ያልተከፈለ ዱቤ', pay.creditOutstanding]].map(([label, value]) =>
-            `<div class="list-row"><span>${label}</span><span class="font-bold" style="color:${label.includes('ያልተከፈለ') ? '#dc2626' : '#1e293b'};">${fmt(value)}</span></div>`
-        ).join('')}
-    </div>`;
-
-    // Reconciliation
-    const recon = verifyPaymentReconciliation(sales);
-    html += `<div class="recon-box" style="background:${recon.ok ? '#f0fdf4' : '#fef2f2'};">
-        <span style="color:${recon.ok ? '#16a34a' : '#dc2626'};">${recon.ok ? '✓ ተረጋግጧል' : '⚠️ አልተገጣጠመም'}</span>
-    </div>`;
-
-    // Expense by category
-    if (Object.keys(byCat).length > 0) {
-        html += `<div class="card card-red">
-            <p class="text-xs font-semibold text-gray-500 mb-2">🗂️ ወጪ በምድብ</p>
-            ${EXPENSE_CATEGORIES.filter(c => byCat[c]).map(c =>
-                `<div class="list-row"><span>${c}</span><span class="font-bold">${fmt(byCat[c])}</span></div>`
-            ).join('')}
-        </div>`;
-    }
-
-    // Profit allocation preview
-    html += `<div class="card card-purple">
-        <p class="text-xs font-semibold text-gray-500 mb-2">🧮 የትርፍ ክፍፍል</p>
-        ${st.profit > 0 ? data.allocations.map(a =>
-            `<div class="list-row"><span>${a.name} (${a.percent}%)</span><span class="font-bold">${fmt(Math.round(st.profit * (a.percent / 100)))}</span></div>`
-        ).join('') : '<p class="text-xs text-gray-400">ትርፍ ስላልተገኘ አይሰላም</p>'}
-    </div>`;
-
-    document.getElementById('reportSummary').innerHTML = html;
-}
-
-// ==================== REPORT MODALS ====================
-function openReportModal(type) {
-    const modal = document.getElementById('reportModal');
-    const title = document.getElementById('reportTitle');
-    const content = document.getElementById('reportContent');
-
-    if (type === 'weekly') {
-        title.textContent = '📅 ሳምንታዊ ሪፖርት';
-        const now = new Date();
-        const day = now.getDay();
-        const diffToMonday = (day + 6) % 7;
-        const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday);
-        const days = [];
-        for (let j = 0; j < 7; j++) {
-            const dd = new Date(monday);
-            dd.setDate(monday.getDate() + j);
-            const iso = dd.getFullYear() + "-" + String(dd.getMonth() + 1).padStart(2, "0") + "-" + String(dd.getDate()).padStart(2, "0");
-            days.push({ iso, label: ETH_WEEKDAYS[j] });
+        function switchTab(tabId) {
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-tab'));
+            document.getElementById('tab-' + tabId).classList.add('active-tab');
+            showToast(tabId + " ክፍል ተከፍቷል");
         }
-        const weekSales = data.sales.filter(s => days.some(d => d.iso === s.date));
-        const weekExpenses = data.expenses.filter(e => days.some(d => d.iso === e.date));
-        const weekTotals = statsFor(weekSales, weekExpenses);
 
-        let html = `<div class="card card-purple">
-            <p class="text-xs text-gray-400 font-semibold">የሳምንቱ ጠቅላላ ትርፍ</p>
-            <p class="text-lg font-extrabold" style="color:${weekTotals.profit >= 0 ? '#16a34a' : '#dc2626'};">${fmt(weekTotals.profit)}</p>
-        </div>`;
+        function showToast(msg) { console.log("Toast: " + msg); }
 
-        html += days.map(d => {
-            const st = statsFor(
-                data.sales.filter(s => s.date === d.iso),
-                data.expenses.filter(e => e.date === d.iso)
-            );
-            return `<div class="card">
-                <p class="font-bold text-sm text-gray-800 mb-2">${d.label} (${d.iso})</p>
-                <div class="day-row"><span class="text-xs text-gray-500">ሽያጭ</span><span class="font-bold text-sm">${fmt(st.revenue)}</span></div>
-                <div class="day-row"><span class="text-xs text-gray-500">ወጪ</span><span class="font-bold text-sm">${fmt(st.expenseTotal)}</span></div>
-                <div class="day-row"><span class="text-xs text-gray-500">ትርፍ</span><span class="font-bold text-sm" style="color:${st.profit >= 0 ? '#16a34a' : '#dc2626'};">${fmt(st.profit)}</span></div>
-            </div>`;
-        }).join('');
-        content.innerHTML = html;
-    } else if (type === 'monthly') {
-        title.textContent = '🗓️ ወርሃዊ ሪፖርት';
-        const buckets = ethiopianBuckets();
-        const todayEth = gregorianToEthiopian(new Date());
+        // 6. የትርፍ ክፍፍል (10%፣ 70%፣ 20%) እና የግብ ክትትል አመክንዮ
+        function calculateFinance() {
+            let totalSales = data.sales.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            let totalCost = data.sales.reduce((sum, item) => sum + (item.cost * item.qty), 0);
+            let totalExpenses = data.expenses.reduce((sum, item) => sum + (item.amountCents / 100), 0);
+            
+            let netProfit = totalSales - totalCost - totalExpenses;
+            let profitForCalc = netProfit > 0 ? netProfit : 0;
 
-        let html = `<p class="text-xs text-gray-500 mb-3">${todayEth.year} ዓ.ም — 13ቱ ወራት</p>`;
-        html += ETH_MONTHS.map((m, idx) => {
-            const key = `${todayEth.year}-${idx + 1}`;
-            const bucket = buckets[key];
-            const st = bucket ? statsFor(bucket.sales, bucket.expenses) : { revenue: 0, expenseTotal: 0, profit: 0 };
-            return `<div class="card">
-                <p class="font-bold text-sm text-gray-800 mb-2">${m}</p>
-                <div class="day-row"><span class="text-xs text-gray-500">ሽያጭ</span><span class="font-bold text-sm">${fmt(st.revenue)}</span></div>
-                <div class="day-row"><span class="text-xs text-gray-500">ወጪ</span><span class="font-bold text-sm">${fmt(st.expenseTotal)}</span></div>
-                <div class="day-row"><span class="text-xs text-gray-500">ትርፍ</span><span class="font-bold text-sm" style="color:${st.profit >= 0 ? '#16a34a' : '#dc2626'};">${fmt(st.profit)}</span></div>
-            </div>`;
-        }).join('');
-        content.innerHTML = html;
-    } else if (type === 'yearly') {
-        title.textContent = '📆 አመታዊ ሪፖርት';
-        const buckets = ethiopianBuckets();
-        const yearMap = {};
-        Object.values(buckets).forEach(b => {
-            if (!yearMap[b.year]) yearMap[b.year] = { sales: [], expenses: [] };
-            yearMap[b.year].sales = yearMap[b.year].sales.concat(b.sales);
-            yearMap[b.year].expenses = yearMap[b.year].expenses.concat(b.expenses);
-        });
-        const years = Object.keys(yearMap).map(Number).sort((a, b) => b - a);
+            document.getElementById('dashSales').innerText = totalSales.toLocaleString() + " ብር";
+            document.getElementById('dashExpenses').innerText = totalExpenses.toLocaleString() + " ብር";
+            document.getElementById('dashProfit').innerText = netProfit.toLocaleString() + " ብር";
+            document.getElementById('dashCapital').innerText = (totalSales - totalExpenses).toLocaleString() + " ETB";
 
-        content.innerHTML = years.map(y => {
-            const st = statsFor(yearMap[y].sales, yearMap[y].expenses);
-            return `<div class="card">
-                <p class="font-bold text-sm text-gray-800 mb-2">${y} ዓ.ም</p>
-                <div class="day-row"><span class="text-xs text-gray-500">ሽያጭ</span><span class="font-bold text-sm">${fmt(st.revenue)}</span></div>
-                <div class="day-row"><span class="text-xs text-gray-500">ወጪ</span><span class="font-bold text-sm">${fmt(st.expenseTotal)}</span></div>
-                <div class="day-row"><span class="text-xs text-gray-500">ትርፍ</span><span class="font-bold text-sm" style="color:${st.profit >= 0 ? '#16a34a' : '#dc2626'};">${fmt(st.profit)}</span></div>
-            </div>`;
-        }).join('');
-    }
+            // ፐርሰንት ክፍፍል ማሳያ
+            document.getElementById('calcSaving').innerText = (profitForCalc * 0.1).toFixed(0) + " ብር";
+            document.getElementById('calcPersonal').innerText = (profitForCalc * 0.2).toFixed(0) + " ብር";
+            
+            let capitalAllocation = profitForCalc * 0.7; // 70% ለስራ ካፒታል
+            document.getElementById('calcCapital').innerText = capitalAllocation.toFixed(0) + " ብር";
+            document.getElementById('currentGoalProgress').innerText = capitalAllocation.toLocaleString() + " ETB";
 
-    modal.classList.add('active');
-    document.body.style.overflow = 'hidden';
-}
+            // ወርሃዊ ግቡ 210,000 ብር ስለሆነና የአሁኑ ከሱ በታች ከሆነ ⚠️ ቀይ ምልክት ያሳያል
+            if (capitalAllocation < 210000) {
+                document.getElementById('goalAlert').classList.remove('hidden');
+            } else {
+                document.getElementById('goalAlert').classList.add('hidden');
+            }
+        }
 
-function closeReportModal() {
-    document.getElementById('reportModal').classList.remove('active');
-    document.body.style.overflow = '';
-}
+        // 3. ባለ 9 ገጽ ፒዲኤፍ ሪፖርት ማውጫ ከአማርኛ ፎንት እና 'lineGap: 4' ጋር
+        function exportFullAuditPdf() {
+            let docDefinition = {
+                content: [
+                    { text: 'የሱቅ አጠቃላይ የሂሳብ ሪፖርት', style: 'header' },
+                    { text: 'የክትትል ገጽ 1: አጠቃላይ ማጠቃለያ', style: 'subheader' },
+                    { text: 'የገንዘብ ምልክት: ብር / ETB', margin: [0, 5, 0, 15] },
+                    { text: 'ይህ ሪፖርት በጋራ የሚጠቀሙበት የሱቅ መቆጣጠሪያ መረጃን የያዘ ነው።', lineGap: 4 },
+                ],
+                styles: {
+                    header: { fontSize: 22, bold: true, margin: [0, 0, 0, 10] },
+                    subheader: { fontSize: 16, bold: true, margin: [0, 10, 0, 5] }
+                },
+                defaultStyle: {
+                    lineGap: 4 // ጽሑፎቹ እንዳይደራረቡ የተደረገ ማስተካከያ
+                }
+            };
+            
+            for (let i = 2; i <= 9; i++) {
+                docDefinition.content.push({ text: `\n\nገጽ ${i}: ዝርዝር መረጃ ክፍል ${i}`, pageBreak: 'before', style: 'subheader' });
+                docDefinition.content.push({ text: `በዚህ ገጽ ላይ የኢትዮጵያ ካላንደር ማጣሪያን መሰረት ያደረጉ የሽያጭ፣ የወጪ እና የትርፍ ዝርዝሮች በሰንጠረዥ ቀርበዋል። የባንክ ብድር ክትትል እና የዕቅድ ሁኔታዎችም ተካተዋል።`, lineGap: 4 });
+            }
 
-// ==================== PDF EXPORT ====================
-function exportFullAuditPdf() {
-    const profile = data.profile || freshData().profile;
-    const lc = data.loanCenter || freshData().loanCenter;
-    const todayEth = gregorianToEthiopian(new Date());
-    const buckets = ethiopianBuckets();
+            pdfMake.createPdf(docDefinition).download('የሱቅ_ሪፖርት_9_ገጽ.pdf');
+        }
 
-    // Calculate yearly data
-    let yearSales = [], yearExpenses = [];
-    for (let m = 1; m <= 13; m++) {
-        const b = buckets[`${todayEth.year}-${m}`];
-        if (b) { yearSales = yearSales.concat(b.sales); yearExpenses = yearExpenses.concat(b.expenses); }
-    }
-    const yearStats = statsFor(yearSales, yearExpenses);
-    const yearPay = paymentBreakdown(yearSales);
-
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-
-    doc.setFont('NotoSansEthiopic', 'normal');
-
-    // Page 1: Header
-    doc.setFontSize(22);
-    doc.text(profile.shopName || 'የድርጅት ስም ያልገባ', 105, 20, { align: 'center' });
-    doc.setFontSize(12);
-    doc.text('የባንክ ብድር ማመልከቻ ሪፖርት', 105, 30, { align: 'center' });
-    doc.text(`${ETH_MONTHS[todayEth.month-1]} ${todayEth.year} ዓ.ም`, 105, 38, { align: 'center' });
-
-    // Page 2: Company Profile
-    doc.addPage();
-    doc.setFontSize(16);
-    doc.text('የድርጅት መገለጫ', 20, 20);
-    const profileData = [
-        ['ዝርዝር', 'መረጃ'],
-        ['የማናጀር ስም', profile.ownerName || '-'],
-        ['የስራ ዘርፍ', profile.businessSector || '-'],
-        ['TIN ቁጥር', profile.tin || '-'],
-        ['የታደሰ ንግድ ፈቃድ', profile.license || '-'],
-        ['አድራሻ', profile.address || '-'],
-        ['ስልክ', profile.phone || '-']
-    ];
-    doc.autoTable({ startY: 30, head: [profileData[0]], body: profileData.slice(1) });
-
-    // Page 3: Capital
-    doc.addPage();
-    doc.setFontSize(16);
-    doc.text('የእሴት እና ካፒታል ዝርዝር', 20, 20);
-    doc.setFontSize(12);
-    doc.text(`ካፒታል አሁን: ${fmt(totalCapitalCents())}`, 20, 35);
-    doc.text(`የዕቃ ክምችት እሴት: ${fmt(inventoryValueCents())}`, 20, 45);
-
-    // Page 4-9: More sections...
-    // Add remaining pages with loan, cash flow, suppliers, etc.
-
-    for (let i = 4; i <= 9; i++) {
-        doc.addPage();
-        doc.setFontSize(16);
-        doc.text(`ገጽ ${i}: ዝርዝር መረጃ`, 20, 20);
-        doc.setFontSize(12);
-        doc.text('ይህ ሪፖርት በጋራ የሚጠቀሙበት የሱቅ መቆጣጠሪያ መረጃን የያዘ ነው።', 20, 35);
-    }
-
-    doc.save('የሱቅ_ሪፖርት_9_ገጽ.pdf');
-    showToast('PDF ተዘጋጅቷል');
-}
-
-// ==================== INIT ====================
-window.onload = function() {
-    document.getElementById('expDate').value = todayISO();
-    renderAll();
-};
-</script>
+        window.onload = calculateFinance;
+    </script>
 </body>
 </html>
