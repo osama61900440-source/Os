@@ -44,6 +44,7 @@ input, select, textarea { font-family:inherit; }
 
 .eyebrow { font-size:13px; font-weight:600; color:#64748b; margin-bottom:12px; }
 
+.card { background:#fff; border-radius:14px; padding:14px; box-shadow:0 1px 3px rgba(0,0,0,0.06); border:1px solid #eef1f3; }
 .card-capital { background:linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #60a5fa 100%); border-radius:16px; padding:18px; box-shadow:0 4px 12px rgba(30,58,138,0.25); color:#fff; position:relative; overflow:hidden; margin-bottom:12px; }
 .card-capital::before { content:""; position:absolute; top:-20px; right:-20px; width:100px; height:100px; background:rgba(255,255,255,0.08); border-radius:50%; }
 .card-capital .card-label { font-size:11px; font-weight:600; opacity:0.85; margin-bottom:4px; }
@@ -110,6 +111,10 @@ input, select, textarea { font-family:inherit; }
 .picker-selected { width:100%; display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:12px; text-align:left; }
 .picker-list { margin-top:4px; background:#fff; border:1px solid #e2e8f0; border-radius:12px; box-shadow:0 8px 20px rgba(0,0,0,.1); max-height:220px; overflow-y:auto; }
 .picker-item { width:100%; text-align:left; padding:10px 12px; font-size:13px; border:none; background:transparent; border-bottom:1px solid #f8fafc; display:flex; justify-content:space-between; }
+
+.pill-row { display:flex; gap:8px; }
+.pill { flex:1; padding:10px 8px; border-radius:10px; border:1px solid #e2e8f0; background:#f8fafc; font-size:13px; font-weight:600; color:#64748b; text-align:center; cursor:pointer; font-family:inherit; }
+.pill.active { background:#2563eb; color:#fff; border-color:#2563eb; }
 
 .navwrap { position:absolute; left:0; right:0; bottom:0; padding:0 12px 12px; }
 .nav { background:#fff; border-radius:20px; display:flex; align-items:center; justify-content:space-around; padding:4px 4px 8px; box-shadow:0 4px 20px rgba(0,0,0,0.08); border:1px solid #f1f5f9; }
@@ -1158,6 +1163,250 @@ function renderExpenses(container) {
   draw();
 }
 
+/* ================= PROFILE PAGE ================= */
+function renderProfile(container) {
+  var data = state.data;
+  var profile = data.profile || freshProfile();
+  container.appendChild(el("div", { class: "eyebrow" }, "🏢 የንግድ ፕሮፋይል"));
+  container.appendChild(el("div", { class: "helpmsg" }, "ይህ መረጃ ለPDF ሪፖርት እና ለባንክ ብድር ማመልከቻ ይጠቅማል።"));
+
+  var fields = [
+    { k: "shopName", l: "የሱቅ/ድርጅት ስም" },
+    { k: "ownerName", l: "የማናጀር ስም" },
+    { k: "businessSector", l: "የስራ ዘርፍ" },
+    { k: "tin", l: "TIN ቁጥር" },
+    { k: "license", l: "የታደሰ ንግድ ፈቃድ ቁጥር" },
+    { k: "businessRegistration", l: "የጸደቀ የንግድ ምዝገባ ቁጥር" },
+    { k: "digitalId", l: "የታደሰ ዲጅታል መታወቅያ" },
+    { k: "address", l: "የስራ አድራሻ" },
+    { k: "email", l: "ኢሜይል" },
+    { k: "phone", l: "ስልክ ቁጥር" }
+  ];
+
+  var inputs = {};
+  fields.forEach(function(f) {
+    var inp = el("input", { class: "input", value: profile[f.k] || "", placeholder: f.l });
+    inputs[f.k] = inp;
+    container.appendChild(Field(f.l, false, inp));
+  });
+
+  var saveBtn = el("button", { class: "btn btn-primary mt3" }, "ፕሮፋይል አስቀምጥ");
+  saveBtn.addEventListener("click", guarded(function() {
+    setData(function(d) {
+      fields.forEach(function(f) { d.profile[f.k] = inputs[f.k].value.trim(); });
+      return d;
+    });
+    showToast("ፕሮፋይል ተስቷል");
+  }));
+  container.appendChild(saveBtn);
+}
+
+/* ================= LOAN CENTER PAGE ================= */
+function renderLoanCenter(container) {
+  var data = state.data;
+  var lc = data.loanCenter || freshLoanCenter();
+  container.appendChild(el("div", { class: "eyebrow" }, "🏦 የባንክ ብድር ማዕከል"));
+  container.appendChild(el("div", { class: "helpmsg" }, "የብድር ፍላጎት፣ የገንዘብ አጠቃቀም እቅድ፣ አቅራቢዎች እና የገበያ ትንተና ያስገቡ።"));
+
+  var reqInput = el("input", { class: "input", type: "number", step: "0.01", value: (lc.requestedAmountCents / 100).toFixed(2), placeholder: "የሚጠየቀው የብድር መጠን" });
+  container.appendChild(Field("የብድር ፍላጎት (ETB)", true, reqInput));
+
+  container.appendChild(el("div", { class: "eyebrow mt3" }, "የገንዘብ አጠቃቀም ስርጭት"));
+  var allocWrap = el("div", {});
+  container.appendChild(allocWrap);
+
+  function drawAlloc() {
+    clear(allocWrap);
+    lc.usageAllocations.forEach(function(u, idx) {
+      var row = el("div", { class: "alloc-row" });
+      var nameInp = el("input", { class: "input alloc-name", value: u.purpose });
+      nameInp.addEventListener("input", function(e) { u.purpose = e.target.value; });
+      var pctInp = el("input", { class: "input alloc-pct", type: "number", step: "0.1", value: u.percent });
+      pctInp.addEventListener("input", function(e) { u.percent = Number(e.target.value) || 0; });
+      var rm = el("button", { class: "trash-btn" }, "✕");
+      rm.addEventListener("click", function() { lc.usageAllocations.splice(idx, 1); drawAlloc(); });
+      row.appendChild(nameInp); row.appendChild(pctInp); row.appendChild(rm);
+      allocWrap.appendChild(row);
+    });
+  }
+  drawAlloc();
+
+  var addAllocBtn = el("button", { class: "btn btn-outline btn-sm" }, "+ አላማ ጨምር");
+  addAllocBtn.addEventListener("click", function() { lc.usageAllocations.push({ id: uid(), purpose: "አዲስ አላማ", percent: 0 }); drawAlloc(); });
+  container.appendChild(addAllocBtn);
+
+  container.appendChild(el("div", { class: "eyebrow mt3" }, "የፕሮፎርማ ኢንቮይስ"));
+  var pfWrap = el("div", {});
+  container.appendChild(pfWrap);
+  function drawPf() {
+    clear(pfWrap);
+    lc.proformaInvoices.forEach(function(pf, idx) {
+      var row = el("div", { class: "item-row" });
+      row.appendChild(el("div", { class: "item-name" }, pf.supplier + " — " + fmt(pf.amountCents)));
+      row.appendChild(el("div", { class: "item-sub" }, (pf.description || "") + " · " + pf.date));
+      var rm = el("button", { class: "trash-btn mt2" }, "🗑️ ሰርዝ");
+      rm.addEventListener("click", function() { lc.proformaInvoices.splice(idx, 1); drawPf(); });
+      row.appendChild(rm);
+      pfWrap.appendChild(row);
+    });
+    if (lc.proformaInvoices.length === 0) pfWrap.appendChild(el("div", { class: "empty" }, "ምንም ኢንቮይስ አልተጨመረም"));
+  }
+  drawPf();
+
+  var addPfBtn = el("button", { class: "btn btn-outline btn-sm mt2" }, "+ ኢንቮይስ ጨምር");
+  addPfBtn.addEventListener("click", function() {
+    openSheet("ፕሮፎርማ ኢንቮይስ ጨምር", function(body) {
+      var supInp = el("input", { class: "input", placeholder: "አቅራቢ ስም" });
+      var descInp = el("input", { class: "input", placeholder: "ዝርዝር" });
+      var amtInp = el("input", { class: "input", type: "number", step: "0.01", placeholder: "ዋጋ" });
+      var dateInp = el("input", { class: "input", type: "date", value: todayISO() });
+      body.appendChild(Field("አቅራቢ", true, supInp));
+      body.appendChild(Field("ዝርዝር", false, descInp));
+      body.appendChild(Field("ዋጋ", true, amtInp));
+      body.appendChild(Field("ቀን", true, dateInp));
+      return function(close) {
+        var btn = el("button", { class: "btn btn-primary" }, "አስቀምጥ");
+        btn.addEventListener("click", function() {
+          var amt = toCents(amtInp.value);
+          if (!supInp.value.trim() || amt <= 0) { showToast("እባክዎ አቅራቢ እና ትክክለኛ ዋጋ ያስገቡ"); return; }
+          lc.proformaInvoices.push({ id: uid(), supplier: supInp.value.trim(), description: descInp.value.trim(), amountCents: amt, date: dateInp.value || todayISO() });
+          drawPf(); close();
+        });
+        return btn;
+      };
+    }(function(body, close, rf) {
+      var fb = addPfBtn._builder(body);
+      var footer = fb(close);
+      body.parentNode.querySelector(".sheet-footer").appendChild(footer);
+    }));
+  });
+  container.appendChild(addPfBtn);
+
+  container.appendChild(el("div", { class: "eyebrow mt3" }, "የገበያ ትንተና"));
+  var marketInput = el("textarea", { class: "input", rows: 4, style: { resize: "vertical" }, value: lc.marketAnalysis || "", placeholder: "የገበያ ሁኔታ፣ የተወዳዳሪነት ጥንካሬዎች..." });
+  container.appendChild(Field("የገበያ ትንተና", false, marketInput));
+
+  container.appendChild(el("div", { class: "eyebrow mt3" }, "ዋና ዋና አቅራቢዎች"));
+  var supWrap = el("div", {});
+  container.appendChild(supWrap);
+  function drawSup() {
+    clear(supWrap);
+    lc.suppliers.forEach(function(s, idx) {
+      var row = el("div", { class: "item-row" });
+      row.appendChild(el("div", { class: "item-name" }, s.name));
+      row.appendChild(el("div", { class: "item-sub" }, s.address || ""));
+      var rm = el("button", { class: "trash-btn mt2" }, "🗑️ ሰርዝ");
+      rm.addEventListener("click", function() { lc.suppliers.splice(idx, 1); drawSup(); });
+      row.appendChild(rm);
+      supWrap.appendChild(row);
+    });
+    if (lc.suppliers.length === 0) supWrap.appendChild(el("div", { class: "empty" }, "ምንም አቅራቢ አልተጨመረም"));
+  }
+  drawSup();
+
+  var addSupBtn = el("button", { class: "btn btn-outline btn-sm mt2" }, "+ አቅራቢ ጨምር");
+  addSupBtn.addEventListener("click", function() {
+    openSheet("አቅራቢ ጨምር", function(body) {
+      var nameInp = el("input", { class: "input", placeholder: "አቅራቢ ስም" });
+      var addrInp = el("input", { class: "input", placeholder: "አድራሻ" });
+      body.appendChild(Field("ስም", true, nameInp));
+      body.appendChild(Field("አድራሻ", false, addrInp));
+      return function(close) {
+        var btn = el("button", { class: "btn btn-primary" }, "አስቀምጥ");
+        btn.addEventListener("click", function() {
+          if (!nameInp.value.trim()) { showToast("እባክዎ ስም ያስገቡ"); return; }
+          lc.suppliers.push({ id: uid(), name: nameInp.value.trim(), address: addrInp.value.trim() });
+          drawSup(); close();
+        });
+        return btn;
+      };
+    }(function(body, close, rf) {
+      var fb = addSupBtn._builder(body);
+      var footer = fb(close);
+      body.parentNode.querySelector(".sheet-footer").appendChild(footer);
+    }));
+  });
+  container.appendChild(addSupBtn);
+
+  var saveBtn = el("button", { class: "btn btn-primary mt3" }, "ሁሉንም አስቀምጥ");
+  saveBtn.addEventListener("click", guarded(function() {
+    lc.requestedAmountCents = toCents(reqInput.value);
+    lc.marketAnalysis = marketInput.value;
+    setData(function(d) { d.loanCenter = lc; return d; });
+    showToast("የብድር ማዕከል ተስቷል");
+  }));
+  container.appendChild(saveBtn);
+}
+
+/* ================= WEEKLY / MONTHLY / YEARLY REPORTS ================= */
+function openWeeklyReport() {
+  var data = state.data;
+  var now = new Date();
+  var day = now.getDay();
+  var diffToMonday = (day + 6) % 7;
+  var monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday);
+  openSheet("📅 ሳምንታዊ ሪፖርት", function(body) {
+    for (var i = 0; i < 7; i++) {
+      var d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+      var iso = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+      var st = dayStats(data, iso);
+      var dayName = ETH_WEEKDAYS[i];
+      var card = el("div", { class: "day-card" });
+      card.appendChild(el("div", { class: "dname" }, dayName + " (" + iso + ")"));
+      card.appendChild(el("div", { class: "row" }, [el("span", {}, "ሽያጭ"), el("b", {}, fmt(st.revenue))]));
+      card.appendChild(el("div", { class: "row" }, [el("span", {}, "ወጪ"), el("b", {}, fmt(st.expenseTotal))]));
+      card.appendChild(el("div", { class: "row" }, [el("span", {}, "ትርፍ"), el("b", { style: { color: st.profit >= 0 ? "#16a34a" : "#dc2626" } }, fmt(st.profit))]));
+      body.appendChild(card);
+    }
+  }, null);
+}
+
+function openMonthlyReport() {
+  var data = state.data;
+  var buckets = ethiopianBuckets(data);
+  var todayEth = gregorianToEthiopian(new Date());
+  openSheet("🗓️ ወርሃዊ ሪፖርት — " + todayEth.year + " ዓ.ም", function(body) {
+    for (var m = 1; m <= 13; m++) {
+      var b = buckets[todayEth.year + "-" + m];
+      var st = b ? statsFor(b.sales, b.expenses) : { revenue: 0, expenseTotal: 0, profit: 0 };
+      var card = el("div", { class: "day-card" });
+      card.appendChild(el("div", { class: "dname" }, ETH_MONTHS[m - 1]));
+      card.appendChild(el("div", { class: "row" }, [el("span", {}, "ሽያጭ"), el("b", {}, fmt(st.revenue))]));
+      card.appendChild(el("div", { class: "row" }, [el("span", {}, "ወጪ"), el("b", {}, fmt(st.expenseTotal))]));
+      card.appendChild(el("div", { class: "row" }, [el("span", {}, "ትርፍ"), el("b", { style: { color: st.profit >= 0 ? "#16a34a" : "#dc2626" } }, fmt(st.profit))]));
+      body.appendChild(card);
+    }
+  }, null);
+}
+
+function openYearlyReport() {
+  var data = state.data;
+  var buckets = ethiopianBuckets(data);
+  var years = {};
+  Object.keys(buckets).forEach(function(k) {
+    var y = buckets[k].year;
+    if (!years[y]) years[y] = { sales: [], expenses: [] };
+    years[y].sales = years[y].sales.concat(buckets[k].sales);
+    years[y].expenses = years[y].expenses.concat(buckets[k].expenses);
+  });
+  var yearList = Object.keys(years).sort(function(a, b) { return b - a; });
+  openSheet("📆 አመታዊ ሪፖርት", function(body) {
+    if (yearList.length === 0) {
+      body.appendChild(el("div", { class: "empty" }, "ምንም ውሂብ አልተገኘም"));
+      return;
+    }
+    yearList.forEach(function(y) {
+      var st = statsFor(years[y].sales, years[y].expenses);
+      var card = el("div", { class: "day-card" });
+      card.appendChild(el("div", { class: "dname" }, y + " ዓ.ም"));
+      card.appendChild(el("div", { class: "row" }, [el("span", {}, "ሽያጭ"), el("b", {}, fmt(st.revenue))]));
+      card.appendChild(el("div", { class: "row" }, [el("span", {}, "ወጪ"), el("b", {}, fmt(st.expenseTotal))]));
+      card.appendChild(el("div", { class: "row" }, [el("span", {}, "ትርፍ"), el("b", { style: { color: st.profit >= 0 ? "#16a34a" : "#dc2626" } }, fmt(st.profit))]));
+      body.appendChild(card);
+    });
+  }, null);
+}
+
 /* ================= pdfMake 9-PAGE BANK AUDIT PDF EXPORT ================= */
 function exportFullAuditPdf() {
   showToast("ባለ 9-ገጽ የባንክ ሪፖርት PDF በማዘጋጀት ላይ...");
@@ -1181,25 +1430,11 @@ function exportFullAuditPdf() {
   var capitalYearStart = capitalAsOf(data, yearStartISO);
   var invValueNow = inventoryValueCents(data);
 
-  // Build pdfMake document definition
-  function buildTable(headers, rows) {
-    return {
-      table: {
-        headerRows: 1,
-        widths: headers.map(function() { return "*"; }),
-        body: [headers].concat(rows)
-      },
-      layout: {
-        fillColor: function(rowIdx) { return rowIdx === 0 ? "#1e3a8a" : (rowIdx % 2 === 0 ? "#f8fafc" : null); },
-        hLineColor: function() { return "#e2e8f0"; },
-        vLineColor: function() { return "#e2e8f0"; },
-        paddingLeft: function() { return 8; },
-        paddingRight: function() { return 8; },
-        paddingTop: function() { return 6; },
-        paddingBottom: function() { return 6; }
-      },
-      style: rowIdx === 0 ? "tableHeader" : "tableCell"
-    };
+  function pdfMoney(cents) {
+    cents = Math.round(Number(cents) || 0);
+    var neg = cents < 0; cents = Math.abs(cents);
+    var whole = Math.floor(cents / 100), frac = cents % 100;
+    return (neg ? "-" : "") + whole.toLocaleString("en-US") + "." + String(frac).padStart(2, "0") + " ETB";
   }
 
   var dd = {
@@ -1211,7 +1446,6 @@ function exportFullAuditPdf() {
       subheader: { fontSize: 12, color: "#64748b", margin: [0, 0, 0, 20] },
       sectionTitle: { fontSize: 14, bold: true, color: "#1e3a8a", margin: [0, 20, 0, 10] },
       sectionSub: { fontSize: 10, color: "#64748b", margin: [0, 0, 0, 10] },
-      highlightBox: { fillColor: "#f8fafc", margin: [0, 10, 0, 10], padding: 10 },
       tableHeader: { bold: true, color: "#ffffff", fontSize: 10 },
       tableCell: { fontSize: 9 },
       footer: { fontSize: 8, color: "#94a3b8", alignment: "center" }
@@ -1225,14 +1459,6 @@ function exportFullAuditPdf() {
     },
     content: []
   };
-
-  // Helper to format money for PDF
-  function pdfMoney(cents) {
-    cents = Math.round(Number(cents) || 0);
-    var neg = cents < 0; cents = Math.abs(cents);
-    var whole = Math.floor(cents / 100), frac = cents % 100;
-    return (neg ? "-" : "") + whole.toLocaleString("en-US") + "." + String(frac).padStart(2, "0") + " ETB";
-  }
 
   // PAGE 1: COMPANY PROFILE
   dd.content.push(
@@ -1373,12 +1599,7 @@ function exportFullAuditPdf() {
 
   dd.content.push({
     text: "የ" + todayEth.year + " ዓ.ም ጠቅላላ የግብይት ብዛት: " + totalTransactions + " ግብይቶች",
-    bold: true, color: "#1e3a8a", fontSize: 12, margin: [0, 15, 0, 0],
-    table: {
-      widths: ["*"],
-      body: [[{ text: "የ" + todayEth.year + " ዓ.ም ጠቅላላ የግብይት ብዛት: " + totalTransactions + " ግብይቶች", alignment: "center", fillColor: "#eff6ff", color: "#1e3a8a", bold: true }]]
-    },
-    layout: { hLineWidth: function() { return 0; }, vLineWidth: function() { return 0; }, paddingLeft: function() { return 10; }, paddingRight: function() { return 10; }, paddingTop: function() { return 8; }, paddingBottom: function() { return 8; } }
+    bold: true, color: "#1e3a8a", fontSize: 12, margin: [0, 15, 0, 0]
   });
 
   // PAGE 4: PAYMENT METHODS
@@ -1430,8 +1651,7 @@ function exportFullAuditPdf() {
     color: recon.ok ? "#16a34a" : "#dc2626",
     bold: true,
     background: recon.ok ? "#f0fdf4" : "#fef2f2",
-    margin: [0, 15, 0, 0],
-    padding: 10
+    margin: [0, 15, 0, 0]
   });
 
   // PAGE 5: INCOME STATEMENT
@@ -1453,8 +1673,7 @@ function exportFullAuditPdf() {
     table: {
       widths: ["*"],
       body: [[
-        { text: profitLabel + "
-" + pdfMoney(yearStats.profit), alignment: "center", bold: true, fontSize: 18, color: profitColor, fillColor: "#f8fafc", margin: [0, 15, 0, 15] }
+        { text: profitLabel + "\n" + pdfMoney(yearStats.profit), alignment: "center", bold: true, fontSize: 18, color: profitColor, fillColor: "#f8fafc", margin: [0, 15, 0, 15] }
       ]]
     },
     layout: { hLineWidth: function() { return 0; }, vLineWidth: function() { return 0; }, paddingLeft: function() { return 20; }, paddingRight: function() { return 20; }, paddingTop: function() { return 20; }, paddingBottom: function() { return 20; } },
@@ -1664,9 +1883,7 @@ function exportFullAuditPdf() {
       text: "ይህ የትርፍ ክፍፍል ስትራቴጂ ከድርጅቱ የአሰራር ፖሊሲ የተወሰደ ሲሆን፣ በየወሩ ከሚገኘው ትርፍ መሰረት ይተገበራል።",
       fontSize: 9,
       color: "#64748b",
-      margin: [0, 15, 0, 0],
-      background: "#f8fafc",
-      padding: 10
+      margin: [0, 15, 0, 0]
     });
   } else {
     dd.content.push(
@@ -1880,7 +2097,6 @@ function renderApp() {
   clear(root);
   var app = el("div", { class: "app" });
 
-  // Header with hamburger
   var hamBtn = el("button", { class: "hamburger" }, "☰");
   hamBtn.addEventListener("click", toggleDrawer);
   app.appendChild(el("div", { class: "header" }, [
@@ -1889,7 +2105,6 @@ function renderApp() {
     hamBtn
   ]));
 
-  // Drawer (side menu)
   var drawerEls = renderDrawer();
   drawerEls.forEach(function(d) { app.appendChild(d); });
 
