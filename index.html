@@ -4,9 +4,20 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <title>የሱቅ መቆጣጠሪያ ሲስተም</title>
+  <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#000000">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.12/pdfmake.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.12/vfs_fonts.min.js"></script>
-<style>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then(reg => console.log('Service Worker ተመዝግቧል!'))
+        .catch(err => console.log('ስህተት አለ:', err));
+    });
+  }
+</script>
+  <style>
 * { box-sizing: border-box; }
 html,body { margin:0; padding:0; background:#F5F7F9; }
 body { font-family: -apple-system, "Noto Sans Ethiopic", "Segoe UI", Roboto, Arial, sans-serif; color:#1e293b; -webkit-tap-highlight-color:transparent; }
