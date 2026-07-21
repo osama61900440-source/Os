@@ -8,7 +8,23 @@
 <meta name="theme-color" content="#000000">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.12/pdfmake.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.12/vfs_fonts.min.js"></script>
+<!-- Flagsmith SDK -->
+<script src="https://cdn.jsdelivr.net/npm/flagsmith/index.js"></script>
+
+<!-- Flagsmith Config -->
 <script>
+  flagsmith.init({
+    environmentID: "6fnaWe4gz7VHC2dVJtD42N",
+    onChange: (oldFlags, params) => {
+      if (flagsmith.hasFeature('show_banner')) {
+        console.log("show_banner በርቷል!");
+      } else {
+        console.log("show_banner ጠፍቷል!");
+      }
+    }
+  });
+</script>
+  <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('./sw.js')
