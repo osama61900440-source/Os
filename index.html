@@ -4,36 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <title>የሱቅ መቆጣጠሪያ ሲስተም</title>
-  <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#000000">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.12/pdfmake.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.12/vfs_fonts.min.js"></script>
-<!-- Flagsmith SDK -->
-<script src="https://cdn.jsdelivr.net/npm/flagsmith/index.js"></script>
-
-<!-- Flagsmith Config -->
-<script>
-  flagsmith.init({
-    environmentID: "6fnaWe4gz7VHC2dVJtD42N",
-    onChange: (oldFlags, params) => {
-      if (flagsmith.hasFeature('show_banner')) {
-        console.log("show_banner በርቷል!");
-      } else {
-        console.log("show_banner ጠፍቷል!");
-      }
-    }
-  });
-</script>
-  <script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js')
-        .then(reg => console.log('Service Worker ተመዝግቧል!'))
-        .catch(err => console.log('ስህተት አለ:', err));
-    });
-  }
-</script>
-  <style>
+<style>
 * { box-sizing: border-box; }
 html,body { margin:0; padding:0; background:#F5F7F9; }
 body { font-family: -apple-system, "Noto Sans Ethiopic", "Segoe UI", Roboto, Arial, sans-serif; color:#1e293b; -webkit-tap-highlight-color:transparent; }
@@ -49,68 +20,37 @@ input, select, textarea { font-family:inherit; }
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .mt2{margin-top:8px}.mt3{margin-top:12px}.mb2{margin-bottom:8px}.mb3{margin-bottom:12px}
 
-.header { display:flex; align-items:center; background:linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); padding:14px 16px; gap:8px; position:relative; z-index:10; }
-.header h1 { margin:0; font-size:18px; font-weight:800; color:#fff; flex:1; text-align:center; }
-.hamburger { width:38px; height:38px; border:none; background:rgba(255,255,255,0.15); font-size:18px; color:#fff; border-radius:10px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
-.hamburger:active{background:rgba(255,255,255,0.25)}
+.header { display:flex; align-items:center; background:#fff; padding:14px 12px; border-bottom:1px solid #eef1f3; gap:8px; }
+.header h1 { margin:0; font-size:18px; font-weight:800; color:#1e293b; flex:1; text-align:center; }
+.hamburger { width:38px; height:38px; border:none; background:transparent; font-size:20px; color:#334155; border-radius:10px; flex-shrink:0; }
+.hamburger:active{background:#f1f5f9}
 .header-spacer{width:38px;flex-shrink:0}
 
-.drawer-overlay { position:fixed; inset:0; z-index:100; background:rgba(0,0,0,0.5); opacity:0; pointer-events:none; transition:opacity 0.25s ease; }
-.drawer-overlay.open { opacity:1; pointer-events:auto; }
-.drawer { position:fixed; top:0; right:0; bottom:0; width:320px; max-width:85vw; background:#fff; z-index:101; transform:translateX(100%); transition:transform 0.3s cubic-bezier(0.4,0,0.2,1); display:flex; flex-direction:column; }
-.drawer.open { transform:translateX(0); }
-.drawer-header { padding:20px 16px 16px; background:linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); color:#fff; }
-.drawer-header h2 { margin:0; font-size:18px; font-weight:800; }
-.drawer-header p { margin:4px 0 0; font-size:12px; opacity:0.85; }
-.drawer-body { flex:1; overflow-y:auto; padding:12px; }
-.drawer-item { display:flex; align-items:center; gap:12px; width:100%; text-align:left; background:#fff; border:1px solid #f1f5f9; border-radius:14px; padding:14px; font-size:14px; font-weight:700; color:#1e293b; margin-bottom:10px; transition:all 0.15s; }
-.drawer-item:active { background:#f8fafc; transform:scale(0.98); }
-.drawer-item .em { font-size:22px; }
-.drawer-item .sub { font-size:11px; color:#94a3b8; font-weight:500; margin-top:2px; }
-.drawer-footer { padding:12px; border-top:1px solid #f1f5f9; font-size:11px; color:#94a3b8; text-align:center; }
+.eyebrow { font-size:13px; font-weight:600; color:#64748b; }
 
-.eyebrow { font-size:13px; font-weight:600; color:#64748b; margin-bottom:12px; }
+.pill-row { display:flex; background:#fff; border-radius:999px; padding:4px; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+.pill { border:none; background:transparent; padding:6px 10px; border-radius:999px; font-size:12px; font-weight:600; color:#64748b; }
+.pill.active { background:#1e293b; color:#fff; }
 
-.card { background:#fff; border-radius:14px; padding:14px; box-shadow:0 1px 3px rgba(0,0,0,0.06); border:1px solid #eef1f3; }
-.card-capital { background:linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #60a5fa 100%); border-radius:16px; padding:18px; box-shadow:0 4px 12px rgba(30,58,138,0.25); color:#fff; position:relative; overflow:hidden; margin-bottom:12px; }
-.card-capital::before { content:""; position:absolute; top:-20px; right:-20px; width:100px; height:100px; background:rgba(255,255,255,0.08); border-radius:50%; }
-.card-capital .card-label { font-size:11px; font-weight:600; opacity:0.85; margin-bottom:4px; }
-.card-capital .card-value { font-size:24px; font-weight:800; }
-.card-capital .card-icon { position:absolute; right:16px; top:50%; transform:translateY(-50%); font-size:32px; opacity:0.2; }
+.card { background:#fff; border-radius:14px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,.06); border-left:4px solid #cbd5e1; }
+.card.blue { border-color:#3b82f6; } .card.green { border-color:#22c55e; } .card.red { border-color:#ef4444; }
+.card.amber { background:#fffbeb; border-color:#f59e0b; } .card.violet { border-color:#8b5cf6; } .card.teal { border-color:#14b8a6; } .card.orange { border-color:#f97316; }
+.card-label { font-size:12px; color:#94a3b8; font-weight:600; }
+.card-value { font-size:18px; font-weight:800; color:#1e293b; margin-top:4px; }
+.icon-btn { width:36px; height:36px; border-radius:10px; border:none; background:#eff6ff; color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; }
 
-.card-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px; }
-.card-small { background:#fff; border-radius:14px; padding:14px; box-shadow:0 1px 3px rgba(0,0,0,0.06); position:relative; overflow:hidden; }
-.card-small::before { content:""; position:absolute; left:0; top:0; bottom:0; width:4px; }
-.card-small.green::before { background:#22c55e; }
-.card-small.red::before { background:#ef4444; }
-.card-small.teal::before { background:#14b8a6; }
-.card-small.orange::before { background:#f97316; }
-.card-small .card-label { font-size:11px; color:#94a3b8; font-weight:600; margin-bottom:4px; }
-.card-small .card-value { font-size:18px; font-weight:800; color:#1e293b; }
-.card-small .card-sub { font-size:11px; color:#64748b; margin-top:2px; }
+.card-compact { background:#fff; border-radius:14px; padding:12px; box-shadow:0 1px 3px rgba(0,0,0,.06); border-left:4px solid #cbd5e1; }
+.card-compact .card-label { font-size:11px; }
+.card-compact .card-value { font-size:15px; margin-top:3px; }
 
-.card-warn { background:#fff; border-radius:14px; padding:14px; box-shadow:0 1px 3px rgba(0,0,0,0.06); border-left:4px solid #fb923c; margin-bottom:12px; }
-.card-warn .card-label { font-size:11px; color:#ea580c; font-weight:700; margin-bottom:8px; }
-
-.card-alloc { background:#fff; border-radius:14px; padding:14px; box-shadow:0 1px 3px rgba(0,0,0,0.06); border-left:4px solid #8b5cf6; margin-bottom:12px; }
-.card-alloc .card-label { font-size:11px; color:#6d28d9; font-weight:700; margin-bottom:8px; }
-
-.goal-tracker { background:linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius:14px; padding:14px; margin-bottom:12px; border:1px solid #f59e0b; }
-.goal-tracker .goal-title { font-size:12px; font-weight:700; color:#92400e; margin-bottom:8px; }
-.goal-tracker .goal-bar-bg { background:rgba(255,255,255,0.6); border-radius:999px; height:8px; overflow:hidden; }
-.goal-tracker .goal-bar-fill { height:100%; border-radius:999px; transition:width 0.5s ease; }
-.goal-tracker .goal-bar-fill.ok { background:#22c55e; }
-.goal-tracker .goal-bar-fill.warn { background:#f59e0b; }
-.goal-tracker .goal-bar-fill.danger { background:#ef4444; }
-.goal-tracker .goal-text { font-size:11px; color:#78350f; margin-top:6px; font-weight:600; }
-.goal-tracker .goal-alert { font-size:12px; font-weight:700; color:#dc2626; margin-top:6px; display:flex; align-items:center; gap:4px; }
+.capital-card { border-radius:16px; padding:18px; background:linear-gradient(135deg,#3b82f6,#2563eb 60%,#1d4ed8); box-shadow:0 6px 18px rgba(37,99,235,.28); color:#fff; }
+.capital-card .card-label { color:rgba(255,255,255,.85); }
+.capital-card .card-value { color:#fff; font-size:22px; }
 
 .list-row { display:flex; align-items:center; justify-content:space-between; font-size:12px; background:#fef3ec; padding:8px; border-radius:8px; margin-top:6px; }
 .list-row.out { background:#fef2f2; }
 .badge { background:#fed7aa; color:#9a3412; padding:2px 8px; border-radius:999px; font-weight:700; font-size:11px; }
 .badge.out { background:#fecaca; color:#991b1b; }
-
-.icon-btn { width:36px; height:36px; border-radius:10px; border:none; background:rgba(255,255,255,0.2); color:#fff; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; }
 
 .search { display:flex; align-items:center; gap:8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:10px 14px; }
 .search input { flex:1; border:none; outline:none; background:transparent; font-size:14px; }
@@ -139,17 +79,12 @@ input, select, textarea { font-family:inherit; }
 .picker-list { margin-top:4px; background:#fff; border:1px solid #e2e8f0; border-radius:12px; box-shadow:0 8px 20px rgba(0,0,0,.1); max-height:220px; overflow-y:auto; }
 .picker-item { width:100%; text-align:left; padding:10px 12px; font-size:13px; border:none; background:transparent; border-bottom:1px solid #f8fafc; display:flex; justify-content:space-between; }
 
-.pill-row { display:flex; gap:8px; }
-.pill { flex:1; padding:10px 8px; border-radius:10px; border:1px solid #e2e8f0; background:#f8fafc; font-size:13px; font-weight:600; color:#64748b; text-align:center; cursor:pointer; font-family:inherit; }
-.pill.active { background:#2563eb; color:#fff; border-color:#2563eb; }
-
 .navwrap { position:absolute; left:0; right:0; bottom:0; padding:0 12px 12px; }
-.nav { background:#fff; border-radius:20px; display:flex; align-items:center; justify-content:space-around; padding:4px 4px 8px; box-shadow:0 4px 20px rgba(0,0,0,0.08); border:1px solid #f1f5f9; }
-.navbtn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:8px 0 6px; border:none; background:transparent; border-radius:14px; color:#94a3b8; position:relative; transition:all 0.2s; }
-.navbtn .em { font-size:20px; margin-bottom:2px; }
-.navbtn span.lbl { font-size:10px; font-weight:600; }
-.navbtn.active { color:#2563eb; }
-.navbtn.active::before { content:""; position:absolute; top:0; left:20%; right:20%; height:3px; background:#2563eb; border-radius:0 0 4px 4px; }
+.nav { background:#141414; border-radius:20px; display:flex; align-items:center; justify-content:space-around; padding:8px 4px; box-shadow:0 10px 24px rgba(0,0,0,.3); }
+.navbtn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:6px 0; border:none; background:transparent; border-radius:14px; color:#8a8a8a; position:relative; }
+.navbtn.active { color:#fff; font-weight:700; }
+.navbtn.active::before { content:""; position:absolute; top:-8px; left:50%; transform:translateX(-50%); width:22px; height:3px; border-radius:999px; background:#3b82f6; }
+.navbtn .em { font-size:17px; } .navbtn span.lbl { font-size:10px; margin-top:2px; }
 
 .overlay { position:fixed; inset:0; z-index:50; display:flex; justify-content:center; }
 .overlay-bg { position:absolute; inset:0; background:rgba(0,0,0,.4); }
@@ -160,6 +95,19 @@ input, select, textarea { font-family:inherit; }
 .sheet-body { overflow-y:auto; padding:18px 20px; flex:1; }
 .sheet-footer { padding:14px 20px; border-top:1px solid #f1f5f9; }
 .sheet h2 { font-size:15px; margin:0; font-weight:800; color:#1e293b; }
+
+/* side drawer */
+.drawer-overlay { position:fixed; inset:0; z-index:55; display:flex; justify-content:flex-end; }
+.drawer-bg { position:absolute; inset:0; background:rgba(0,0,0,.42); }
+.drawer { position:relative; width:86%; max-width:360px; height:100%; background:#fff; box-shadow:-8px 0 24px rgba(0,0,0,.18); display:flex; flex-direction:column; animation:slideLeft .18s ease-out; }
+@keyframes slideLeft { from{ transform:translateX(24px); opacity:.6 } to{ transform:translateX(0); opacity:1 } }
+.drawer-header { background:#1e293b; color:#fff; padding:20px 18px; }
+.drawer-header h2 { margin:0; font-size:16px; font-weight:800; }
+.drawer-body { overflow-y:auto; padding:14px; flex:1; }
+
+.menu-item { display:flex; align-items:center; gap:12px; width:100%; text-align:left; background:#fff; border:1px solid #f1f5f9; border-radius:14px; padding:14px; font-size:14px; font-weight:700; color:#1e293b; margin-bottom:10px; }
+.menu-item .em { font-size:20px; }
+.menu-item .sub { font-size:11px; color:#94a3b8; font-weight:500; margin-top:2px; }
 
 .errmsg { color:#ef4444; font-size:11.5px; margin-top:4px; }
 .helpmsg { color:#94a3b8; font-size:11.5px; margin-bottom:10px; line-height:1.5; }
@@ -176,29 +124,42 @@ input, select, textarea { font-family:inherit; }
 
 .toast { position:absolute; bottom:96px; left:50%; transform:translateX(-50%); background:#1e293b; color:#fff; font-size:13px; padding:10px 18px; border-radius:999px; box-shadow:0 8px 20px rgba(0,0,0,.25); z-index:60; }
 .empty { text-align:center; color:#94a3b8; font-size:13px; padding:24px 0; }
+
+.progress-track { width:100%; height:10px; border-radius:999px; background:#e2e8f0; overflow:hidden; }
+.progress-fill { height:100%; border-radius:999px; transition:width .25s ease; }
+.goal-warning { background:#fef2f2; border:1px solid #fecaca; color:#991b1b; font-weight:800; font-size:13px; padding:12px; border-radius:12px; text-align:center; }
+.goal-ok { background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; font-weight:800; font-size:13px; padding:12px; border-radius:12px; text-align:center; }
 </style>
 </head>
 <body>
 <div id="root"></div>
+
 <script>
 (function () {
 "use strict";
 
-var STORAGE_KEY = "shop-control-data-v6";
-var OLD_V5_KEY = "shop-control-data-v5";
+/* ================= constants & storage keys ================= */
+var STORAGE_KEY = "shop-control-data-v5";
 var OLD_V4_KEY = "shop-control-data-v4";
 var OLD_V3_KEY = "shop-control-data-v3";
 var OLD_V2_KEY = "shop-control-data-v2";
 var FIREBASE_CFG_KEY = "shop-control-firebase-cfg";
 var PERIOD_LABEL = { day: "የቀን", week: "የሳምንት", month: "የወር", year: "የአመት" };
 var ETH_MONTHS = ["መስከረም","ጥቅምት","ኅዳር","ታኅሳስ","ጥር","የካቲት","መጋቢት","ሚያዝያ","ግንቦት","ሰኔ","ሐምሌ","ነሐሴ","ጳጉሜን"];
-var ETH_WEEKDAYS = ["ሰኞ","ማክሰኞ","ረቡዕ","ሐሙስ","ዓርብ","ቅዳሜ","እሁድ"];
+var ETH_WEEKDAYS = ["ሰኞ","ማክሰኞ","ረቡዕ","ሐሙስ","ዓርብ","ቅዳሜ","እሁድ"]; // Monday-first, matches our week range
 var EXPENSE_CATEGORIES = ["ኪራይ", "ደመወዝ", "መብራት/ውሃ", "ትራንስፖርት", "ሌላ"];
 var BANK_NAMES = ["CBE (ንግድ ባንክ)", "አዋሽ ባንክ", "ዳሸን ባንክ", "አቢሲኒያ ባንክ", "ኦሮሚያ ባንክ", "ሌላ"];
 
-var MONTHLY_CAPITAL_GOAL_CENTS = 210000 * 100;
-var DAILY_PROFIT_TARGET_CENTS = 7000 * 100;
+/* Default monthly capital-accumulation TARGET (still editable per-shop in the
+   Goal Tracker page — this is just the starting default, not a hardcoded
+   fact about the shop). The PROGRESS toward this target is never invented:
+   it is always derived from the actual % of profit the shop owner has
+   assigned to "capital" in their own allocation table (see
+   capitalAllocationPercent() below), multiplied by their real booked
+   profit for the period. */
+var GOAL_MONTHLY_CENTS_DEFAULT = 21000000; // 210,000 ብር በወር (ነባሪ ግብ)
 
+/* ================= tiny DOM helper ================= */
 function el(tag, props, children) {
   var e = document.createElement(tag);
   props = props || {};
@@ -222,7 +183,12 @@ function el(tag, props, children) {
 }
 function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function escapeHtml(s) {
+  return String(s === undefined || s === null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
 
+/* local (NOT utc) today, so Ethiopia-timezone users never get a day-shift bug */
 function todayISO() {
   var d = new Date();
   var y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, "0"), day = String(d.getDate()).padStart(2, "0");
@@ -235,17 +201,16 @@ function fmt(cents) {
   var whole = Math.floor(cents / 100), frac = cents % 100;
   return (neg ? "-" : "") + whole.toLocaleString("en-US") + "." + String(frac).padStart(2, "0") + " ብር";
 }
-function fmtETB(cents) {
-  cents = Math.round(Number(cents) || 0);
-  var neg = cents < 0; cents = Math.abs(cents);
-  var whole = Math.floor(cents / 100), frac = cents % 100;
-  return (neg ? "-" : "") + whole.toLocaleString("en-US") + "." + String(frac).padStart(2, "0") + " ETB";
-}
 function daysBetween(iso1, iso2) {
   var a = new Date(iso1 + "T00:00:00"), b = new Date(iso2 + "T00:00:00");
   return Math.max(0, Math.round((b - a) / 86400000));
 }
 
+/* ================= double-submit guard =================
+   A fast double-tap on mobile can fire two click events before the first
+   re-render removes the button. This module-level lock makes every "add"
+   action atomic — a second call within the cooldown is simply ignored,
+   so a sale/expense/item can never be recorded twice from one tap. */
 var submitLock = false;
 function guarded(fn) {
   return function () {
@@ -255,10 +220,11 @@ function guarded(fn) {
   };
 }
 
+/* ================= Ethiopian calendar (pure math, no network) ================= */
 function isGregLeap(y) { return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0; }
 function ethNewYearGregorianDate(gYear) {
   var day = isGregLeap(gYear + 1) ? 12 : 11;
-  return new Date(gYear, 8, day);
+  return new Date(gYear, 8, day); // September
 }
 function gregorianToEthiopian(gDate) {
   var gYear = gDate.getFullYear();
@@ -272,12 +238,21 @@ function gregorianToEthiopian(gDate) {
   return { year: ethYear, month: month, day: day };
 }
 function ethLabel(y, m) { return ETH_MONTHS[m - 1] + " " + y + " ዓ.ም"; }
+/* Gregorian ISO date of the 1st day of a given Ethiopian year+month (used for goal tracker range) */
+function ethMonthStartGregorianISO(ethYear, ethMonth) {
+  var startGYear = ethYear + 7;
+  var newYear = ethNewYearGregorianDate(startGYear);
+  var d = new Date(newYear);
+  d.setDate(d.getDate() + (ethMonth - 1) * 30);
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
 function ethiopianYearStartGregorianISO(ethYear) {
-  var gYear = ethYear + 7;
-  var day = isGregLeap(gYear + 1) ? 12 : 11;
-  return gYear + "-09-" + String(day).padStart(2, "0");
+  var startGYear = ethYear + 7;
+  var d = ethNewYearGregorianDate(startGYear);
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
 }
 
+/* ================= period range (used by the main dashboard's "today") ================= */
 function periodRange(period) {
   var now = new Date(), start;
   if (period === "day") start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -288,6 +263,17 @@ function periodRange(period) {
 }
 function inPeriod(iso, range) { var t = new Date(iso + "T00:00:00").getTime(); return t >= range.start && t <= range.end; }
 
+/* ================= data model =================
+baseCapitalCents : manually editable base (cash/investment not tied to stock)
+items[]  : {id,name,costPriceCents,sellPriceCents,openingStock,dateAdded,createdAt}
+sales[]  : {id,itemId,itemName,qty,unitPriceCents,unitCostCents,totalCents,customer,date,createdAt}
+expenses[]: {id,title,amountCents,date,createdAt}
+allocations[]: {id,name,percent}
+
+Every downstream number (stock, capital, revenue, profit, per-day/month/year
+totals) is DERIVED from this log each time it's needed — nothing is ever
+incremented directly — so numbers can never drift, double-count, or
+disagree with each other. */
 function freshAllocations() {
   return [
     { id: uid(), name: "ቁጠባ", percent: 10 },
@@ -295,7 +281,7 @@ function freshAllocations() {
     { id: uid(), name: "ወጪ", percent: 20 }
   ];
 }
-function freshData() { return { baseCapitalCents: 0, items: [], sales: [], expenses: [], allocations: freshAllocations(), profile: freshProfile(), loanCenter: freshLoanCenter() }; }
+function freshData() { return { baseCapitalCents: 0, items: [], sales: [], expenses: [], allocations: freshAllocations(), profile: freshProfile(), loanCenter: freshLoanCenter(), capitalGoalMonthlyCents: GOAL_MONTHLY_CENTS_DEFAULT }; }
 function freshProfile() { return { shopName: "", ownerName: "", email: "", phone: "", tin: "", license: "", businessSector: "", digitalId: "", businessRegistration: "", address: "", managerPhoto: "" }; }
 function freshLoanCenter() {
   return {
@@ -316,6 +302,7 @@ function loadData() {
       if (d && Array.isArray(d.items) && Array.isArray(d.sales) && Array.isArray(d.expenses)) {
         if (!Array.isArray(d.allocations)) d.allocations = freshAllocations();
         if (typeof d.baseCapitalCents !== "number") d.baseCapitalCents = 0;
+        if (typeof d.capitalGoalMonthlyCents !== "number" || d.capitalGoalMonthlyCents <= 0) d.capitalGoalMonthlyCents = GOAL_MONTHLY_CENTS_DEFAULT;
         if (!d.profile || typeof d.profile !== "object") d.profile = freshProfile();
         else { var fp = freshProfile(); for (var pk in fp) if (!(pk in d.profile)) d.profile[pk] = fp[pk]; }
         if (!d.loanCenter || typeof d.loanCenter !== "object") d.loanCenter = freshLoanCenter();
@@ -332,20 +319,7 @@ function loadData() {
       }
     }
   } catch (e) {}
-  try {
-    var v5 = localStorage.getItem(OLD_V5_KEY);
-    if (v5) {
-      var o = JSON.parse(v5);
-      if (o && Array.isArray(o.items)) {
-        return {
-          baseCapitalCents: Number(o.baseCapitalCents) || 0,
-          items: o.items || [], sales: o.sales || [], expenses: o.expenses || [],
-          allocations: (Array.isArray(o.allocations) && o.allocations.length) ? o.allocations : freshAllocations(),
-          profile: o.profile || freshProfile(), loanCenter: o.loanCenter || freshLoanCenter()
-        };
-      }
-    }
-  } catch (e) {}
+  // migrate forward from any earlier version we can find
   var chain = [OLD_V4_KEY, OLD_V3_KEY];
   for (var i = 0; i < chain.length; i++) {
     try {
@@ -357,7 +331,7 @@ function loadData() {
             baseCapitalCents: Number(o.baseCapitalCents || o.openingCapitalCents) || 0,
             items: o.items || [], sales: o.sales || [], expenses: o.expenses || [],
             allocations: (Array.isArray(o.allocations) && o.allocations.length) ? o.allocations : freshAllocations(),
-            profile: freshProfile(), loanCenter: freshLoanCenter()
+            profile: freshProfile(), loanCenter: freshLoanCenter(), capitalGoalMonthlyCents: GOAL_MONTHLY_CENTS_DEFAULT
           };
         }
       }
@@ -373,7 +347,7 @@ function loadData() {
           items: (o2.items || []).map(function (it) {
             return { id: it.id || uid(), name: it.name, sellPriceCents: toCents(it.price), costPriceCents: 0, openingStock: Number(it.stock) || 0, dateAdded: todayISO(), createdAt: Date.now() };
           }),
-          sales: [], expenses: [], allocations: freshAllocations(), profile: freshProfile(), loanCenter: freshLoanCenter()
+          sales: [], expenses: [], allocations: freshAllocations(), profile: freshProfile(), loanCenter: freshLoanCenter(), capitalGoalMonthlyCents: GOAL_MONTHLY_CENTS_DEFAULT
         };
       }
     }
@@ -384,6 +358,7 @@ var storageAvailable = true;
 var storageErrorDetail = "";
 function saveLocal(d) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); storageAvailable = true; } catch (e) { storageAvailable = false; storageErrorDetail = (e && e.message) ? e.message : String(e); } }
 
+/* ================= derived calculations ================= */
 function itemStock(data, itemId) {
   var item = data.items.find(function (i) { return i.id === itemId; });
   if (!item) return 0;
@@ -407,6 +382,10 @@ function inventoryValueCents(data) {
   return data.items.reduce(function (s, it) { return s + Math.max(0, itemStock(data, it.id)) * it.costPriceCents; }, 0);
 }
 function totalCapitalCents(data) { return data.baseCapitalCents + inventoryValueCents(data); }
+/* stock/capital as of a cutoff date — used only for the "value at start of
+   this Ethiopian year vs now" comparison on the PDF report. Same derivation
+   principle as the live numbers, just filtered to a date range, so it can
+   never disagree with the live totals when the cutoff is "today". */
 function itemStockAsOf(data, itemId, cutoffISO) {
   var item = data.items.find(function (i) { return i.id === itemId; });
   if (!item) return 0;
@@ -429,6 +408,10 @@ function statsFor(sales, expenses) {
   Object.keys(counts).forEach(function (n) { if (counts[n] > topQty) { topQty = counts[n]; topName = n; } });
   return { revenue: revenue, expenseTotal: expenseTotal, profit: profit, topName: topName, topQty: topQty };
 }
+/* Cash / bank-transfer / on-credit split — every sale is counted in exactly
+   one bucket (whatever it was tagged with), so the three always sum back
+   to total revenue exactly. Sales recorded before this feature existed
+   have no paymentMethod field and default safely to "cash". */
 function paymentBreakdown(sales) {
   var cash = 0, bank = 0, credit = 0, creditOutstanding = 0, creditCollected = 0;
   sales.forEach(function (s) {
@@ -444,7 +427,16 @@ function expenseByCategory(expenses) {
   expenses.forEach(function (e) { var c = e.category || "ሌላ"; map[c] = (map[c] || 0) + e.amountCents; });
   return map;
 }
+/* "customer traffic" — we don't track unique customer identity reliably (many
+   walk-in sales share no phone/ID), so the honest, defensible proxy for a
+   bank report is the number of separate sales transactions. Clearly labeled
+   as such wherever it's shown so it's never mistaken for verified footfall. */
 function transactionCount(sales) { return sales.length; }
+/* Reconciliation check: cash + bank + credit must equal total revenue.
+   Because every sale is derived and counted in exactly one bucket, this is
+   true by construction — but we still compute and display it explicitly so
+   the figure is auditable, and so it would visibly flag if data were ever
+   corrupted (e.g. a manually edited Firestore document). */
 function verifyPaymentReconciliation(sales) {
   var pay = paymentBreakdown(sales);
   var total = sales.reduce(function (s, x) { return s + x.totalCents; }, 0);
@@ -462,8 +454,9 @@ function periodStats(data, period) {
 function dayStats(data, iso) {
   return statsFor(data.sales.filter(function (s) { return s.date === iso; }), data.expenses.filter(function (e) { return e.date === iso; }));
 }
+/* group EVERY sale/expense once into Ethiopian year+month buckets — single pass, single source */
 function ethiopianBuckets(data) {
-  var map = {};
+  var map = {}; // key "y-m" -> {sales:[], expenses:[]}
   function bucketFor(iso) {
     var e = gregorianToEthiopian(new Date(iso + "T00:00:00"));
     var key = e.year + "-" + e.month;
@@ -475,35 +468,101 @@ function ethiopianBuckets(data) {
   return map;
 }
 
-function calculateGoalProgress(data) {
+/* Ethiopian months are always 30 days except Pagume (13th), which has 5 days
+   in a normal year and 6 days right before an Ethiopian leap year. This is
+   only used to pace the goal evenly across however many days the current
+   Ethiopian month actually has. */
+function daysInEthMonth(ethYear, ethMonth) {
+  if (ethMonth <= 12) return 30;
+  return isGregLeap(ethYear + 8) ? 6 : 5;
+}
+/* Which allocation row represents "capital"? We don't hardcode 70% — we
+   read whatever percentage the shop owner has actually assigned to the row
+   named "ካፒታል" (e.g. "ለስራ ካፒታል") in their own profit-allocation table
+   (☰ → 🧮). If they've renamed/removed that row, we fall back to the
+   standard 70% default so the tracker still has something sensible to show,
+   but as soon as they set up their own allocation it takes over automatically. */
+function capitalAllocationPercent(data) {
+  var row = (data.allocations || []).find(function (a) { return a.name && a.name.indexOf("ካፒታል") !== -1; });
+  return row ? (Number(row.percent) || 0) : 70;
+}
+
+/* ================= Goal Tracker (Ethiopian-month capital-accumulation goal) =================
+   DATA-DRIVEN: nothing here is invented. The "capital saved so far" figure
+   is always the real % assigned to capital (capitalAllocationPercent) times
+   the REAL net profit booked so far this Ethiopian month — exactly the same
+   number the shop owner sees in their own profit-allocation table. The only
+   configurable input is the monthly TARGET itself (editable in the Goal
+   Tracker page), which is then paced evenly across the real number of days
+   in the current Ethiopian month to know whether today's progress is on
+   track — never a separately-invented daily figure. */
+function goalTrackerStats(data) {
   var todayEth = gregorianToEthiopian(new Date());
   var buckets = ethiopianBuckets(data);
   var key = todayEth.year + "-" + todayEth.month;
   var bucket = buckets[key];
-  var monthStats = bucket ? statsFor(bucket.sales, bucket.expenses) : { profit: 0 };
-  var profit = monthStats.profit;
-  var daysInMonth = 30;
-  var dayOfMonth = todayEth.day;
-  var capitalAllocation = data.allocations.find(function(a) { return a.name.indexOf("ካፒታል") !== -1; }) || { percent: 70 };
-  var capitalFromProfit = Math.round(profit * (capitalAllocation.percent / 100));
-  var expectedByNow = Math.round((MONTHLY_CAPITAL_GOAL_CENTS / daysInMonth) * dayOfMonth);
-  var progress = expectedByNow > 0 ? Math.min(100, Math.round((capitalFromProfit / expectedByNow) * 100)) : 0;
+  var monthStats = bucket ? statsFor(bucket.sales, bucket.expenses) : { revenue: 0, expenseTotal: 0, profit: 0 };
+  var capitalPct = capitalAllocationPercent(data);
+  var actualCapitalAllocatedCents = monthStats.profit > 0 ? Math.round(monthStats.profit * (capitalPct / 100)) : 0;
+  var monthlyGoalCents = (data.capitalGoalMonthlyCents && data.capitalGoalMonthlyCents > 0) ? data.capitalGoalMonthlyCents : GOAL_MONTHLY_CENTS_DEFAULT;
+  var totalDaysInMonth = daysInEthMonth(todayEth.year, todayEth.month);
+  var daysElapsed = Math.min(todayEth.day, totalDaysInMonth);
+  var paceToDateCents = Math.round(monthlyGoalCents * (daysElapsed / totalDaysInMonth));
+  var shortfallCents = paceToDateCents - actualCapitalAllocatedCents;
+  var pctOfMonthlyGoal = monthlyGoalCents > 0 ? Math.min(100, Math.max(0, Math.round((actualCapitalAllocatedCents / monthlyGoalCents) * 100))) : 0;
   return {
-    capitalFromProfit: capitalFromProfit,
-    expectedByNow: expectedByNow,
-    monthlyGoal: MONTHLY_CAPITAL_GOAL_CENTS,
-    progress: progress,
-    dayOfMonth: dayOfMonth,
-    daysInMonth: daysInMonth,
-    shortfall: Math.max(0, expectedByNow - capitalFromProfit)
+    ethYear: todayEth.year, ethMonth: todayEth.month, daysElapsed: daysElapsed, totalDaysInMonth: totalDaysInMonth,
+    capitalPct: capitalPct, monthProfitCents: monthStats.profit,
+    monthlyGoalCents: monthlyGoalCents, paceToDateCents: paceToDateCents,
+    actualCents: actualCapitalAllocatedCents, shortfallCents: shortfallCents,
+    onTrack: shortfallCents <= 0, pctOfMonthlyGoal: pctOfMonthlyGoal
   };
 }
 
-var state = { data: loadData(), tab: "dashboard", drawerOpen: false };
+/* ================= Capital Utilization Tracker =================
+   Once money is allocated to "capital" (via the % above), did it actually
+   get put to work buying stock/inventory, or is it just sitting idle?
+   The app has no separate "restock/purchase" ledger, so the honest,
+   defensible proxy is: the cost (costPrice × openingStock) of every item
+   whose dateAdded falls inside the period — i.e. inventory that was
+   actually acquired during that window. This is the same category of
+   clearly-labeled proxy already used elsewhere in this app (see
+   transactionCount / paymentBreakdown notes) — it is disclosed wherever
+   shown, never presented as a verified purchase log. */
+function capitalUtilizationStats(data, period) {
+  var todayEth = gregorianToEthiopian(new Date());
+  var buckets = ethiopianBuckets(data);
+  var capitalPct = capitalAllocationPercent(data);
+  var profitCents, itemsInPeriod, label;
+  if (period === "year") {
+    var yearSales = [], yearExpenses = [];
+    for (var m = 1; m <= 13; m++) { var b = buckets[todayEth.year + "-" + m]; if (b) { yearSales = yearSales.concat(b.sales); yearExpenses = yearExpenses.concat(b.expenses); } }
+    profitCents = statsFor(yearSales, yearExpenses).profit;
+    var yearStartISO = ethiopianYearStartGregorianISO(todayEth.year);
+    itemsInPeriod = data.items.filter(function (it) { return it.dateAdded >= yearStartISO; });
+    label = todayEth.year + " ዓ.ም (አመታዊ)";
+  } else {
+    var bucket = buckets[todayEth.year + "-" + todayEth.month];
+    profitCents = bucket ? statsFor(bucket.sales, bucket.expenses).profit : 0;
+    var monthStartISO = ethMonthStartGregorianISO(todayEth.year, todayEth.month);
+    itemsInPeriod = data.items.filter(function (it) { return it.dateAdded >= monthStartISO; });
+    label = ethLabel(todayEth.year, todayEth.month) + " (ወርሃዊ)";
+  }
+  var allocatedCents = profitCents > 0 ? Math.round(profitCents * (capitalPct / 100)) : 0;
+  var utilizedCents = itemsInPeriod.reduce(function (s, it) { return s + (it.costPriceCents || 0) * (it.openingStock || 0); }, 0);
+  var usedCents = Math.min(allocatedCents, utilizedCents);
+  var idleCents = Math.max(0, allocatedCents - utilizedCents);
+  var overageCents = Math.max(0, utilizedCents - allocatedCents);
+  var usedPct = allocatedCents > 0 ? Math.min(100, Math.round((usedCents / allocatedCents) * 100)) : 0;
+  return { label: label, capitalPct: capitalPct, allocatedCents: allocatedCents, utilizedCents: utilizedCents, usedCents: usedCents, idleCents: idleCents, overageCents: overageCents, usedPct: usedPct };
+}
+
+/* ================= state ================= */
+var state = { data: loadData(), tab: "dashboard" };
 function setData(mutator) {
   state.data = mutator(state.data);
   saveLocal(state.data);
-  cloudPush(state.data);
+  cloudPush(state.data); // no-op unless Firebase is configured
   renderApp();
 }
 function showToast(msg) {
@@ -514,6 +573,7 @@ function showToast(msg) {
   setTimeout(function () { t.remove(); }, 1800);
 }
 
+/* ================= sheet / modal ================= */
 function openSheet(title, bodyBuilder, footerBuilder) {
   var overlay = el("div", { class: "overlay" });
   var bg = el("div", { class: "overlay-bg", onclick: close });
@@ -538,6 +598,7 @@ function Field(labelText, required, inputEl) {
   return el("div", { class: "field" }, [el("label", {}, labelText + (required ? " *" : "")), inputEl]);
 }
 
+/* ================= allocation renderer (guarded against zero/negative profit) ================= */
 function renderAllocationBlock(profitCents, allocations, periodLabel) {
   var wrap = el("div", {});
   wrap.appendChild(el("div", { style: { fontSize: "11px", color: "#94a3b8", marginBottom: "8px" } },
@@ -565,153 +626,106 @@ function renderAllocationBlock(profitCents, allocations, periodLabel) {
   return wrap;
 }
 
-function toggleDrawer() {
-  state.drawerOpen = !state.drawerOpen;
-  renderApp();
-}
-function closeDrawer() {
-  state.drawerOpen = false;
-  renderApp();
-}
-
-function renderDrawer() {
-  var overlay = el("div", { class: "drawer-overlay" + (state.drawerOpen ? " open" : "") });
-  overlay.addEventListener("click", closeDrawer);
-  var drawer = el("div", { class: "drawer" + (state.drawerOpen ? " open" : "") });
-  var profile = state.data.profile || freshProfile();
-  drawer.appendChild(el("div", { class: "drawer-header" }, [
-    el("h2", {}, profile.shopName || "የሱቅ መቆጣጠሪያ"),
-    el("p", {}, profile.ownerName || "ንግድ ስራዎን ይቆጣጠሩ")
+/* ================= goal tracker renderer (data-driven) ================= */
+function renderGoalTrackerBlock(gt) {
+  var wrap = el("div", {});
+  wrap.appendChild(el("div", { class: "eyebrow mb2" }, ethLabel(gt.ethYear, gt.ethMonth) + " — ቀን " + gt.daysElapsed + " / " + gt.totalDaysInMonth));
+  var pctBarColor = gt.onTrack ? "#16a34a" : "#ef4444";
+  wrap.appendChild(el("div", { class: "mb2" }, [
+    el("div", { class: "flex items-center justify-between", style: { fontSize: "11px", color: "#64748b", marginBottom: "4px" } }, [
+      el("span", {}, "የወርሃዊ ግብ እድገት"), el("span", { style: { fontWeight: "700" } }, gt.pctOfMonthlyGoal + "%")
+    ]),
+    el("div", { class: "progress-track" }, [el("div", { class: "progress-fill", style: { width: gt.pctOfMonthlyGoal + "%", background: pctBarColor } })])
   ]));
-  var body = el("div", { class: "drawer-body" });
-  var profileItem = el("button", { class: "drawer-item" }, [
-    el("span", { class: "em" }, "🏢"),
-    el("div", {}, [el("div", {}, "የንግድ ፕሮፋይል"), el("div", { class: "sub" }, "ስም፣ TIN፣ ስልክ — ለPDF ሪፖርት")])
-  ]);
-  profileItem.addEventListener("click", function () { closeDrawer(); state.tab = "profile"; renderApp(); });
-  body.appendChild(profileItem);
-  var loanItem = el("button", { class: "drawer-item" }, [
-    el("span", { class: "em" }, "🏦"),
-    el("div", {}, [el("div", {}, "የባንክ ብድር ማዕከል"), el("div", { class: "sub" }, "የብድር ፍላጎት፣ ትንበያ፣ አቅራቢዎች")])
-  ]);
-  loanItem.addEventListener("click", function () { closeDrawer(); state.tab = "loancenter"; renderApp(); });
-  body.appendChild(loanItem);
-  var allocItem = el("button", { class: "drawer-item" }, [
-    el("span", { class: "em" }, "🧮"),
-    el("div", {}, [el("div", {}, "የትርፍ ክፍፍል እና ግብ ክትትል"), el("div", { class: "sub" }, "የትርፍ ክፍፍል ስትራቴጂ እና የግብ ሁኔታ")])
-  ]);
-  allocItem.addEventListener("click", function () { closeDrawer(); openAllocationAndGoalSheet(); });
-  body.appendChild(allocItem);
-  var pdfItem = el("button", { class: "drawer-item" }, [
-    el("span", { class: "em" }, "📄"),
-    el("div", {}, [el("div", {}, "ባለ 9-ገጽ PDF ሪፖርት አውርድ"), el("div", { class: "sub" }, "ለባንክ ብድር ማመልከቻ ዝግጁ")])
-  ]);
-  pdfItem.addEventListener("click", function () { closeDrawer(); exportFullAuditPdf(); });
-  body.appendChild(pdfItem);
-  var weeklyItem = el("button", { class: "drawer-item" }, [
-    el("span", { class: "em" }, "📅"),
-    el("div", {}, [el("div", {}, "ሳምንታዊ ሪፖርት"), el("div", { class: "sub" }, "7 ቀናት በስማቸው")])
-  ]);
-  weeklyItem.addEventListener("click", function () { closeDrawer(); openWeeklyReport(); });
-  body.appendChild(weeklyItem);
-  var monthlyItem = el("button", { class: "drawer-item" }, [
-    el("span", { class: "em" }, "🗓️"),
-    el("div", {}, [el("div", {}, "ወርሃዊ ሪፖርት"), el("div", { class: "sub" }, "13ቱ የኢትዮጵያ ወራት")])
-  ]);
-  monthlyItem.addEventListener("click", function () { closeDrawer(); openMonthlyReport(); });
-  body.appendChild(monthlyItem);
-  var yearlyItem = el("button", { class: "drawer-item" }, [
-    el("span", { class: "em" }, "📆"),
-    el("div", {}, [el("div", {}, "አመታዊ ሪፖርት"), el("div", { class: "sub" }, "በኢትዮጵያ ዓ.ም")])
-  ]);
-  yearlyItem.addEventListener("click", function () { closeDrawer(); openYearlyReport(); });
-  body.appendChild(yearlyItem);
-  var syncItem = el("button", { class: "drawer-item" }, [
-    el("span", { class: "em" }, "☁️"),
-    el("div", {}, [el("div", {}, "የጋራ ዳታቤዝ (Firebase)"), el("div", { class: "sub" }, "ብዙ ስልኮች በ real-time እንዲመሳሰሉ")])
-  ]);
-  syncItem.addEventListener("click", function () { closeDrawer(); openFirebaseSetup(); });
-  body.appendChild(syncItem);
-  drawer.appendChild(body);
-  drawer.appendChild(el("div", { class: "drawer-footer" }, "የሱቅ መቆጣጠሪያ ሲስተም v6.0"));
-  return [overlay, drawer];
+  wrap.appendChild(el("div", { style: { fontSize: "10.5px", color: "#94a3b8", marginBottom: "6px" } },
+    "🔗 መነሻ: " + gt.capitalPct + "% ካፒታል ክፍፍል × የ" + ethLabel(gt.ethYear, gt.ethMonth) + " ትክክለኛ ትርፍ (" + fmt(gt.monthProfitCents) + ") — ከምንም ያልተነሳ፣ ራሱ ከመዝገቡ የተሰላ።"));
+  wrap.appendChild(el("div", { class: "list-row" }, [el("span", {}, "የወር ግብ"), el("span", { style: { fontWeight: "700" } }, fmt(gt.monthlyGoalCents))]));
+  wrap.appendChild(el("div", { class: "list-row" }, [el("span", {}, "እስካሁን ማግኘት የነበረበት (ግቡ በቀናት ተከፋፍሎ)"), el("span", { style: { fontWeight: "700" } }, fmt(gt.paceToDateCents))]));
+  wrap.appendChild(el("div", { class: "list-row" }, [el("span", {}, "እስካሁን ወደ ካፒታል የተመደበው (" + gt.capitalPct + "% ከትርፍ)"), el("span", { style: { fontWeight: "700", color: gt.actualCents >= 0 ? "#16a34a" : "#dc2626" } }, fmt(gt.actualCents))]));
+  wrap.appendChild(el("div", { class: "mt2" }, [
+    gt.onTrack
+      ? el("div", { class: "goal-ok" }, "✅ በእቅዱ መሰረት እየሄዱ ነው!")
+      : el("div", { class: "goal-warning" }, "⚠️ ግብ አልተሳካም! ጉድለት: " + fmt(gt.shortfallCents))
+  ]));
+  return wrap;
 }
 
+/* ================= capital utilization renderer ================= */
+function renderCapitalUtilizationBlock(cu) {
+  var wrap = el("div", {});
+  wrap.appendChild(el("div", { class: "eyebrow mb2" }, cu.label));
+  wrap.appendChild(el("div", { style: { fontSize: "10.5px", color: "#94a3b8", marginBottom: "8px" } },
+    "* 'ለስራ የዋለ' የሚለው ግምት በዚህ ጊዜ ውስጥ አዲስ ወደ ስቶክ የገቡ ዕቃዎች (የገዢ ዋጋ × ብዛት) ላይ የተመሰረተ ነው፣ ምክንያቱም ለብቻው የግዢ መዝገብ ስለሌለ።"));
+  wrap.appendChild(el("div", { class: "list-row" }, [el("span", {}, "ለካፒታል የተመደበ (" + cu.capitalPct + "%)"), el("span", { style: { fontWeight: "700" } }, fmt(cu.allocatedCents))]));
+  wrap.appendChild(el("div", { class: "list-row" }, [el("span", {}, "✅ ለስራ/ለዕቃ መግዣ የዋለ"), el("span", { style: { fontWeight: "700", color: "#16a34a" } }, fmt(cu.usedCents))]));
+  wrap.appendChild(el("div", { class: "list-row" + (cu.idleCents > 0 ? " out" : "") }, [el("span", {}, "🕒 ያልተጠቀሙበት / በእጅ ያለ ካፒታል"), el("span", { style: { fontWeight: "700", color: cu.idleCents > 0 ? "#dc2626" : "#16a34a" } }, fmt(cu.idleCents))]));
+  if (cu.overageCents > 0) {
+    wrap.appendChild(el("div", { class: "list-row" }, [el("span", {}, "ℹ️ ከመድቡ በላይ የተገዛ (ከመሠረት ካፒታል የተሸፈነ)"), el("span", { style: { fontWeight: "700", color: "#8b5cf6" } }, fmt(cu.overageCents))]));
+  }
+  wrap.appendChild(el("div", { class: "progress-track mt2" }, [el("div", { class: "progress-fill", style: { width: cu.usedPct + "%", background: cu.usedPct >= 70 ? "#16a34a" : cu.usedPct >= 30 ? "#f59e0b" : "#ef4444" } })]));
+  wrap.appendChild(el("div", { style: { fontSize: "10.5px", color: "#64748b", marginTop: "4px", textAlign: "right" } }, cu.usedPct + "% ስራ ላይ ውሏል"));
+  return wrap;
+}
+
+/* ================= dashboard (simplified: always "today", compact grid layout) ================= */
 function renderDashboard(container) {
   var data = state.data;
   var stats = periodStats(data, "day");
   var capital = totalCapitalCents(data);
-  var goal = calculateGoalProgress(data);
+  var lowStock = data.items.filter(function (i) { var s = itemStock(data, i.id); return s > 0 && s <= 5; });
+  var outStock = data.items.filter(function (i) { return itemStock(data, i.id) <= 0; });
 
-  container.appendChild(el("div", { class: "eyebrow" }, "📊 የዛሬ ሁኔታ (" + todayISO() + ")"));
+  container.appendChild(el("div", { class: "eyebrow section" }, "📊 የዛሬ ሁኔታ (" + todayISO() + ")"));
 
-  var capCard = el("div", { class: "card-capital" });
-  capCard.appendChild(el("div", { class: "card-label" }, "💰 ጠቅላላ ካፒታል"));
-  capCard.appendChild(el("div", { class: "card-value" }, fmt(capital)));
-  capCard.appendChild(el("div", { class: "card-icon" }, "💼"));
-  var editCapBtn = el("button", { class: "icon-btn", style: { position:"absolute", top:"12px", right:"12px" } }, "✎");
+  /* full-width gradient capital card */
+  var capCard = el("div", { class: "capital-card section flex items-center justify-between" }, [
+    el("div", {}, [
+      el("div", { class: "card-label" }, "💰 ጠቅላላ ካፒታል"),
+      el("div", { class: "card-value" }, fmt(capital))
+    ])
+  ]);
+  var editCapBtn = el("button", { class: "icon-btn", style: { background: "rgba(255,255,255,.2)", color: "#fff" } }, "✎");
   editCapBtn.addEventListener("click", openEditCapitalModal);
   capCard.appendChild(editCapBtn);
   container.appendChild(capCard);
 
-  var grid1 = el("div", { class: "card-grid" });
-  var salesCard = el("div", { class: "card-small green" });
-  salesCard.appendChild(el("div", { class: "card-label" }, "🧾 ጠቅላላ ሽያጭ"));
-  salesCard.appendChild(el("div", { class: "card-value" }, fmt(stats.revenue)));
-  salesCard.appendChild(el("div", { class: "card-sub" }, "የዛሬ ገቢ"));
-  grid1.appendChild(salesCard);
-  var expCard = el("div", { class: "card-small red" });
-  expCard.appendChild(el("div", { class: "card-label" }, "📉 ጠቅላላ ወጪ"));
-  expCard.appendChild(el("div", { class: "card-value" }, fmt(stats.expenseTotal)));
-  expCard.appendChild(el("div", { class: "card-sub" }, "የዛሬ ወጪ"));
-  grid1.appendChild(expCard);
-  container.appendChild(grid1);
-
-  var grid2 = el("div", { class: "card-grid" });
-  var profitCard = el("div", { class: "card-small teal" });
-  profitCard.appendChild(el("div", { class: "card-label" }, "📈 የተጣራ ትርፍ"));
-  profitCard.appendChild(el("div", { class: "card-value", style: { color: stats.profit >= 0 ? "#0d9488" : "#dc2626" } }, fmt(stats.profit)));
-  profitCard.appendChild(el("div", { class: "card-sub" }, stats.profit >= 0 ? "ትርፍ" : "ኪሳራ"));
-  grid2.appendChild(profitCard);
-  var outStock = data.items.filter(function (i) { return itemStock(data, i.id) <= 0; });
-  var lowStock = data.items.filter(function (i) { var s = itemStock(data, i.id); return s > 0 && s <= 5; });
-  var warnCard = el("div", { class: "card-small orange" });
-  warnCard.appendChild(el("div", { class: "card-label" }, "⚠️ ያለቁ ዕቃዎች"));
-  warnCard.appendChild(el("div", { class: "card-value", style: { color: outStock.length > 0 ? "#ea580c" : "#64748b" } }, String(outStock.length) + " እቃዎች"));
-  warnCard.appendChild(el("div", { class: "card-sub" }, lowStock.length + " ትንሽ ስቶክ"));
-  grid2.appendChild(warnCard);
-  container.appendChild(grid2);
-
-  var goalCard = el("div", { class: "goal-tracker" });
-  goalCard.appendChild(el("div", { class: "goal-title" }, "🎯 ወርሃዊ የካፒታል ክምችት ግብ: " + fmt(MONTHLY_CAPITAL_GOAL_CENTS)));
-  var barClass = goal.progress >= 80 ? "ok" : goal.progress >= 50 ? "warn" : "danger";
-  goalCard.appendChild(el("div", { class: "goal-bar-bg" }, [
-    el("div", { class: "goal-bar-fill " + barClass, style: { width: goal.progress + "%" } })
+  /* row 1: revenue (green) / expense (red) */
+  var row1 = el("div", { class: "grid2 section" });
+  row1.appendChild(el("div", { class: "card-compact green" }, [
+    el("div", { class: "card-label" }, "🧾 የዛሬ ሽያጭ"),
+    el("div", { class: "card-value" }, fmt(stats.revenue))
   ]));
-  goalCard.appendChild(el("div", { class: "goal-text" }, 
-    "ከ" + ETH_MONTHS[goal.dayOfMonth > 0 ? (gregorianToEthiopian(new Date()).month - 1) : 0] + " " + 
-    goal.dayOfMonth + " ቀን — " + fmt(goal.capitalFromProfit) + " / " + fmt(goal.expectedByNow) + " (" + goal.progress + "%)"));
-  if (goal.shortfall > 0) {
-    goalCard.appendChild(el("div", { class: "goal-alert" }, [
-      "⚠️ ግብ አልተሳካም! ",
-      "ከዕቅዱ " + fmt(goal.shortfall) + " ብር ይጎድላል"
-    ]));
-  }
-  container.appendChild(goalCard);
+  var expCardCompact = el("div", { class: "card-compact red" }, [
+    el("div", { class: "card-label" }, "📉 የዛሬ ወጪ"),
+    el("div", { class: "card-value" }, fmt(stats.expenseTotal))
+  ]);
+  expCardCompact.addEventListener("click", openAddExpenseModal);
+  row1.appendChild(expCardCompact);
+  container.appendChild(row1);
 
-  if (stats.topName) {
-    container.appendChild(el("div", { class: "card-small", style: { marginBottom:"12px", borderLeft:"4px solid #f59e0b" } }, [
-      el("div", { class: "card-label" }, "🔥 በጣም የተሸጠው ዕቃ"),
-      el("div", { class: "card-value", style: { fontSize:"16px" } }, stats.topName + " (" + stats.topQty + " ጊዜ)")
-    ]));
-  }
+  /* row 2: net profit (teal) / low+out stock count (orange) */
+  var row2 = el("div", { class: "grid2 section" });
+  row2.appendChild(el("div", { class: "card-compact teal" }, [
+    el("div", { class: "card-label" }, "📈 የተጣራ ትርፍ"),
+    el("div", { class: "card-value", style: { color: stats.profit >= 0 ? "#0f766e" : "#dc2626" } }, fmt(stats.profit))
+  ]));
+  row2.appendChild(el("div", { class: "card-compact orange" }, [
+    el("div", { class: "card-label" }, "⚠️ ያለቁ ዕቃዎች"),
+    el("div", { class: "card-value" }, outStock.length + " እቃዎች")
+  ]));
+  container.appendChild(row2);
+
+  container.appendChild(el("div", { class: "card amber section" }, [
+    el("div", { class: "card-label", style: { color: "#b45309" } }, "🔥 የዛሬ በጣም የተሸጠው ዕቃ"),
+    el("div", { class: "card-value", style: { color: "#78350f" } }, stats.topName ? (stats.topName + " (" + stats.topQty + " ጊዜ)") : "ምንም አልተሸጠም")
+  ]));
 
   if (lowStock.length > 0 || outStock.length > 0) {
-    var warnDetail = el("div", { class: "card-warn" });
-    warnDetail.appendChild(el("div", { class: "card-label" }, "⚠️ ያለቁ / የሚያልቁ ዕቃዎች"));
-    outStock.forEach(function (i) { warnDetail.appendChild(el("div", { class: "list-row out" }, [el("span", {}, i.name), el("span", { class: "badge out" }, "አልቋል")])); });
-    lowStock.forEach(function (i) { warnDetail.appendChild(el("div", { class: "list-row" }, [el("span", {}, i.name), el("span", { class: "badge" }, "ቀሪ: " + itemStock(data, i.id))])); });
-    container.appendChild(warnDetail);
+    var warnCard = el("div", { class: "card section", style: { borderColor: "#fb923c" } });
+    warnCard.appendChild(el("div", { class: "card-label", style: { color: "#ea580c", marginBottom: "8px" } }, "⚠️ ያለቁ / የሚያልቁ ዕቃዎች"));
+    outStock.forEach(function (i) { warnCard.appendChild(el("div", { class: "list-row out" }, [el("span", {}, i.name), el("span", { class: "badge out" }, "አልቋል")])); });
+    lowStock.forEach(function (i) { warnCard.appendChild(el("div", { class: "list-row" }, [el("span", {}, i.name), el("span", { class: "badge" }, "ቀሪ ስቶክ: " + itemStock(data, i.id))])); });
+    container.appendChild(warnCard);
   }
 
   var syncNote = cloudStatus();
@@ -721,7 +735,7 @@ function renderDashboard(container) {
 function openEditCapitalModal() {
   var input;
   openSheet("የመነሻ ካፒታል አርም", function (body) {
-    body.appendChild(el("div", { class: "helpmsg" }, "ይህ ከዕቃ ክምችት ውጭ ያለ ተጨማሪ ገንዘብ (ካሽ) ነው።"));
+    body.appendChild(el("div", { class: "helpmsg" }, "ይህ ከዕቃ ክምችት ውጭ ያለ ተጨማሪ ገንዘብ (ካሽ) ነው። የዕቃ ክምችት ዋጋ ራሱ ዕቃ ሲገባ/ሲሸጥ ራሱ ስለሚታሰብ፣ እዚህ የያዙትን ተጨማሪ የመነሻ ገንዘብ ብቻ ያስተካክሉ።"));
     input = el("input", { class: "input", type: "number", step: "0.01", value: (state.data.baseCapitalCents / 100).toFixed(2) });
     body.appendChild(input);
   }, function (close) {
@@ -768,47 +782,6 @@ function openAddExpenseModal(existing) {
   });
 }
 
-function openAllocationAndGoalSheet() {
-  var data = state.data;
-  var todayEth = gregorianToEthiopian(new Date());
-  var buckets = ethiopianBuckets(data);
-  var key = todayEth.year + "-" + todayEth.month;
-  var bucket = buckets[key];
-  var monthStats = bucket ? statsFor(bucket.sales, bucket.expenses) : { profit: 0 };
-  var goal = calculateGoalProgress(data);
-  openSheet("🧮 የትርፍ ክፍፍል እና ግብ ክትትል", function (body) {
-    body.appendChild(el("div", { class: "eyebrow" }, "የትርፍ ክፍፍል — " + ETH_MONTHS[todayEth.month - 1] + " " + todayEth.year + " ዓ.ም"));
-    body.appendChild(renderAllocationBlock(monthStats.profit, data.allocations, "የዚህ ወር"));
-    var editBtn = el("button", { class: "btn btn-outline btn-sm", style: { marginTop:"12px", marginBottom:"20px" } }, "✎ ክፍፍሉን አርም");
-    editBtn.addEventListener("click", function () { openAllocationModal(); });
-    body.appendChild(editBtn);
-    body.appendChild(el("div", { class: "eyebrow mt3" }, "🎯 የካፒታል ክምችት ግብ"));
-    var goalCard = el("div", { class: "goal-tracker" });
-    goalCard.appendChild(el("div", { class: "goal-title" }, "ወርሃዊ ግብ: " + fmt(MONTHLY_CAPITAL_GOAL_CENTS) + " (በቀን " + fmt(DAILY_PROFIT_TARGET_CENTS) + " ከትርፍ)"));
-    var barClass = goal.progress >= 80 ? "ok" : goal.progress >= 50 ? "warn" : "danger";
-    goalCard.appendChild(el("div", { class: "goal-bar-bg" }, [
-      el("div", { class: "goal-bar-fill " + barClass, style: { width: goal.progress + "%" } })
-    ]));
-    goalCard.appendChild(el("div", { class: "goal-text" }, 
-      "ከ70% ትርፍ የተገኘ ካፒታል: " + fmt(goal.capitalFromProfit) + " / " + fmt(goal.expectedByNow) + " (" + goal.progress + "%)"));
-    if (goal.shortfall > 0) {
-      goalCard.appendChild(el("div", { class: "goal-alert" }, [
-        "⚠️ ግብ አልተሳካም! ",
-        "ከዕቅዱ " + fmt(goal.shortfall) + " ብር ይጎድላል"
-      ]));
-    } else {
-      goalCard.appendChild(el("div", { style: { fontSize:"12px", color:"#16a34a", fontWeight:"700", marginTop:"6px" } }, "✅ ግቡ ተሳክቷል!"));
-    }
-    body.appendChild(goalCard);
-    body.appendChild(el("div", { class: "eyebrow mt3" }, "የዚህ ወር ዝርዝር"));
-    body.appendChild(el("div", { class: "day-card" }, [
-      el("div", { class: "row" }, [el("span", {}, "ጠቅላላ ሽያጭ"), el("b", {}, fmt(monthStats.revenue))]),
-      el("div", { class: "row" }, [el("span", {}, "ጠቅላላ ወጪ"), el("b", {}, fmt(monthStats.expenseTotal))]),
-      el("div", { class: "row" }, [el("span", {}, "የተጣራ ትርፍ"), el("b", { style: { color: monthStats.profit >= 0 ? "#16a34a" : "#dc2626" } }, fmt(monthStats.profit))])
-    ]));
-  }, null);
-}
-
 function openAllocationModal() {
   var rows = state.data.allocations.map(function (a) { return { id: a.id, name: a.name, percent: a.percent }; });
   var listWrap, totalLabel;
@@ -849,6 +822,62 @@ function openAllocationModal() {
   });
 }
 
+/* ================= profit allocation & goal tracker (moved into drawer) ================= */
+function renderAllocationAndGoalPage(container) {
+  var data = state.data;
+  container.appendChild(el("div", { class: "eyebrow section" }, "🧮 የትርፍ ክፍፍል እና የግብ ክትትል"));
+
+  var todayStats = periodStats(data, "day");
+  var allocCard = el("div", { class: "card section", style: { borderColor: "#8b5cf6" } });
+  var allocHead = el("div", { class: "flex items-center justify-between mb2" }, [el("div", { class: "card-label", style: { color: "#6d28d9" } }, "የዛሬ ትርፍ ክፍፍል")]);
+  var allocEditBtn = el("button", { class: "icon-btn" }, "✎");
+  allocEditBtn.addEventListener("click", openAllocationModal);
+  allocHead.appendChild(allocEditBtn);
+  allocCard.appendChild(allocHead);
+  allocCard.appendChild(renderAllocationBlock(todayStats.profit, data.allocations, "የዛሬ"));
+  container.appendChild(allocCard);
+
+  var gt = goalTrackerStats(data);
+  var goalCard = el("div", { class: "card section", style: { borderColor: gt.onTrack ? "#22c55e" : "#ef4444" } });
+  var goalHead = el("div", { class: "flex items-center justify-between mb2" }, [el("div", { class: "card-label", style: { color: gt.onTrack ? "#16a34a" : "#dc2626" } }, "🎯 የካፒታል ክምችት ግብ ክትትል")]);
+  var goalEditBtn = el("button", { class: "icon-btn" }, "✎");
+  goalEditBtn.addEventListener("click", openCapitalGoalModal);
+  goalHead.appendChild(goalEditBtn);
+  goalCard.appendChild(goalHead);
+  goalCard.appendChild(renderGoalTrackerBlock(gt));
+  container.appendChild(goalCard);
+
+  var cuMonth = capitalUtilizationStats(data, "month");
+  var cuMonthCard = el("div", { class: "card section", style: { borderColor: "#3b82f6" } });
+  cuMonthCard.appendChild(el("div", { class: "card-label mb2", style: { color: "#1d4ed8" } }, "🏗️ የካፒታል አጠቃቀም — ወርሃዊ"));
+  cuMonthCard.appendChild(renderCapitalUtilizationBlock(cuMonth));
+  container.appendChild(cuMonthCard);
+
+  var cuYear = capitalUtilizationStats(data, "year");
+  var cuYearCard = el("div", { class: "card section", style: { borderColor: "#8b5cf6" } });
+  cuYearCard.appendChild(el("div", { class: "card-label mb2", style: { color: "#6d28d9" } }, "🏗️ የካፒታል አጠቃቀም — አመታዊ"));
+  cuYearCard.appendChild(renderCapitalUtilizationBlock(cuYear));
+  container.appendChild(cuYearCard);
+}
+
+function openCapitalGoalModal() {
+  var input;
+  openSheet("የወርሃዊ ካፒታል ግብ አርም", function (body) {
+    body.appendChild(el("div", { class: "helpmsg" }, "ይህ የወርሃዊ ካፒታል ክምችት ግብዎ (ኢላማ) ነው። እድገቱ ግን ሁልጊዜ ከትክክለኛው የካፒታል ክፍፍል መቶኛ (☰ → 🧮) እና ከትክክለኛው ወርሃዊ ትርፍ ራሱ ይሰላል።"));
+    input = el("input", { class: "input", type: "number", step: "0.01", value: ((state.data.capitalGoalMonthlyCents || GOAL_MONTHLY_CENTS_DEFAULT) / 100).toFixed(2) });
+    body.appendChild(input);
+  }, function (close) {
+    var btn = el("button", { class: "btn btn-primary" }, "አስቀምጥ");
+    btn.addEventListener("click", guarded(function () {
+      var cents = toCents(input.value);
+      setData(function (d) { d.capitalGoalMonthlyCents = cents > 0 ? cents : GOAL_MONTHLY_CENTS_DEFAULT; return d; });
+      close();
+    }));
+    return btn;
+  });
+}
+
+/* ================= sales tab ================= */
 function renderSales(container) {
   container.appendChild(el("div", { class: "eyebrow section" }, "📝 ሽያጭ መመዝገቢያ ፎርም"));
   var formCard = el("div", { class: "card section" });
@@ -917,6 +946,7 @@ function renderSales(container) {
     qtyRow.appendChild(minusBtn); qtyRow.appendChild(qtyInput); qtyRow.appendChild(plusBtn);
     restWrap.appendChild(Field("የዕቃ ብዛት (መጠን)", true, qtyRow));
 
+    // --- payment method (cash / bank transfer / on credit) ---
     var payField = el("div", { class: "field" });
     payField.appendChild(el("label", {}, "የክፍያ አይነት"));
     var payRow = el("div", { class: "pill-row", style: { width: "100%" } });
@@ -1043,6 +1073,7 @@ function openEditSaleModal(sale) {
       var qty = Math.max(1, Number(qtyInput.value) || 1);
       var priceCents = toCents(priceInput.value);
       if (priceCents <= 0) { errBox.textContent = "ትክክለኛ ዋጋ ያስገቡ"; return; }
+      // ensure editing doesn't push this item's stock negative (excluding this sale's own qty from the check)
       var otherSold = state.data.sales.filter(function (s) { return s.itemId === sale.itemId && s.id !== sale.id; }).reduce(function (s, x) { return s + x.qty; }, 0);
       var item = state.data.items.find(function (i) { return i.id === sale.itemId; });
       var openingStock = item ? item.openingStock : 0;
@@ -1059,6 +1090,7 @@ function openEditSaleModal(sale) {
   });
 }
 
+/* ================= items tab ================= */
 function renderItems(container) {
   container.appendChild(el("div", { class: "eyebrow section" }, "📦 አዲስ ዕቃ መጨመሪያ እና የነበሩት ዝርዝር"));
   var nameInput = el("input", { class: "input", placeholder: "የዕቃ ስም" });
@@ -1147,6 +1179,7 @@ function openEditItemModal(item) {
   });
 }
 
+/* ================= expenses tab (dedicated, categorized) ================= */
 function renderExpenses(container) {
   container.appendChild(el("div", { class: "eyebrow section" }, "💸 ወጪ መመዝገቢያ"));
   var addBtn = el("button", { class: "btn btn-primary section" }, "+ ወጪ መዝግብ");
@@ -1190,255 +1223,421 @@ function renderExpenses(container) {
   draw();
 }
 
-/* ================= PROFILE PAGE ================= */
-function renderProfile(container) {
-  var data = state.data;
-  var profile = data.profile || freshProfile();
-  container.appendChild(el("div", { class: "eyebrow" }, "🏢 የንግድ ፕሮፋይል"));
-  container.appendChild(el("div", { class: "helpmsg" }, "ይህ መረጃ ለPDF ሪፖርት እና ለባንክ ብድር ማመልከቻ ይጠቅማል።"));
+/* ================= reports page (period toggle + bank-ready summary + PDF export) — now lives in the drawer ================= */
+var reportsPeriod = "month";
+function renderReports(container) {
+  container.appendChild(el("div", { class: "eyebrow section" }, "📊 ሪፖርት (ለባንክ ብድር ማመልከቻ ዝግጁ)"));
 
-  var fields = [
-    { k: "shopName", l: "የሱቅ/ድርጅት ስም" },
-    { k: "ownerName", l: "የማናጀር ስም" },
-    { k: "businessSector", l: "የስራ ዘርፍ" },
-    { k: "tin", l: "TIN ቁጥር" },
-    { k: "license", l: "የታደሰ ንግድ ፈቃድ ቁጥር" },
-    { k: "businessRegistration", l: "የጸደቀ የንግድ ምዝገባ ቁጥር" },
-    { k: "digitalId", l: "የታደሰ ዲጅታል መታወቅያ" },
-    { k: "address", l: "የስራ አድራሻ" },
-    { k: "email", l: "ኢሜይል" },
-    { k: "phone", l: "ስልክ ቁጥር" }
-  ];
-
-  var inputs = {};
-  fields.forEach(function(f) {
-    var inp = el("input", { class: "input", value: profile[f.k] || "", placeholder: f.l });
-    inputs[f.k] = inp;
-    container.appendChild(Field(f.l, false, inp));
+  var pillRow = el("div", { class: "pill-row section" });
+  [["week", "ሳምንት"], ["month", "ወር"], ["year", "አመት"], ["all", "ጠቅላላ ጊዜ"]].forEach(function (p) {
+    var b = el("button", { class: "pill" + (reportsPeriod === p[0] ? " active" : ""), style: { flex: "1" } }, p[1]);
+    b.addEventListener("click", function () { reportsPeriod = p[0]; state.tab = "reports"; renderApp(); });
+    pillRow.appendChild(b);
   });
+  container.appendChild(pillRow);
 
-  var saveBtn = el("button", { class: "btn btn-primary mt3" }, "ፕሮፋይል አስቀምጥ");
-  saveBtn.addEventListener("click", guarded(function() {
-    setData(function(d) {
-      fields.forEach(function(f) { d.profile[f.k] = inputs[f.k].value.trim(); });
+  var data = state.data;
+  var sales, expenses;
+  if (reportsPeriod === "all") { sales = data.sales; expenses = data.expenses; }
+  else { var range = periodRange(reportsPeriod); sales = data.sales.filter(function (s) { return inPeriod(s.date, range); }); expenses = data.expenses.filter(function (e) { return inPeriod(e.date, range); }); }
+  var st = statsFor(sales, expenses);
+  var pay = paymentBreakdown(sales);
+  var byCat = expenseByCategory(expenses);
+  var capital = totalCapitalCents(data);
+  var invValue = inventoryValueCents(data);
+
+  var summaryCard = el("div", { class: "card blue section" });
+  summaryCard.appendChild(el("div", { class: "card-label mb2" }, "🏦 ለባንክ ቁልፍ መረጃዎች"));
+  [["ጠቅላላ ገቢ (Gross Revenue)", st.revenue], ["ጠቅላላ ወጪ (Total Expenses)", st.expenseTotal], ["የተጣራ ትርፍ (Net Profit)", st.profit], ["የዕቃ ክምችት እሴት (Inventory Asset Value)", invValue], ["ጠቅላላ ካፒታል (Total Capital)", capital]].forEach(function (row) {
+    summaryCard.appendChild(el("div", { class: "list-row" }, [el("span", {}, row[0]), el("span", { style: { fontWeight: "800", color: row[0].indexOf("ትርፍ") !== -1 ? (row[1] >= 0 ? "#16a34a" : "#dc2626") : "#1e293b" } }, fmt(row[1]))]));
+  });
+  container.appendChild(summaryCard);
+
+  var payCard = el("div", { class: "card violet section" });
+  payCard.appendChild(el("div", { class: "card-label mb2" }, "💳 የክፍያ ፍሰት (ካሽ / ባንክ / ዱቤ)"));
+  payCard.appendChild(el("div", { class: "list-row" }, [el("span", {}, "ካሽ"), el("span", { style: { fontWeight: "700" } }, fmt(pay.cash))]));
+  payCard.appendChild(el("div", { class: "list-row" }, [el("span", {}, "ባንክ ትራንስፈር"), el("span", { style: { fontWeight: "700" } }, fmt(pay.bank))]));
+  payCard.appendChild(el("div", { class: "list-row" }, [el("span", {}, "ዱቤ (ጠቅላላ)"), el("span", { style: { fontWeight: "700" } }, fmt(pay.credit))]));
+  payCard.appendChild(el("div", { class: "list-row out" }, [el("span", {}, "⚠️ ያልተከፈለ ዱቤ (Outstanding)"), el("span", { style: { fontWeight: "700", color: "#dc2626" } }, fmt(pay.creditOutstanding))]));
+  container.appendChild(payCard);
+
+  var recon = verifyPaymentReconciliation(sales);
+  container.appendChild(el("div", { class: "section", style: { fontSize: "11.5px", fontWeight: "700", textAlign: "center", padding: "10px", borderRadius: "10px", background: recon.ok ? "#f0fdf4" : "#fef2f2", color: recon.ok ? "#16a34a" : "#dc2626" } },
+    recon.ok ? ("✓ ተረጋግጧል፦ ካሽ + ባንክ + ዱቤ (" + fmt(recon.sumOfMethods) + ") = ጠቅላላ ገቢ (" + fmt(recon.total) + ")")
+      : ("⚠️ ማሳሰቢያ፦ የሽያጭ እና የገቢ ቁጥሮችዎ አልተገጣጠሙም (" + fmt(recon.sumOfMethods) + " ≠ " + fmt(recon.total) + ")፣ እባክዎ ኦዲተሮች ውድቅ እንዳያደርጉት ያስተካክሉ።")));
+
+  if (Object.keys(byCat).length > 0) {
+    var catCard = el("div", { class: "card red section" });
+    catCard.appendChild(el("div", { class: "card-label mb2" }, "🗂️ ወጪ በምድብ"));
+    EXPENSE_CATEGORIES.forEach(function (c) { if (byCat[c]) catCard.appendChild(el("div", { class: "list-row" }, [el("span", {}, c), el("span", { style: { fontWeight: "700" } }, fmt(byCat[c]))])); });
+    container.appendChild(catCard);
+  }
+
+  var allocCard = el("div", { class: "card section", style: { borderColor: "#8b5cf6" } });
+  allocCard.appendChild(el("div", { class: "card-label mb2", style: { color: "#6d28d9" } }, "🧮 የትርፍ ክፍፍል"));
+  allocCard.appendChild(renderAllocationBlock(st.profit, data.allocations, "የተመረጠው ጊዜ"));
+  container.appendChild(allocCard);
+
+  var pdfBtn = el("button", { class: "btn btn-navy section" }, "🖨️ ባለ 9-ገጽ ሪፖርት አዘጋጅ / አትም");
+  pdfBtn.addEventListener("click", guarded(function () { openReportPrepSheet(); }));
+  container.appendChild(pdfBtn);
+}
+
+function renderProfile(container) {
+  container.appendChild(el("div", { class: "eyebrow section" }, "🏢 የንግድ ፕሮፋይል"));
+  var p = state.data.profile || freshProfile();
+  var fields = [
+    ["shopName", "የድርጅት ስም", true], ["ownerName", "የማናጀር ስም", true], ["businessSector", "የስራ ዘርፍ", false],
+    ["tin", "TIN ቁጥር", true], ["license", "የታደሰ ንግድ ፈቃድ ቁጥር", true], ["businessRegistration", "የጸደቀ የንግድ ምዝገባ ቁጥር", false],
+    ["digitalId", "የታደሰ ዲጅታል መታወቅያ ቁጥር", false], ["address", "የስራ አድራሻ", true],
+    ["email", "ኢሜይል", false], ["phone", "ስልክ ቁጥር", true]
+  ];
+  var inputs = {};
+  var card = el("div", { class: "card section" });
+
+  var photoPreview = el("img", { src: p.managerPhoto || "", style: { width: "84px", height: "84px", borderRadius: "12px", objectFit: "cover", background: "#f1f5f9", display: p.managerPhoto ? "block" : "none" } });
+  var photoInput = el("input", { type: "file", accept: "image/*", class: "input" });
+  photoInput.addEventListener("change", function (e) {
+    var file = e.target.files[0]; if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function (ev) {
+      var img = new Image();
+      img.onload = function () {
+        var canvas = document.createElement("canvas");
+        var size = 240; canvas.width = size; canvas.height = size;
+        var ctx = canvas.getContext("2d");
+        var scale = Math.max(size / img.width, size / img.height);
+        var w = img.width * scale, h = img.height * scale;
+        ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+        var dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+        photoPreview.src = dataUrl; photoPreview.style.display = "block";
+        photoPreview.dataset.value = dataUrl;
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+  card.appendChild(Field("የማናጀር ፎቶ", false, el("div", { class: "flex items-center gap3" }, [photoPreview, photoInput])));
+
+  fields.forEach(function (f) {
+    var input = el("input", { class: "input", value: p[f[0]] || "" });
+    inputs[f[0]] = input;
+    card.appendChild(Field(f[1], f[2], input));
+  });
+  var saveBtn = el("button", { class: "btn btn-primary" }, "አስቀምጥ");
+  saveBtn.addEventListener("click", guarded(function () {
+    setData(function (d) {
+      var np = {};
+      fields.forEach(function (f) { np[f[0]] = inputs[f[0]].value.trim(); });
+      np.managerPhoto = photoPreview.dataset.value || p.managerPhoto || "";
+      d.profile = np;
       return d;
     });
-    showToast("ፕሮፋይል ተስቷል");
+    showToast("የንግድ ፕሮፋይል ተቀምጧል");
   }));
-  container.appendChild(saveBtn);
+  card.appendChild(saveBtn);
+  container.appendChild(card);
+  container.appendChild(el("div", { class: "helpmsg section" }, "ይህ መረጃ በPDF ሪፖርት ገጽ 1 ላይ ይታያል — ለባንክ ብድር ማመልከቻ ትክክለኛ እንዲሆን በጥንቃቄ ይሙሉ።"));
 }
 
-/* ================= LOAN CENTER PAGE ================= */
+/* ================= bank loan center ================= */
 function renderLoanCenter(container) {
-  var data = state.data;
-  var lc = data.loanCenter || freshLoanCenter();
-  container.appendChild(el("div", { class: "eyebrow" }, "🏦 የባንክ ብድር ማዕከል"));
-  container.appendChild(el("div", { class: "helpmsg" }, "የብድር ፍላጎት፣ የገንዘብ አጠቃቀም እቅድ፣ አቅራቢዎች እና የገበያ ትንተና ያስገቡ።"));
+  container.appendChild(el("div", { class: "eyebrow section" }, "🏦 የባንክ ብድር ማዕከል"));
+  var lc = state.data.loanCenter || freshLoanCenter();
 
-  var reqInput = el("input", { class: "input", type: "number", step: "0.01", value: (lc.requestedAmountCents / 100).toFixed(2), placeholder: "የሚጠየቀው የብድር መጠን" });
-  container.appendChild(Field("የብድር ፍላጎት (ETB)", true, reqInput));
+  // ---- ሀ. loan utilization ----
+  var utilCard = el("div", { class: "card blue section" });
+  utilCard.appendChild(el("div", { class: "card-label mb2" }, "ሀ. የብድር ፍላጎት እና አጠቃቀም"));
+  var amtInput = el("input", { class: "input", type: "number", step: "0.01", value: (lc.requestedAmountCents / 100).toFixed(2) });
+  utilCard.appendChild(Field("የሚጠየቀው የብድር መጠን", true, amtInput));
+  var saveAmtBtn = el("button", { class: "btn btn-outline btn-sm" }, "መጠን አስቀምጥ");
+  saveAmtBtn.addEventListener("click", guarded(function () { setData(function (d) { d.loanCenter.requestedAmountCents = toCents(amtInput.value); return d; }); showToast("ተቀምጧል"); }));
+  utilCard.appendChild(saveAmtBtn);
 
-  container.appendChild(el("div", { class: "eyebrow mt3" }, "የገንዘብ አጠቃቀም ስርጭት"));
-  var allocWrap = el("div", {});
-  container.appendChild(allocWrap);
-
-  function drawAlloc() {
-    clear(allocWrap);
-    lc.usageAllocations.forEach(function(u, idx) {
-      var row = el("div", { class: "alloc-row" });
-      var nameInp = el("input", { class: "input alloc-name", value: u.purpose });
-      nameInp.addEventListener("input", function(e) { u.purpose = e.target.value; });
-      var pctInp = el("input", { class: "input alloc-pct", type: "number", step: "0.1", value: u.percent });
-      pctInp.addEventListener("input", function(e) { u.percent = Number(e.target.value) || 0; });
-      var rm = el("button", { class: "trash-btn" }, "✕");
-      rm.addEventListener("click", function() { lc.usageAllocations.splice(idx, 1); drawAlloc(); });
-      row.appendChild(nameInp); row.appendChild(pctInp); row.appendChild(rm);
-      allocWrap.appendChild(row);
+  utilCard.appendChild(el("div", { class: "mt3 mb2", style: { fontSize: "12px", fontWeight: "700", color: "#1e293b" } }, "የገንዘቡ አጠቃቀም ስርጭት (%)"));
+  var usageWrap = el("div", {});
+  utilCard.appendChild(usageWrap);
+  function drawUsage() {
+    clear(usageWrap);
+    var rows = lc.usageAllocations;
+    var tot = rows.reduce(function (s, r) { return s + Number(r.percent); }, 0);
+    rows.forEach(function (r, idx) {
+      var nameInput = el("input", { class: "input alloc-name", value: r.purpose });
+      var pctInput = el("input", { class: "input alloc-pct", type: "number", value: r.percent });
+      var rmBtn = el("button", { class: "trash-btn" }, "✕");
+      rmBtn.addEventListener("click", function () { setData(function (d) { d.loanCenter.usageAllocations.splice(idx, 1); return d; }); });
+      nameInput.addEventListener("change", function (e) { setData(function (d) { d.loanCenter.usageAllocations[idx].purpose = e.target.value; return d; }); });
+      pctInput.addEventListener("change", function (e) { setData(function (d) { d.loanCenter.usageAllocations[idx].percent = Number(e.target.value) || 0; return d; }); });
+      usageWrap.appendChild(el("div", { class: "flex gap2 items-center mb2" }, [nameInput, pctInput, rmBtn]));
     });
+    usageWrap.appendChild(el("div", { style: { fontSize: "11px", fontWeight: "700", color: Math.abs(tot - 100) > 0.01 ? "#f59e0b" : "#16a34a" } }, "ጠቅላላ: " + tot + "%"));
   }
-  drawAlloc();
+  drawUsage();
+  var addUsageBtn = el("button", { class: "btn btn-outline btn-sm mt2" }, "+ ስርጭት ጨምር");
+  addUsageBtn.addEventListener("click", function () { setData(function (d) { d.loanCenter.usageAllocations.push({ id: uid(), purpose: "አዲስ አላማ", percent: 0 }); return d; }); });
+  utilCard.appendChild(addUsageBtn);
+  container.appendChild(utilCard);
 
-  var addAllocBtn = el("button", { class: "btn btn-outline btn-sm" }, "+ አላማ ጨምር");
-  addAllocBtn.addEventListener("click", function() { lc.usageAllocations.push({ id: uid(), purpose: "አዲስ አላማ", percent: 0 }); drawAlloc(); });
-  container.appendChild(addAllocBtn);
-
-  container.appendChild(el("div", { class: "eyebrow mt3" }, "የፕሮፎርማ ኢንቮይስ"));
-  var pfWrap = el("div", {});
-  container.appendChild(pfWrap);
-  function drawPf() {
-    clear(pfWrap);
-    lc.proformaInvoices.forEach(function(pf, idx) {
-      var row = el("div", { class: "item-row" });
-      row.appendChild(el("div", { class: "item-name" }, pf.supplier + " — " + fmt(pf.amountCents)));
-      row.appendChild(el("div", { class: "item-sub" }, (pf.description || "") + " · " + pf.date));
-      var rm = el("button", { class: "trash-btn mt2" }, "🗑️ ሰርዝ");
-      rm.addEventListener("click", function() { lc.proformaInvoices.splice(idx, 1); drawPf(); });
-      row.appendChild(rm);
-      pfWrap.appendChild(row);
-    });
-    if (lc.proformaInvoices.length === 0) pfWrap.appendChild(el("div", { class: "empty" }, "ምንም ኢንቮይስ አልተጨመረም"));
-  }
-  drawPf();
-
-  var addPfBtn = el("button", { class: "btn btn-outline btn-sm mt2" }, "+ ኢንቮይስ ጨምር");
-  addPfBtn.addEventListener("click", function() {
-    openSheet("ፕሮፎርማ ኢንቮይስ ጨምር", function(body) {
-      var supInp = el("input", { class: "input", placeholder: "አቅራቢ ስም" });
-      var descInp = el("input", { class: "input", placeholder: "ዝርዝር" });
-      var amtInp = el("input", { class: "input", type: "number", step: "0.01", placeholder: "ዋጋ" });
-      var dateInp = el("input", { class: "input", type: "date", value: todayISO() });
-      body.appendChild(Field("አቅራቢ", true, supInp));
-      body.appendChild(Field("ዝርዝር", false, descInp));
-      body.appendChild(Field("ዋጋ", true, amtInp));
-      body.appendChild(Field("ቀን", true, dateInp));
-      return function(close) {
-        var btn = el("button", { class: "btn btn-primary" }, "አስቀምጥ");
-        btn.addEventListener("click", function() {
-          var amt = toCents(amtInp.value);
-          if (!supInp.value.trim() || amt <= 0) { showToast("እባክዎ አቅራቢ እና ትክክለኛ ዋጋ ያስገቡ"); return; }
-          lc.proformaInvoices.push({ id: uid(), supplier: supInp.value.trim(), description: descInp.value.trim(), amountCents: amt, date: dateInp.value || todayISO() });
-          drawPf(); close();
-        });
-        return btn;
-      };
-    }(function(body, close, rf) {
-      var fb = addPfBtn._builder(body);
-      var footer = fb(close);
-      body.parentNode.querySelector(".sheet-footer").appendChild(footer);
-    }));
-  });
-  container.appendChild(addPfBtn);
-
-  container.appendChild(el("div", { class: "eyebrow mt3" }, "የገበያ ትንተና"));
-  var marketInput = el("textarea", { class: "input", rows: 4, style: { resize: "vertical" }, value: lc.marketAnalysis || "", placeholder: "የገበያ ሁኔታ፣ የተወዳዳሪነት ጥንካሬዎች..." });
-  container.appendChild(Field("የገበያ ትንተና", false, marketInput));
-
-  container.appendChild(el("div", { class: "eyebrow mt3" }, "ዋና ዋና አቅራቢዎች"));
-  var supWrap = el("div", {});
-  container.appendChild(supWrap);
-  function drawSup() {
-    clear(supWrap);
-    lc.suppliers.forEach(function(s, idx) {
-      var row = el("div", { class: "item-row" });
-      row.appendChild(el("div", { class: "item-name" }, s.name));
-      row.appendChild(el("div", { class: "item-sub" }, s.address || ""));
-      var rm = el("button", { class: "trash-btn mt2" }, "🗑️ ሰርዝ");
-      rm.addEventListener("click", function() { lc.suppliers.splice(idx, 1); drawSup(); });
-      row.appendChild(rm);
-      supWrap.appendChild(row);
-    });
-    if (lc.suppliers.length === 0) supWrap.appendChild(el("div", { class: "empty" }, "ምንም አቅራቢ አልተጨመረም"));
-  }
-  drawSup();
-
-  var addSupBtn = el("button", { class: "btn btn-outline btn-sm mt2" }, "+ አቅራቢ ጨምር");
-  addSupBtn.addEventListener("click", function() {
-    openSheet("አቅራቢ ጨምር", function(body) {
-      var nameInp = el("input", { class: "input", placeholder: "አቅራቢ ስም" });
-      var addrInp = el("input", { class: "input", placeholder: "አድራሻ" });
-      body.appendChild(Field("ስም", true, nameInp));
-      body.appendChild(Field("አድራሻ", false, addrInp));
-      return function(close) {
-        var btn = el("button", { class: "btn btn-primary" }, "አስቀምጥ");
-        btn.addEventListener("click", function() {
-          if (!nameInp.value.trim()) { showToast("እባክዎ ስም ያስገቡ"); return; }
-          lc.suppliers.push({ id: uid(), name: nameInp.value.trim(), address: addrInp.value.trim() });
-          drawSup(); close();
-        });
-        return btn;
-      };
-    }(function(body, close, rf) {
-      var fb = addSupBtn._builder(body);
-      var footer = fb(close);
-      body.parentNode.querySelector(".sheet-footer").appendChild(footer);
-    }));
-  });
-  container.appendChild(addSupBtn);
-
-  var saveBtn = el("button", { class: "btn btn-primary mt3" }, "ሁሉንም አስቀምጥ");
-  saveBtn.addEventListener("click", guarded(function() {
-    lc.requestedAmountCents = toCents(reqInput.value);
-    lc.marketAnalysis = marketInput.value;
-    setData(function(d) { d.loanCenter = lc; return d; });
-    showToast("የብድር ማዕከል ተስቷል");
+  // proforma invoices
+  var proformaCard = el("div", { class: "card section" });
+  proformaCard.appendChild(el("div", { class: "card-label mb2" }, "📄 የፕሮፎርማ ኢንቮይስ መዝገብ"));
+  var pfSupplier = el("input", { class: "input", placeholder: "አቅራቢ ስም" });
+  var pfDesc = el("input", { class: "input", placeholder: "ዝርዝር (ምን እንደሚገዛ)" });
+  var pfAmt = el("input", { class: "input", type: "number", step: "0.01", placeholder: "የተጠቀሰ ዋጋ" });
+  var addPfBtn = el("button", { class: "btn btn-outline btn-sm" }, "+ ጨምር");
+  addPfBtn.addEventListener("click", guarded(function () {
+    if (!pfSupplier.value.trim() || !pfAmt.value) { showToast("እባክዎ አቅራቢ ስም እና ዋጋ ያስገቡ"); return; }
+    setData(function (d) { d.loanCenter.proformaInvoices.push({ id: uid(), supplier: pfSupplier.value.trim(), description: pfDesc.value.trim(), amountCents: toCents(pfAmt.value), date: todayISO() }); return d; });
+    pfSupplier.value = ""; pfDesc.value = ""; pfAmt.value = "";
   }));
-  container.appendChild(saveBtn);
-}
-
-/* ================= WEEKLY / MONTHLY / YEARLY REPORTS ================= */
-function openWeeklyReport() {
-  var data = state.data;
-  var now = new Date();
-  var day = now.getDay();
-  var diffToMonday = (day + 6) % 7;
-  var monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday);
-  openSheet("📅 ሳምንታዊ ሪፖርት", function(body) {
-    for (var i = 0; i < 7; i++) {
-      var d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
-      var iso = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-      var st = dayStats(data, iso);
-      var dayName = ETH_WEEKDAYS[i];
-      var card = el("div", { class: "day-card" });
-      card.appendChild(el("div", { class: "dname" }, dayName + " (" + iso + ")"));
-      card.appendChild(el("div", { class: "row" }, [el("span", {}, "ሽያጭ"), el("b", {}, fmt(st.revenue))]));
-      card.appendChild(el("div", { class: "row" }, [el("span", {}, "ወጪ"), el("b", {}, fmt(st.expenseTotal))]));
-      card.appendChild(el("div", { class: "row" }, [el("span", {}, "ትርፍ"), el("b", { style: { color: st.profit >= 0 ? "#16a34a" : "#dc2626" } }, fmt(st.profit))]));
-      body.appendChild(card);
-    }
-  }, null);
-}
-
-function openMonthlyReport() {
-  var data = state.data;
-  var buckets = ethiopianBuckets(data);
-  var todayEth = gregorianToEthiopian(new Date());
-  openSheet("🗓️ ወርሃዊ ሪፖርት — " + todayEth.year + " ዓ.ም", function(body) {
-    for (var m = 1; m <= 13; m++) {
-      var b = buckets[todayEth.year + "-" + m];
-      var st = b ? statsFor(b.sales, b.expenses) : { revenue: 0, expenseTotal: 0, profit: 0 };
-      var card = el("div", { class: "day-card" });
-      card.appendChild(el("div", { class: "dname" }, ETH_MONTHS[m - 1]));
-      card.appendChild(el("div", { class: "row" }, [el("span", {}, "ሽያጭ"), el("b", {}, fmt(st.revenue))]));
-      card.appendChild(el("div", { class: "row" }, [el("span", {}, "ወጪ"), el("b", {}, fmt(st.expenseTotal))]));
-      card.appendChild(el("div", { class: "row" }, [el("span", {}, "ትርፍ"), el("b", { style: { color: st.profit >= 0 ? "#16a34a" : "#dc2626" } }, fmt(st.profit))]));
-      body.appendChild(card);
-    }
-  }, null);
-}
-
-function openYearlyReport() {
-  var data = state.data;
-  var buckets = ethiopianBuckets(data);
-  var years = {};
-  Object.keys(buckets).forEach(function(k) {
-    var y = buckets[k].year;
-    if (!years[y]) years[y] = { sales: [], expenses: [] };
-    years[y].sales = years[y].sales.concat(buckets[k].sales);
-    years[y].expenses = years[y].expenses.concat(buckets[k].expenses);
+  proformaCard.appendChild(pfSupplier); proformaCard.appendChild(el("div", { class: "mt2" }, [pfDesc])); proformaCard.appendChild(el("div", { class: "mt2" }, [pfAmt])); proformaCard.appendChild(el("div", { class: "mt2" }, [addPfBtn]));
+  lc.proformaInvoices.forEach(function (pf) {
+    proformaCard.appendChild(el("div", { class: "list-row", style: { marginTop: "8px" } }, [
+      el("span", {}, pf.supplier + (pf.description ? " · " + pf.description : "")),
+      el("span", { style: { fontWeight: "700" } }, fmt(pf.amountCents))
+    ]));
   });
-  var yearList = Object.keys(years).sort(function(a, b) { return b - a; });
-  openSheet("📆 አመታዊ ሪፖርት", function(body) {
-    if (yearList.length === 0) {
-      body.appendChild(el("div", { class: "empty" }, "ምንም ውሂብ አልተገኘም"));
-      return;
-    }
-    yearList.forEach(function(y) {
-      var st = statsFor(years[y].sales, years[y].expenses);
-      var card = el("div", { class: "day-card" });
-      card.appendChild(el("div", { class: "dname" }, y + " ዓ.ም"));
-      card.appendChild(el("div", { class: "row" }, [el("span", {}, "ሽያጭ"), el("b", {}, fmt(st.revenue))]));
-      card.appendChild(el("div", { class: "row" }, [el("span", {}, "ወጪ"), el("b", {}, fmt(st.expenseTotal))]));
-      card.appendChild(el("div", { class: "row" }, [el("span", {}, "ትርፍ"), el("b", { style: { color: st.profit >= 0 ? "#16a34a" : "#dc2626" } }, fmt(st.profit))]));
-      body.appendChild(card);
-    });
-  }, null);
+  container.appendChild(proformaCard);
+
+  // ---- ለ. cash flow projection ----
+  var cfCard = el("div", { class: "card green section" });
+  cfCard.appendChild(el("div", { class: "card-label mb2" }, "ለ. የ12 ወራት የገንዘብ ፍሰት ትንበያ"));
+  var todayEth = gregorianToEthiopian(new Date());
+  if (!lc.cashFlowProjection || lc.cashFlowProjection.length !== 12) {
+    var proj = [];
+    for (var m = 0; m < 12; m++) { var mm = ((todayEth.month - 1 + m) % 12) + 1; proj.push({ month: mm, projectedRevenueCents: 0 }); }
+    lc.cashFlowProjection = proj;
+  }
+  lc.cashFlowProjection.forEach(function (row, idx) {
+    var input = el("input", { class: "input", type: "number", step: "0.01", value: (row.projectedRevenueCents / 100).toFixed(2), style: { flex: "1" } });
+    input.addEventListener("change", function (e) { setData(function (d) { d.loanCenter.cashFlowProjection[idx].projectedRevenueCents = toCents(e.target.value); return d; }); });
+    cfCard.appendChild(el("div", { class: "flex items-center gap2 mb2" }, [el("span", { style: { width: "88px", fontSize: "12px", color: "#64748b" } }, ETH_MONTHS[row.month - 1]), input]));
+  });
+  container.appendChild(cfCard);
+
+  // ---- ሐ. suppliers & market ----
+  var mktCard = el("div", { class: "card amber section" });
+  mktCard.appendChild(el("div", { class: "card-label mb2", style: { color: "#b45309" } }, "ሐ. አቅራቢዎች እና የገበያ ሁኔታ"));
+  var supName = el("input", { class: "input", placeholder: "የአቅራቢ ስም" });
+  var supAddr = el("input", { class: "input", placeholder: "አድራሻ" });
+  var addSupBtn = el("button", { class: "btn btn-outline btn-sm" }, "+ አቅራቢ ጨምር");
+  addSupBtn.addEventListener("click", guarded(function () {
+    if (!supName.value.trim()) { showToast("የአቅራቢ ስም ያስገቡ"); return; }
+    setData(function (d) { d.loanCenter.suppliers.push({ id: uid(), name: supName.value.trim(), address: supAddr.value.trim() }); return d; });
+    supName.value = ""; supAddr.value = "";
+  }));
+  mktCard.appendChild(supName); mktCard.appendChild(el("div", { class: "mt2" }, [supAddr])); mktCard.appendChild(el("div", { class: "mt2" }, [addSupBtn]));
+  lc.suppliers.forEach(function (s) {
+    mktCard.appendChild(el("div", { class: "list-row", style: { marginTop: "8px" } }, [el("span", {}, s.name), el("span", { style: { fontSize: "11px", color: "#94a3b8" } }, s.address)]));
+  });
+  var mktText = el("textarea", { class: "input mt3", rows: "4", placeholder: "የሱቁን ተወዳዳሪነት ጥንካሬዎች (ጥራት፣ ዋጋ፣ አካባቢ...)" });
+  mktText.value = lc.marketAnalysis || "";
+  mktCard.appendChild(mktText);
+  var saveMktBtn = el("button", { class: "btn btn-outline btn-sm mt2" }, "መግለጫ አስቀምጥ");
+  saveMktBtn.addEventListener("click", guarded(function () { setData(function (d) { d.loanCenter.marketAnalysis = mktText.value.trim(); return d; }); showToast("ተቀምጧል"); }));
+  mktCard.appendChild(saveMktBtn);
+  container.appendChild(mktCard);
+
+  var pdfBtn = el("button", { class: "btn btn-navy section" }, "🖨️ ባለ 9-ገጽ ሪፖርት አዘጋጅ / አትም");
+  pdfBtn.addEventListener("click", guarded(function () { openReportPrepSheet(); }));
+  container.appendChild(pdfBtn);
 }
 
-/* ================= pdfMake 9-PAGE BANK AUDIT PDF EXPORT ================= */
-function exportFullAuditPdf() {
-  showToast("ባለ 9-ገጽ የባንክ ሪፖርት PDF በማዘጋጀት ላይ...");
 
-  var data = state.data;
+/* ============================================================
+   PROFESSIONAL 9-PAGE BANK AUDIT PDF EXPORT  —  pdfMake edition
+   Version 2.0 — Amharic-capable (Noto Sans Ethiopic embedded at runtime)
+   ============================================================ */
+
+/* ---- pdfMake / font loading (kicked off once at app start, see init) ----
+   We proactively load pdfmake.min.js + a base64 Amharic (Noto Sans
+   Ethiopic) TTF the first time the app opens, so that by the time the user
+   actually taps "PDF አውርድ" the library and font are already warm in
+   memory and the export feels instant instead of failing with a generic
+   "internet ያረጋግጡ" error in the middle of report generation. */
+var PDFMAKE_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/pdfmake.min.js";
+var NOTO_ETHIOPIC_TTF_URL = "https://cdn.jsdelivr.net/gh/googlefonts/noto-fonts/hinted/ttf/NotoSansEthiopic/NotoSansEthiopic-Regular.ttf";
+var NOTO_ETHIOPIC_BOLD_TTF_URL = "https://cdn.jsdelivr.net/gh/googlefonts/noto-fonts/hinted/ttf/NotoSansEthiopic/NotoSansEthiopic-Bold.ttf";
+var pdfEngineState = "idle"; // idle | loading | ready | error
+var pdfEngineError = "";
+var pdfEnginePromise = null;
+
+function arrayBufferToBase64(buffer) {
+  var bytes = new Uint8Array(buffer);
+  var binary = "";
+  var chunk = 0x8000;
+  for (var i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
+/* Loads pdfmake + registers the Amharic font into pdfMake's virtual file
+   system. Cached in pdfEnginePromise so repeated calls (auto-warm at
+   startup, then the real export tap) reuse the same in-flight/completed
+   request instead of re-downloading. */
+function ensurePdfEngine() {
+  if (pdfEnginePromise) return pdfEnginePromise;
+  pdfEngineState = "loading"; pdfEngineError = "";
+  pdfEnginePromise = injectScript(PDFMAKE_URL)
+    .then(function () {
+      return Promise.all([
+        fetch(NOTO_ETHIOPIC_TTF_URL).then(function (r) { if (!r.ok) throw new Error("font fetch failed (regular)"); return r.arrayBuffer(); }),
+        fetch(NOTO_ETHIOPIC_BOLD_TTF_URL).then(function (r) { if (!r.ok) throw new Error("font fetch failed (bold)"); return r.arrayBuffer(); })
+      ]);
+    })
+    .then(function (buffers) {
+      var regularB64 = arrayBufferToBase64(buffers[0]);
+      var boldB64 = arrayBufferToBase64(buffers[1]);
+      window.pdfMake.vfs = window.pdfMake.vfs || {};
+      window.pdfMake.vfs["NotoSansEthiopic-Regular.ttf"] = regularB64;
+      window.pdfMake.vfs["NotoSansEthiopic-Bold.ttf"] = boldB64;
+      window.pdfMake.fonts = {
+        NotoEthiopic: {
+          normal: "NotoSansEthiopic-Regular.ttf",
+          bold: "NotoSansEthiopic-Bold.ttf",
+          italics: "NotoSansEthiopic-Regular.ttf",
+          bolditalics: "NotoSansEthiopic-Bold.ttf"
+        }
+      };
+      pdfEngineState = "ready";
+      return true;
+    })
+    .catch(function (err) {
+      pdfEngineState = "error";
+      pdfEngineError = (err && err.message) || String(err);
+      pdfEnginePromise = null; // allow retry on next attempt
+      throw err;
+    });
+  return pdfEnginePromise;
+}
+
+/* ---- small pdfMake content-building helpers ---- */
+var PDF_NAVY = "#122B4A", PDF_ACCENT = "#3B82F6", PDF_EMERALD = "#10A34A", PDF_CRIMSON = "#DC2626",
+    PDF_AMBER = "#F59E0B", PDF_SLATE = "#1E293B", PDF_SLATE_LIGHT = "#475569", PDF_GRAY = "#94A3B8",
+    PDF_LIGHT_GRAY = "#E2E8F0", PDF_BG = "#F8FAFC";
+var PDF_PIE_COLORS = ["#3B82F6", "#10A34A", "#F59E0B", "#DC2626", "#8B5CF6", "#14B8A6", "#F97316"];
+
+function pdfSectionTitle(title, subtitle) {
+  var stack = [
+    { text: title, fontSize: 14, bold: true, color: PDF_NAVY, margin: [0, 0, 0, subtitle ? 2 : 4] }
+  ];
+  if (subtitle) stack.push({ text: subtitle, fontSize: 9, color: PDF_SLATE_LIGHT, margin: [0, 0, 0, 4] });
+  stack.push({ canvas: [{ type: "line", x1: 0, y1: 0, x2: 495, y2: 0, lineWidth: 0.75, lineColor: PDF_LIGHT_GRAY }], margin: [0, 0, 0, 8] });
+  return { stack: stack, margin: [0, 10, 0, 4] };
+}
+function pdfKV(label, value, color) {
+  return {
+    columns: [
+      { text: label, fontSize: 10, color: PDF_SLATE_LIGHT, width: "45%" },
+      { text: String(value || "-"), fontSize: 10, color: color || PDF_SLATE, bold: !!color, width: "55%" }
+    ],
+    margin: [0, 2, 0, 2]
+  };
+}
+function pdfHighlightBox(label, value, color) {
+  return {
+    table: {
+      widths: ["*"],
+      body: [[{
+        stack: [
+          { text: label, fontSize: 9, color: PDF_SLATE_LIGHT, margin: [0, 0, 0, 3] },
+          { text: String(value), fontSize: 13, bold: true, color: color }
+        ],
+        fillColor: PDF_BG, border: [false, false, false, false], margin: [8, 8, 8, 8]
+      }]]
+    },
+    layout: { defaultBorder: false },
+    margin: [0, 4, 0, 4]
+  };
+}
+function pdfTable(headers, rows, widths, options) {
+  options = options || {};
+  var body = [headers.map(function (h) { return { text: h, bold: true, color: "#ffffff", fontSize: 9, fillColor: PDF_NAVY, margin: [3, 4, 3, 4] }; })];
+  rows.forEach(function (row, rIdx) {
+    body.push(row.map(function (cell, cIdx) {
+      var isBold = options.boldCol && options.boldCol.indexOf(cIdx) !== -1;
+      var color = (options.rowColors && options.rowColors[rIdx] && options.rowColors[rIdx][cIdx]) || PDF_SLATE;
+      return { text: String(cell === undefined || cell === null || cell === "" ? "-" : cell), fontSize: 8.5, bold: isBold, color: color, fillColor: rIdx % 2 === 0 ? "#FAFBFC" : "#ffffff", margin: [3, 3, 3, 3] };
+    }));
+  });
+  return {
+    table: { headerRows: 1, widths: widths, body: body },
+    layout: {
+      hLineWidth: function (i) { return i === 0 || i === 1 ? 0.75 : 0.4; },
+      vLineWidth: function () { return 0; },
+      hLineColor: function () { return PDF_LIGHT_GRAY; },
+      paddingLeft: function () { return 3; }, paddingRight: function () { return 3; }
+    },
+    margin: [0, 2, 0, 8]
+  };
+}
+function pdfComparisonTable(title, leftLabel, leftValue, rightLabel, rightValue, diffLabel, diffValue, diffPositive) {
+  return {
+    stack: [
+      { text: title, fontSize: 11, bold: true, color: PDF_NAVY, margin: [0, 4, 0, 6] },
+      {
+        table: {
+          widths: ["*", "*", "*"],
+          body: [
+            [
+              { text: leftLabel, color: "#ffffff", fillColor: PDF_NAVY, fontSize: 9, bold: true, margin: [5, 5, 5, 5] },
+              { text: rightLabel, color: "#ffffff", fillColor: PDF_NAVY, fontSize: 9, bold: true, margin: [5, 5, 5, 5] },
+              { text: diffLabel, color: "#ffffff", fillColor: PDF_NAVY, fontSize: 9, bold: true, margin: [5, 5, 5, 5] }
+            ],
+            [
+              { text: leftValue, fontSize: 11, bold: true, fillColor: PDF_BG, margin: [5, 6, 5, 6] },
+              { text: rightValue, fontSize: 11, bold: true, fillColor: PDF_BG, margin: [5, 6, 5, 6] },
+              { text: diffValue, fontSize: 11, bold: true, color: diffPositive ? PDF_EMERALD : PDF_CRIMSON, fillColor: PDF_BG, margin: [5, 6, 5, 6] }
+            ]
+          ]
+        },
+        layout: { hLineWidth: function () { return 0; }, vLineWidth: function () { return 2; }, vLineColor: function () { return "#ffffff"; } }
+      }
+    ],
+    margin: [0, 0, 0, 8]
+  };
+}
+/* Pie chart rendered to an offscreen canvas, then embedded as a PNG data URL
+   (pdfMake has no native pie primitive, so this is the standard approach). */
+function pdfPieChartDataUrl(segments, labels, size) {
+  size = size || 220;
+  var canvas = document.createElement("canvas");
+  var scale = 3;
+  canvas.width = size * scale; canvas.height = (size + labels.length * 20) * scale;
+  var ctx = canvas.getContext("2d");
+  ctx.scale(scale, scale);
+  var cx = size / 2, cy = size / 2, r = size / 2 - 12;
+  var total = segments.reduce(function (s, v) { return s + Math.max(0, v); }, 0);
+  if (total <= 0) {
+    ctx.fillStyle = "#e2e8f0"; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2 * Math.PI); ctx.fill();
+  } else {
+    var start = -Math.PI / 2;
+    segments.forEach(function (seg, i) {
+      var angle = (Math.max(0, seg) / total) * 2 * Math.PI;
+      ctx.fillStyle = PDF_PIE_COLORS[i % PDF_PIE_COLORS.length];
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, r, start, start + angle); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2; ctx.stroke();
+      start += angle;
+    });
+    ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.arc(cx, cy, r * 0.45, 0, 2 * Math.PI); ctx.fill();
+  }
+  var ly = size + 14;
+  ctx.font = "12px sans-serif";
+  segments.forEach(function (seg, i) {
+    if (seg <= 0) return;
+    ctx.fillStyle = PDF_PIE_COLORS[i % PDF_PIE_COLORS.length];
+    ctx.fillRect(4, ly - 9, 10, 10);
+    ctx.fillStyle = "#475569";
+    var pct = total > 0 ? Math.round((seg / total) * 100) : 0;
+    ctx.fillText((labels[i] || "") + "  " + pct + "%", 18, ly);
+    ly += 16;
+  });
+  return canvas.toDataURL("image/png");
+}
+
+/* ---- Build the full 9-page docDefinition ---- */
+function buildAuditDocDefinition(data) {
   var profile = data.profile || freshProfile();
   var lc = data.loanCenter || freshLoanCenter();
   var todayEth = gregorianToEthiopian(new Date());
@@ -1457,706 +1656,75 @@ function exportFullAuditPdf() {
   var capitalYearStart = capitalAsOf(data, yearStartISO);
   var invValueNow = inventoryValueCents(data);
 
-  function pdfMoney(cents) {
-    cents = Math.round(Number(cents) || 0);
-    var neg = cents < 0; cents = Math.abs(cents);
-    var whole = Math.floor(cents / 100), frac = cents % 100;
-    return (neg ? "-" : "") + whole.toLocaleString("en-US") + "." + String(frac).padStart(2, "0") + " ETB";
+  var content = [];
+  var pageBreakNext = false;
+  function addPage(nodes) {
+    if (content.length > 0) nodes[0] = Object.assign({}, nodes[0], { pageBreak: "before" });
+    content = content.concat(nodes);
   }
 
-  var dd = {
-    pageSize: "A4",
-    pageMargins: [50, 60, 50, 60],
-    defaultStyle: { font: "Helvetica", fontSize: 10, lineHeight: 1.4 },
-    styles: {
-      header: { fontSize: 22, bold: true, color: "#1e3a8a", margin: [0, 0, 0, 10] },
-      subheader: { fontSize: 12, color: "#64748b", margin: [0, 0, 0, 20] },
-      sectionTitle: { fontSize: 14, bold: true, color: "#1e3a8a", margin: [0, 20, 0, 10] },
-      sectionSub: { fontSize: 10, color: "#64748b", margin: [0, 0, 0, 10] },
-      tableHeader: { bold: true, color: "#ffffff", fontSize: 10 },
-      tableCell: { fontSize: 9 },
-      footer: { fontSize: 8, color: "#94a3b8", alignment: "center" }
-    },
-    footer: function(currentPage, pageCount) {
-      return {
-        text: "ገጽ " + currentPage + " / " + pageCount + "  |  " + (profile.shopName || "የሱቅ መቆጣጠሪያ ሲስተም") + "  |  በራስ-ሰር ከንግድ ስራው መዝገብ የተዘጋጀ",
-        style: "footer",
-        margin: [0, 20, 0, 0]
-      };
-    },
-    content: []
-  };
-
-  // PAGE 1: COMPANY PROFILE
-  dd.content.push(
-    { text: profile.shopName || "የድርጅት ስም ያልገባ", style: "header" },
-    { text: "የባንክ ብድር ማመልከቻ ሪፖርት  |  " + ETH_MONTHS[todayEth.month - 1] + " " + todayEth.year + " ዓ.ም", style: "subheader" },
-    { canvas: [{ type: "line", x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1, lineColor: "#e2e8f0" }] },
-    { text: "የድርጅት መገለጫ", style: "sectionTitle" },
-    { text: "Company Profile & Registration Details", style: "sectionSub" }
-  );
-
+  /* ===== PAGE 1: Company Profile ===== */
   var profileFields = [
-    ["የማናጀር ስም", profile.ownerName],
-    ["የስራ ዘርፍ", profile.businessSector],
-    ["TIN ቁጥር", profile.tin],
-    ["የታደሰ ንግድ ፈቃድ ቁጥር", profile.license],
-    ["የጸደቀ የንግድ ምዝገባ ቁጥር", profile.businessRegistration],
-    ["የታደሰ ዲጅታል መታወቅያ", profile.digitalId],
-    ["የስራ አድራሻ", profile.address],
-    ["ኢሜይል", profile.email],
-    ["ስልክ ቁጥር", profile.phone]
-  ];
+    ["የማናጀር ስም", profile.ownerName], ["የስራ ዘርፍ", profile.businessSector], ["TIN ቁጥር", profile.tin],
+    ["የታደሰ ንግድ ፈቃድ ቁጥር", profile.license], ["የጸደቀ የንግድ ምዝገባ ቁጥር", profile.businessRegistration],
+    ["የታደሰ ዲጅታል መታወቅያ", profile.digitalId], ["የስራ አድራሻ", profile.address],
+    ["ኢሜይል", profile.email], ["ስልክ ቁጥር", profile.phone]
+  ].filter(function (f) { return f[1]; });
 
-  profileFields.forEach(function(f) {
-    if (f[1]) {
-      dd.content.push({
-        columns: [
-          { text: "• " + f[0], width: 180, color: "#64748b", fontSize: 10 },
-          { text: f[1], color: "#1e293b", fontSize: 10, bold: true }
-        ],
-        margin: [0, 4, 0, 4]
-      });
-    }
-  });
+  var page1Header = {
+    table: { widths: ["*"], body: [[{
+      stack: [
+        { text: profile.shopName || "የድርጅት ስም ያልገባ", fontSize: 20, bold: true, color: "#ffffff", margin: [0, 0, 0, 4] },
+        { text: "የባንክ ብድር ማመልከቻ ሪፖርት  |  " + ETH_MONTHS[todayEth.month - 1] + " " + todayEth.year + " ዓ.ም", fontSize: 10, color: "#ffffff" }
+      ],
+      fillColor: PDF_NAVY, margin: [16, 16, 16, 16]
+    }]] },
+    layout: { defaultBorder: false }, margin: [0, 0, 0, 12]
+  };
+  addPage([
+    page1Header,
+    pdfSectionTitle("የድርጅት መገለጫ", "Company Profile & Registration Details"),
+    { stack: profileFields.map(function (f) { return pdfKV(f[0], f[1]); }) },
+    pdfHighlightBox("ሪፖርት የወጣበት ቀን", todayISO() + " (" + ETH_MONTHS[todayEth.month - 1] + " " + todayEth.year + " ዓ.ም)", PDF_ACCENT)
+  ]);
 
-  dd.content.push(
-    { text: "", margin: [0, 10, 0, 0] },
-    {
-      table: {
-        widths: ["*"],
-        body: [[{ text: "ሪፖርት የወጣበት ቀን: " + todayISO() + " (" + ETH_MONTHS[todayEth.month - 1] + " " + todayEth.year + " ዓ.ም)", alignment: "center", fillColor: "#eff6ff", color: "#2563eb", bold: true, fontSize: 11 }]]
-      },
-      layout: { hLineWidth: function() { return 0; }, vLineWidth: function() { return 0; }, paddingLeft: function() { return 10; }, paddingRight: function() { return 10; }, paddingTop: function() { return 8; }, paddingBottom: function() { return 8; } }
-    }
-  );
-
-  // PAGE 2: CAPITAL & ASSET VALUATION
-  dd.content.push({ text: "", pageBreak: "before" });
-  dd.content.push(
-    { text: "የእሴት እና ካፒታል ዝርዝር", style: "sectionTitle" },
-    { text: "Capital & Asset Valuation — Year-over-Year Comparison", style: "sectionSub" }
-  );
-
+  /* ===== PAGE 2: Capital & Assets ===== */
   var capitalDiff = capitalNow - capitalYearStart;
-  var capitalDiffStr = (capitalDiff >= 0 ? "+" : "") + pdfMoney(capitalDiff);
-
-  dd.content.push({
-    table: {
-      widths: ["*", "*", "*"],
-      body: [
-        [{ text: "ካፒታል በ" + todayEth.year + " ዓ.ም መጀመሪያ", style: "tableHeader", fillColor: "#1e3a8a" }, { text: "ካፒታል አሁን (" + todayISO() + ")", style: "tableHeader", fillColor: "#1e3a8a" }, { text: "የካፒታል ለውጥ (Growth)", style: "tableHeader", fillColor: "#1e3a8a" }],
-        [{ text: pdfMoney(capitalYearStart), bold: true, fontSize: 12 }, { text: pdfMoney(capitalNow), bold: true, fontSize: 12 }, { text: capitalDiffStr, bold: true, fontSize: 12, color: capitalDiff >= 0 ? "#16a34a" : "#dc2626" }]
-      ]
-    },
-    layout: {
-      fillColor: function(rowIdx) { return rowIdx === 0 ? "#1e3a8a" : "#f8fafc"; },
-      hLineColor: function() { return "#e2e8f0"; },
-      vLineColor: function() { return "#e2e8f0"; }
-    },
-    margin: [0, 10, 0, 10]
-  });
-
-  dd.content.push(
-    { text: "የአሁኑ የዕቃ ክምችት እሴት (Inventory Asset Value): " + pdfMoney(invValueNow), bold: true, color: "#16a34a", fontSize: 12, margin: [0, 10, 0, 10] },
-    { text: "የዕቃ ክምችት ዝርዝር", style: "sectionTitle" },
-    { text: "Current Inventory Breakdown", style: "sectionSub" }
-  );
-
-  var invHeaders = ["የዕቃ ስም", "የገዢ ዋጋ", "ቀሪ ስቶክ", "እሴት"];
-  var invRows = data.items.map(function(it) {
+  var invRows = data.items.map(function (it) {
     var stock = itemStock(data, it.id);
-    return [it.name, pdfMoney(it.costPriceCents), String(stock), pdfMoney(stock * it.costPriceCents)];
-  }).filter(function(r) { return parseInt(r[2]) > 0; });
+    return [it.name, fmt(it.costPriceCents), String(stock), fmt(stock * it.costPriceCents)];
+  }).filter(function (r) { return parseInt(r[2]) > 0; });
+  addPage([
+    pdfSectionTitle("የእሴት እና ካፒታል ዝርዝር", "Capital & Asset Valuation — Year-over-Year Comparison"),
+    pdfComparisonTable("የካፒታል ለውጥ ዝርዝር",
+      "ካፒታል በ" + todayEth.year + " ዓ.ም መጀመሪያ", fmt(capitalYearStart),
+      "ካፒታል አሁን (" + todayISO() + ")", fmt(capitalNow),
+      "የካፒታል ለውጥ (Growth)", (capitalDiff >= 0 ? "+" : "") + fmt(capitalDiff), capitalDiff >= 0),
+    pdfHighlightBox("የአሁኑ የዕቃ ክምችት እሴት (Inventory Asset Value)", fmt(invValueNow), PDF_EMERALD),
+    pdfSectionTitle("የዕቃ ክምችት ዝርዝር", "Current Inventory Breakdown"),
+    invRows.length === 0
+      ? { text: "በአሁኑ ሰዓት ምንም ዕቃ ክምችት የለም።", fontSize: 10, color: PDF_GRAY }
+      : pdfTable(["የዕቃ ስም", "የገዢ ዋጋ", "ቀሪ ስቶክ", "እሴት"], invRows, ["40%", "20%", "15%", "25%"], { boldCol: [3] })
+  ]);
 
-  if (invRows.length === 0) {
-    dd.content.push({ text: "በአሁኑ ሰዓት ምንም ዕቃ ክምችት የለም።", color: "#94a3b8", margin: [0, 10, 0, 10] });
-  } else {
-    dd.content.push({
-      table: {
-        headerRows: 1,
-        widths: ["*", "auto", "auto", "auto"],
-        body: [invHeaders].concat(invRows)
-      },
-      layout: {
-        fillColor: function(rowIdx) { return rowIdx === 0 ? "#1e3a8a" : (rowIdx % 2 === 0 ? "#f8fafc" : null); },
-        hLineColor: function() { return "#e2e8f0"; },
-        vLineColor: function() { return "#e2e8f0"; }
-      }
-    });
-  }
-
-  // PAGE 3: CUSTOMER TRAFFIC
-  dd.content.push({ text: "", pageBreak: "before" });
-  dd.content.push(
-    { text: "የደንበኞች ትራፊክ", style: "sectionTitle" },
-    { text: "Customer Traffic Analysis — Transaction Count by Period", style: "sectionSub" },
-    { text: "* እያንዳንዱ የተመዘገበ ሽያጭ እንደ አንድ የደንበኛ አገልግሎት ተቆጥሯል (transaction count)", fontSize: 8, color: "#94a3b8", margin: [0, 0, 0, 10] }
-  );
-
-  var trafficHeaders = ["ወር", "የግብይት ብዛት", "የተሸጠ ዕቃ አይነት", "ከፍተኛ ሽያጭ"];
-  var trafficRows = [];
-  var totalTransactions = 0;
-
+  /* ===== PAGE 3: Customer Traffic ===== */
+  var trafficRows = [], totalTransactions = 0;
   for (var mt = 1; mt <= 13; mt++) {
     var bt = buckets[todayEth.year + "-" + mt];
     var tc = bt ? transactionCount(bt.sales) : 0;
     totalTransactions += tc;
     var itemCounts = {};
-    if (bt) {
-      bt.sales.forEach(function(s) { itemCounts[s.itemName] = (itemCounts[s.itemName] || 0) + s.qty; });
-    }
+    if (bt) bt.sales.forEach(function (s) { itemCounts[s.itemName] = (itemCounts[s.itemName] || 0) + s.qty; });
     var topItem = "-", topQty = 0;
-    Object.keys(itemCounts).forEach(function(n) { if (itemCounts[n] > topQty) { topQty = itemCounts[n]; topItem = n; } });
+    Object.keys(itemCounts).forEach(function (n) { if (itemCounts[n] > topQty) { topQty = itemCounts[n]; topItem = n; } });
     trafficRows.push([ETH_MONTHS[mt - 1], String(tc), topItem, topQty > 0 ? (topItem + " (" + topQty + ")") : "-"]);
   }
-
-  dd.content.push({
-    table: {
-      headerRows: 1,
-      widths: ["*", "auto", "*", "*"],
-      body: [trafficHeaders].concat(trafficRows)
-    },
-    layout: {
-      fillColor: function(rowIdx) { return rowIdx === 0 ? "#1e3a8a" : (rowIdx % 2 === 0 ? "#f8fafc" : null); },
-      hLineColor: function() { return "#e2e8f0"; },
-      vLineColor: function() { return "#e2e8f0"; }
-    }
-  });
-
-  dd.content.push({
-    text: "የ" + todayEth.year + " ዓ.ም ጠቅላላ የግብይት ብዛት: " + totalTransactions + " ግብይቶች",
-    bold: true, color: "#1e3a8a", fontSize: 12, margin: [0, 15, 0, 0]
-  });
-
-  // PAGE 4: PAYMENT METHODS
-  dd.content.push({ text: "", pageBreak: "before" });
-  dd.content.push(
-    { text: "የክፍያ አማራጮች ዝርዝር", style: "sectionTitle" },
-    { text: "Payment Methods Breakdown — Cash vs Mobile Banking", style: "sectionSub" }
-  );
-
-  var payHeaders = ["ወር", "ካሽ (ETB)", "ባንክ ትራንስፈር (ETB)", "ዱቤ (ETB)", "ጠቅላላ (ETB)"];
-  var payRows = [];
-
-  for (var mp = 1; mp <= 13; mp++) {
-    var bp = buckets[todayEth.year + "-" + mp];
-    var pp = bp ? paymentBreakdown(bp.sales) : { cash: 0, bank: 0, credit: 0 };
-    var monthTotal = pp.cash + pp.bank + pp.credit;
-    payRows.push([ETH_MONTHS[mp - 1], pdfMoney(pp.cash), pdfMoney(pp.bank), pdfMoney(pp.credit), pdfMoney(monthTotal)]);
-  }
-
-  dd.content.push({
-    table: {
-      headerRows: 1,
-      widths: ["*", "auto", "auto", "auto", "auto"],
-      body: [payHeaders].concat(payRows)
-    },
-    layout: {
-      fillColor: function(rowIdx) { return rowIdx === 0 ? "#1e3a8a" : (rowIdx % 2 === 0 ? "#f8fafc" : null); },
-      hLineColor: function() { return "#e2e8f0"; },
-      vLineColor: function() { return "#e2e8f0"; }
-    }
-  });
-
-  dd.content.push(
-    { text: "የ" + todayEth.year + " ዓ.ም ጠቅላላ የክፍያ ዝርዝር", style: "sectionTitle", margin: [0, 20, 0, 10] },
-    { text: "ጠቅላላ ካሽ: " + pdfMoney(yearPay.cash), bold: true, color: "#16a34a", margin: [0, 5, 0, 5] },
-    { text: "ጠቅላላ ባንክ ትራንስፈር: " + pdfMoney(yearPay.bank), bold: true, color: "#2563eb", margin: [0, 5, 0, 5] },
-    { text: "ጠቅላላ ዱቤ: " + pdfMoney(yearPay.credit), bold: true, color: "#f59e0b", margin: [0, 5, 0, 5] }
-  );
-
-  if (yearPay.creditOutstanding > 0) {
-    dd.content.push({ text: "ያልተከፈለ ዱቤ (Outstanding): " + pdfMoney(yearPay.creditOutstanding), bold: true, color: "#dc2626", margin: [0, 5, 0, 5] });
-  }
-
-  var recon = verifyPaymentReconciliation(yearSales);
-  dd.content.push({
-    text: recon.ok 
-      ? "✓ ተረጋግጧል፦ ካሽ + ባንክ + ዱቤ (" + pdfMoney(recon.sumOfMethods) + ") = ጠቅላላ ገቢ (" + pdfMoney(recon.total) + ")"
-      : "⚠ ማሳሰቢያ፦ የሽያጭ እና የገቢ ቁጥሮችዎ አልተገጣጠሙም (" + pdfMoney(recon.sumOfMethods) + " ≠ " + pdfMoney(recon.total) + ")፣ እባክዎ ኦዲተሮች ውድቅ እንዳያደርጉት ያስተካክሉ።",
-    color: recon.ok ? "#16a34a" : "#dc2626",
-    bold: true,
-    background: recon.ok ? "#f0fdf4" : "#fef2f2",
-    margin: [0, 15, 0, 0]
-  });
-
-  // PAGE 5: INCOME STATEMENT
-  dd.content.push({ text: "", pageBreak: "before" });
-  dd.content.push(
-    { text: "የአሁኑ የትርፍ እና ወጪ መግለጫ", style: "sectionTitle" },
-    { text: "Income Statement — Profit & Loss Summary", style: "sectionSub" }
-  );
-
-  dd.content.push(
-    { text: "ጠቅላላ ገቢ (Gross Revenue): " + pdfMoney(yearStats.revenue), bold: true, color: "#1e3a8a", fontSize: 12, margin: [0, 10, 0, 10] },
-    { text: "ጠቅላላ ወጪ (Total Expenses): " + pdfMoney(yearStats.expenseTotal), bold: true, color: "#dc2626", fontSize: 12, margin: [0, 10, 0, 10] }
-  );
-
-  var profitColor = yearStats.profit >= 0 ? "#16a34a" : "#dc2626";
-  var profitLabel = yearStats.profit >= 0 ? "የተጣራ ትርፍ (Net Profit)" : "የተጣራ ኪሳራ (Net Loss)";
-
-  dd.content.push({
-    table: {
-      widths: ["*"],
-      body: [[
-        { text: profitLabel + "\n" + pdfMoney(yearStats.profit), alignment: "center", bold: true, fontSize: 18, color: profitColor, fillColor: "#f8fafc", margin: [0, 15, 0, 15] }
-      ]]
-    },
-    layout: { hLineWidth: function() { return 0; }, vLineWidth: function() { return 0; }, paddingLeft: function() { return 20; }, paddingRight: function() { return 20; }, paddingTop: function() { return 20; }, paddingBottom: function() { return 20; } },
-    margin: [0, 10, 0, 10]
-  });
-
-  if (Object.keys(yearByCat).length > 0) {
-    dd.content.push({ text: "ወጪ በምድብ", style: "sectionTitle" }, { text: "Expense Breakdown by Category", style: "sectionSub" });
-    var catHeaders = ["ምድብ", "መጠን (ETB)", "ከጠቅላላ ወጪ %"];
-    var catRows = [];
-    EXPENSE_CATEGORIES.forEach(function(c) {
-      if (yearByCat[c]) {
-        var pct = yearStats.expenseTotal > 0 ? Math.round((yearByCat[c] / yearStats.expenseTotal) * 100) : 0;
-        catRows.push([c, pdfMoney(yearByCat[c]), pct + "%"]);
-      }
-    });
-    dd.content.push({
-      table: {
-        headerRows: 1,
-        widths: ["*", "auto", "auto"],
-        body: [catHeaders].concat(catRows)
-      },
-      layout: {
-        fillColor: function(rowIdx) { return rowIdx === 0 ? "#1e3a8a" : (rowIdx % 2 === 0 ? "#f8fafc" : null); },
-        hLineColor: function() { return "#e2e8f0"; },
-        vLineColor: function() { return "#e2e8f0"; }
-      }
-    });
-  }
-
-  // PAGE 6: LOAN UTILIZATION
-  dd.content.push({ text: "", pageBreak: "before" });
-  dd.content.push(
-    { text: "የብድር ፍላጎት እና አጠቃቀም እቅድ", style: "sectionTitle" },
-    { text: "Loan Request & Utilization Plan", style: "sectionSub" }
-  );
-
-  dd.content.push({ text: "የሚጠየቀው የብድር መጠን (Loan Request Amount): " + pdfMoney(lc.requestedAmountCents), bold: true, color: "#1e3a8a", fontSize: 12, margin: [0, 10, 0, 10] });
-
-  if (lc.requestedAmountCents > 0 && lc.usageAllocations.length > 0) {
-    dd.content.push({ text: "የገንዘቡ አጠቃቀም ስርጭት", style: "sectionTitle" }, { text: "Fund Allocation Breakdown", style: "sectionSub" });
-    var utilHeaders = ["አላማ", "መቶኛ", "መጠን (ETB)"];
-    var utilRows = lc.usageAllocations.map(function(u) {
-      var amt = Math.round(lc.requestedAmountCents * (u.percent / 100));
-      return [u.purpose, u.percent + "%", pdfMoney(amt)];
-    });
-    var totalPct = lc.usageAllocations.reduce(function(s, r) { return s + Number(r.percent); }, 0);
-    if (Math.abs(totalPct - 100) > 0.01) {
-      utilRows.push(["⚠️ ጠቅላላ", totalPct + "%", ""]);
-    }
-    dd.content.push({
-      table: {
-        headerRows: 1,
-        widths: ["*", "auto", "auto"],
-        body: [utilHeaders].concat(utilRows)
-      },
-      layout: {
-        fillColor: function(rowIdx) { return rowIdx === 0 ? "#1e3a8a" : (rowIdx % 2 === 0 ? "#f8fafc" : null); },
-        hLineColor: function() { return "#e2e8f0"; },
-        vLineColor: function() { return "#e2e8f0"; }
-      }
-    });
-  }
-
-  if (lc.proformaInvoices && lc.proformaInvoices.length > 0) {
-    dd.content.push({ text: "የፕሮፎርማ ኢንቮይስ ዝርዝር", style: "sectionTitle", margin: [0, 20, 0, 10] }, { text: "Proforma Invoices", style: "sectionSub" });
-    var pfHeaders = ["አቅራቢ", "ዝርዝር", "ዋጋ (ETB)", "ቀን"];
-    var pfRows = lc.proformaInvoices.map(function(pf) {
-      return [pf.supplier, pf.description || "-", pdfMoney(pf.amountCents), pf.date];
-    });
-    dd.content.push({
-      table: {
-        headerRows: 1,
-        widths: ["*", "*", "auto", "auto"],
-        body: [pfHeaders].concat(pfRows)
-      },
-      layout: {
-        fillColor: function(rowIdx) { return rowIdx === 0 ? "#1e3a8a" : (rowIdx % 2 === 0 ? "#f8fafc" : null); },
-        hLineColor: function() { return "#e2e8f0"; },
-        vLineColor: function() { return "#e2e8f0"; }
-      }
-    });
-  }
-
-  // PAGE 7: 12-MONTH CASH FLOW
-  dd.content.push({ text: "", pageBreak: "before" });
-  dd.content.push(
-    { text: "የ12 ወራት የገንዘብ ፍሰት ትንበያ", style: "sectionTitle" },
-    { text: "12-Month Cash Flow Projection", style: "sectionSub" }
-  );
-
-  if (lc.cashFlowProjection && lc.cashFlowProjection.length > 0) {
-    var cfHeaders = ["ወር", "የሚጠበቅ ገቢ (ETB)", "የተረጋገጠ ገቢ (ETB)", "ልዩነት"];
-    var cfRows = [];
-    var cfTotal = 0;
-
-    lc.cashFlowProjection.forEach(function(r) {
-      cfTotal += r.projectedRevenueCents;
-      var monthKey = todayEth.year + "-" + r.month;
-      var bucket = buckets[monthKey];
-      var actual = bucket ? statsFor(bucket.sales, bucket.expenses).revenue : 0;
-      var diff = r.projectedRevenueCents - actual;
-      var diffStr = (diff >= 0 ? "+" : "") + pdfMoney(diff);
-      cfRows.push([ETH_MONTHS[r.month - 1], pdfMoney(r.projectedRevenueCents), pdfMoney(actual), { text: diffStr, color: diff >= 0 ? "#16a34a" : "#dc2626" }]);
-    });
-
-    dd.content.push({
-      table: {
-        headerRows: 1,
-        widths: ["*", "auto", "auto", "auto"],
-        body: [cfHeaders].concat(cfRows)
-      },
-      layout: {
-        fillColor: function(rowIdx) { return rowIdx === 0 ? "#1e3a8a" : (rowIdx % 2 === 0 ? "#f8fafc" : null); },
-        hLineColor: function() { return "#e2e8f0"; },
-        vLineColor: function() { return "#e2e8f0"; }
-      }
-    });
-
-    dd.content.push({ text: "የ12 ወራት ጠቅላላ ትንበያ: " + pdfMoney(cfTotal), bold: true, color: "#1e3a8a", fontSize: 12, margin: [0, 15, 0, 0] });
-  } else {
-    dd.content.push({ text: "ምንም የገንዘብ ፍሰት ትንበያ አልተመዘገበም።", color: "#94a3b8", margin: [0, 10, 0, 10] });
-  }
-
-  // PAGE 8: MARKET & SUPPLIERS
-  dd.content.push({ text: "", pageBreak: "before" });
-  dd.content.push(
-    { text: "የአቅራቢዎች እና የገበያ ሁኔታ", style: "sectionTitle" },
-    { text: "Market & Suppliers Analysis", style: "sectionSub" }
-  );
-
-  if (lc.suppliers && lc.suppliers.length > 0) {
-    dd.content.push({ text: "ዋና ዋና አቅራቢዎች", style: "sectionTitle" }, { text: "Key Suppliers", style: "sectionSub" });
-    var supHeaders = ["አቅራቢ ስም", "አድራሻ", "የተመዘገበበት ቀን"];
-    var supRows = lc.suppliers.map(function(s) {
-      return [s.name, s.address || "-", todayISO()];
-    });
-    dd.content.push({
-      table: {
-        headerRows: 1,
-        widths: ["*", "*", "auto"],
-        body: [supHeaders].concat(supRows)
-      },
-      layout: {
-        fillColor: function(rowIdx) { return rowIdx === 0 ? "#1e3a8a" : (rowIdx % 2 === 0 ? "#f8fafc" : null); },
-        hLineColor: function() { return "#e2e8f0"; },
-        vLineColor: function() { return "#e2e8f0"; }
-      }
-    });
-  } else {
-    dd.content.push({ text: "ምንም አቅራቢ አልተመዘገበም።", color: "#94a3b8", margin: [0, 10, 0, 10] });
-  }
-
-  dd.content.push({ text: "የተወዳዳሪነት ጥንካሬዎች", style: "sectionTitle", margin: [0, 20, 0, 10] }, { text: "Competitive Strengths & Market Position", style: "sectionSub" });
-  if (lc.marketAnalysis && lc.marketAnalysis.trim()) {
-    dd.content.push({ text: lc.marketAnalysis, margin: [0, 10, 0, 10] });
-  } else {
-    dd.content.push({ text: "ምንም የገበያ ትንተና አልተመዘገበም።", color: "#94a3b8", margin: [0, 10, 0, 10] });
-  }
-
-  dd.content.push({ text: "ማሳሰቢያዎች", style: "sectionTitle", margin: [0, 20, 0, 10] }, { text: "Required Supporting Documents", style: "sectionSub" });
-  var notes = [
-    "• የባንክ ስቴትመንት ማያያዣ መመሪያ: ያለፉት 6 ወራት የባንክ ስቴትመንት ኮፒ ከዚህ ሪፖርት ጋር ያያይዙ።",
-    "• የግብር ሰነዶች (Tax Clearance) ማመሳከሪያ: የቅርብ ጊዜ ግብር ክፍያ ደረሰኝ ኮፒ ያዘጋጁ።",
-    "• የንግድ ፈቃድ እና የታደሰ TIN ሰነድ ኮፒዎች ያያይዙ።",
-    "• ይህ ሪፖርት በራስ-ሰር ከንግድ ስራው መዝገብ የተዘጋጀ ሲሆን፣ ቁጥሮቹ ከዕለታዊ ግብይቶች የተመነዩ ናቸው።"
-  ];
-  notes.forEach(function(note) {
-    dd.content.push({ text: note, fontSize: 9, color: "#64748b", margin: [0, 4, 0, 4] });
-  });
-
-  // PAGE 9: PROFIT DISTRIBUTION
-  dd.content.push({ text: "", pageBreak: "before" });
-  dd.content.push(
-    { text: "የትርፍ ክፍፍል ስትራቴጂ", style: "sectionTitle" },
-    { text: "Profit Distribution Strategy", style: "sectionSub" }
-  );
-
-  if (yearStats.profit > 0 && data.allocations && data.allocations.length > 0) {
-    var monthlyAvgProfit = Math.round(yearStats.profit / 12);
-    var allocHeaders = ["ክፍል", "መቶኛ", "ወርሃዊ (አማካይ ETB)", "አመታዊ (ETB)"];
-    var allocRows = data.allocations.map(function(a) {
-      var monthlyAmt = Math.round(monthlyAvgProfit * (a.percent / 100));
-      var yearlyAmt = Math.round(yearStats.profit * (a.percent / 100));
-      return [a.name, a.percent + "%", pdfMoney(monthlyAmt), pdfMoney(yearlyAmt)];
-    });
-
-    var totalPct = data.allocations.reduce(function(s, a) { return s + Number(a.percent); }, 0);
-    if (Math.abs(totalPct - 100) > 0.01) {
-      allocRows.push(["⚠️ ጠቅላላ", totalPct + "%", "", ""]);
-    }
-
-    dd.content.push({
-      table: {
-        headerRows: 1,
-        widths: ["*", "auto", "auto", "auto"],
-        body: [allocHeaders].concat(allocRows)
-      },
-      layout: {
-        fillColor: function(rowIdx) { return rowIdx === 0 ? "#1e3a8a" : (rowIdx % 2 === 0 ? "#f8fafc" : null); },
-        hLineColor: function() { return "#e2e8f0"; },
-        vLineColor: function() { return "#e2e8f0"; }
-      }
-    });
-
-    dd.content.push({
-      text: "ይህ የትርፍ ክፍፍል ስትራቴጂ ከድርጅቱ የአሰራር ፖሊሲ የተወሰደ ሲሆን፣ በየወሩ ከሚገኘው ትርፍ መሰረት ይተገበራል።",
-      fontSize: 9,
-      color: "#64748b",
-      margin: [0, 15, 0, 0]
-    });
-  } else {
-    dd.content.push(
-      { text: "⚠ በዚህ አመት ትርፍ ስላልተገኘ የትርፍ ክፍፍል ሪፖርት አልተዘጋጀም።", color: "#f59e0b", bold: true, fontSize: 11, margin: [0, 10, 0, 10] },
-      { text: "የተገኘው ውጤት: " + pdfMoney(yearStats.profit), margin: [0, 5, 0, 5] },
-      { text: "ትርፍ ክፍፍል ስትራቴጂው ትርፍ ሲኖር ብቻ ይተገበራል።", color: "#94a3b8", margin: [0, 5, 0, 5] }
-    );
-  }
-
-  // Generate and download PDF
-  try {
-    pdfMake.createPdf(dd).download((profile.shopName || "shop").replace(/[^a-zA-Z0-9\u1200-\u137F]/g, "_") + "-bank-audit-" + todayISO() + ".pdf");
-    showToast("✓ ባለ 9-ገጽ የባንክ ሪፖርት PDF ተዘጋጅቷል");
-  } catch (err) {
-    showToast("PDF ማዘጋጀት አልተቻለም — እባክዎ ይሞክሩ");
-    console.error(err);
-  }
-}
-
-/* ================= Firebase (optional, lazy-loaded) ================= */
-var firebaseReady = false, firebaseDb = null, firebaseDocPath = null, firebaseApplyingRemote = false;
-var firebaseState = "idle";
-var firebaseErrorDetail = "";
-var DEFAULT_FIREBASE_CONFIG = {
-  apiKey: "AIzaSyCmAI1Op2i-HD7Qy66ZqHoxjpr9UTt4vPM",
-  authDomain: "seniy-624d6.firebaseapp.com",
-  projectId: "seniy-624d6",
-  storageBucket: "seniy-624d6.firebasestorage.app",
-  messagingSenderId: "631207328604",
-  appId: "1:631207328604:web:7867624bd48cbc0baa5f99",
-  shopId: "seniy-main-shop"
-};
-function loadFirebaseConfig() {
-  try {
-    var v = localStorage.getItem(FIREBASE_CFG_KEY);
-    if (v) { var parsed = JSON.parse(v); return parsed && parsed.disabled ? null : parsed; }
-  } catch (e) {}
-  return DEFAULT_FIREBASE_CONFIG;
-}
-function saveFirebaseConfig(cfg) { try { localStorage.setItem(FIREBASE_CFG_KEY, JSON.stringify(cfg)); } catch (e) {} }
-
-function injectScript(src) {
-  return new Promise(function (resolve, reject) {
-    var existing = document.querySelector('script[src="' + src + '"]');
-    if (existing) { resolve(); return; }
-    var s = document.createElement("script");
-    s.src = src; s.onload = resolve; s.onerror = function () { reject(new Error("script load failed: " + src)); };
-    document.head.appendChild(s);
-  });
-}
-function friendlyFirebaseError(code) {
-  if (!code) return "";
-  if (code.indexOf("permission-denied") !== -1) return "ፈቃድ የለም — Firestore Rules ውስጥ 'Publish' መደረጉን ያረጋግጡ";
-  if (code.indexOf("not-found") !== -1 || code.indexOf("unavailable") !== -1) return "Firestore Database አልተፈጠረም — Firebase Console ላይ ያንቁ";
-  if (code.indexOf("network") !== -1 || code === "TypeError: Failed to fetch") return "የኢንተርኔት ግንኙነት ችግር አለ";
-  return code;
-}
-var firebaseUnsubscribe = null;
-function initFirebaseIfConfigured(onDone) {
-  var cfg = loadFirebaseConfig();
-  if (!cfg || !cfg.apiKey || !cfg.shopId) { firebaseState = "idle"; if (onDone) onDone(); return; }
-  firebaseState = "connecting"; firebaseErrorDetail = "";
-  renderApp();
-  injectScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js")
-    .then(function () { return injectScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"); })
-    .then(function () {
-      try {
-        if (!firebaseDb) {
-          try { firebase.initializeApp(cfg); } catch (e) {}
-          firebaseDb = firebase.firestore();
-        }
-        if (firebaseUnsubscribe) { firebaseUnsubscribe(); firebaseUnsubscribe = null; }
-        firebaseDocPath = firebaseDb.collection("shops").doc(cfg.shopId);
-        firebaseDb.runTransaction(function (tx) {
-          return tx.get(firebaseDocPath).then(function (docSnap) {
-            if (!docSnap.exists) tx.set(firebaseDocPath, state.data);
-          });
-        }).catch(function (err) {
-          firebaseState = "error"; firebaseErrorDetail = (err && err.code) || (err && err.message) || String(err);
-          renderApp();
-        });
-        firebaseUnsubscribe = firebaseDocPath.onSnapshot(function (docSnap) {
-          firebaseState = "connected"; firebaseReady = true; firebaseErrorDetail = "";
-          if (docSnap.exists) {
-            var remote = docSnap.data();
-            if (remote && Array.isArray(remote.items)) {
-              firebaseApplyingRemote = true;
-              state.data = remote;
-              saveLocal(state.data);
-              firebaseApplyingRemote = false;
-            }
-          }
-          renderApp();
-          if (onDone) onDone();
-        }, function (err) {
-          firebaseState = "error"; firebaseReady = false;
-          firebaseErrorDetail = (err && err.code) || (err && err.message) || String(err);
-          renderApp();
-          if (onDone) onDone();
-        });
-      } catch (err) {
-        firebaseState = "error"; firebaseReady = false;
-        firebaseErrorDetail = (err && err.message) || String(err);
-        renderApp();
-        if (onDone) onDone();
-      }
-    })
-    .catch(function (err) {
-      firebaseState = "error"; firebaseReady = false;
-      firebaseErrorDetail = (err && err.message) || String(err);
-      renderApp();
-      if (onDone) onDone();
-    });
-}
-function cloudPush(data) {
-  if (!firebaseReady || !firebaseDocPath || firebaseApplyingRemote) return;
-  firebaseDocPath.set(data).catch(function (err) {
-    firebaseState = "error"; firebaseErrorDetail = (err && err.code) || (err && err.message) || String(err);
-    renderApp();
-  });
-}
-function cloudStatus() {
-  var cfg = loadFirebaseConfig();
-  if (!cfg) return null;
-  var color = firebaseState === "connected" ? "#22c55e" : firebaseState === "error" ? "#ef4444" : "#f59e0b";
-  var text = firebaseState === "connected" ? ("የጋራ ዳታቤዝ ተገናኝቷል (ሱቅ: " + cfg.shopId + ")")
-    : firebaseState === "error" ? ("⚠️ ግንኙነት አልተሳካም — " + friendlyFirebaseError(firebaseErrorDetail))
-    : "የጋራ ዳታቤዝ በመገናኘት ላይ...";
-  return el("div", { class: "section", style: { fontSize: "11px", color: firebaseState === "error" ? "#dc2626" : "#64748b", textAlign: "center", padding: "0 8px" } }, [
-    el("span", { class: "sync-dot", style: { background: color } }), text
+  addPage([
+    pdfSectionTitle("የደንበኞች ትራፊክ", "Customer Traffic Analysis — Transaction Count by Period"),
+    { text: "* እያንዳንዱ የተመዘገበ ሽያጭ እንደ አንድ የደንበኛ አገልግሎት ተቆጥሯል (transaction count)", fontSize: 8, color: PDF_GRAY, margin: [0, 0, 0, 8] },
+    pdfTable(["ወር", "የግብይት ብዛት", "የተሸጠ ዕቃ አይነት", "ከፍተኛ ሽያጭ"], trafficRows, ["25%", "25%", "25%", "25%"], { boldCol: [1] }),
+    pdfHighlightBox("የ" + todayEth.year + " ዓ.ም ጠቅላላ የግብይት ብዛት", String(totalTransactions) + " ግብይቶች", PDF_NAVY)
   ]);
-}
 
-function openFirebaseSetup() {
-  var cfg = loadFirebaseConfig() || {};
-  var fields = ["apiKey", "authDomain", "projectId", "storageBucket", "messagingSenderId", "appId", "shopId"];
-  var labels = { apiKey: "apiKey", authDomain: "authDomain", projectId: "projectId", storageBucket: "storageBucket", messagingSenderId: "messagingSenderId", appId: "appId", shopId: "የሱቅ መለያ ኮድ" };
-  var inputs = {};
-  var statusBox;
-  function drawStatus() {
-    if (!statusBox) return;
-    clear(statusBox);
-    var color = firebaseState === "connected" ? "#16a34a" : firebaseState === "error" ? "#dc2626" : "#b45309";
-    var text = firebaseState === "connected" ? "✓ ተገናኝቷል"
-      : firebaseState === "error" ? ("✕ ስህተት: " + friendlyFirebaseError(firebaseErrorDetail))
-      : firebaseState === "connecting" ? "… በመገናኘት ላይ" : "ገና አልተሞከረም";
-    statusBox.appendChild(el("div", { style: { fontSize: "12px", fontWeight: "700", color: color, background: "#f8fafc", padding: "10px", borderRadius: "10px" } }, text));
-  }
-  openSheet("☁️ የጋራ ዳታቤዝ (Firebase) ማዋቀሪያ", function (body) {
-    body.appendChild(el("div", { class: "helpmsg" },
-      "ብዙ ስልኮች በ real-time እንዲመሳሰሉ firebase.google.com ላይ ነጻ አካውንት ፈጥረው Firestore Database ያንቁ።"));
-    statusBox = el("div", { class: "mb3" });
-    drawStatus();
-    body.appendChild(statusBox);
-    var testBtn = el("button", { class: "btn btn-outline btn-sm", style: { marginBottom: "12px" } }, "🔄 ግንኙነት አሁን ሞክር");
-    testBtn.addEventListener("click", function () { drawStatusConnecting(); initFirebaseIfConfigured(drawStatus); });
-    function drawStatusConnecting() { firebaseState = "connecting"; drawStatus(); }
-    body.appendChild(testBtn);
-    fields.forEach(function (f) {
-      var input = el("input", { class: "input", value: cfg[f] || "", placeholder: labels[f] });
-      inputs[f] = input;
-      body.appendChild(Field(labels[f], f === "apiKey" || f === "shopId", input));
-    });
-  }, function (close) {
-    var row = el("div", { class: "flex gap2" });
-    if (cfg.apiKey) {
-      var clearBtn = el("button", { class: "btn btn-outline" }, "አላቅ (ኦፍላይን ብቻ)");
-      clearBtn.addEventListener("click", function () { saveFirebaseConfig({ disabled: true }); showToast("የጋራ ዳታቤዝ ግንኙነት ተቋርጧል"); location.reload(); });
-      row.appendChild(clearBtn);
-    }
-    var saveBtn = el("button", { class: "btn btn-primary" }, "አገናኝ / አስቀምጥ");
-    saveBtn.addEventListener("click", guarded(function () {
-      var newCfg = {};
-      fields.forEach(function (f) { newCfg[f] = inputs[f].value.trim(); });
-      if (!newCfg.apiKey || !newCfg.shopId) { showToast("እባክዎ apiKey እና የሱቅ መለያ ኮድ ያስገቡ"); return; }
-      saveFirebaseConfig(newCfg);
-      showToast("ተቀምጧል — በመገናኘት ላይ...");
-      initFirebaseIfConfigured(drawStatus);
-      drawStatus();
-      close();
-    }));
-    row.appendChild(saveBtn);
-    return row;
-  });
-}
-
-/* ================= BOTTOM NAV - 4 TABS ONLY ================= */
-function BottomNav() {
-  var items = [
-    { key: "dashboard", label: "ዳሽቦርድ", em: "🏠" },
-    { key: "sales", label: "ሽያጭ", em: "📦" },
-    { key: "items", label: "ዕቃዎች", em: "🗃️" },
-    { key: "expenses", label: "ወጪ", em: "💸" }
-  ];
-  var nav = el("div", { class: "nav" });
-  items.forEach(function (it) {
-    var active = state.tab === it.key;
-    var b = el("button", { class: "navbtn" + (active ? " active" : "") }, [
-      el("span", { class: "em" }, it.em),
-      el("span", { class: "lbl" }, it.label)
-    ]);
-    b.addEventListener("click", function () { state.tab = it.key; renderApp(); });
-    nav.appendChild(b);
-  });
-  return el("div", { class: "navwrap" }, [nav]);
-}
-
-/* ================= RENDER APP ================= */
-function renderApp() {
-  var root = document.getElementById("root");
-  clear(root);
-  var app = el("div", { class: "app" });
-
-  var hamBtn = el("button", { class: "hamburger" }, "☰");
-  hamBtn.addEventListener("click", toggleDrawer);
-  app.appendChild(el("div", { class: "header" }, [
-    el("div", { class: "header-spacer" }),
-    el("h1", {}, "የሱቅ መቆጣጠሪያ ሲስተም"),
-    hamBtn
-  ]));
-
-  var drawerEls = renderDrawer();
-  drawerEls.forEach(function(d) { app.appendChild(d); });
-
-  if (!storageAvailable) {
-    app.appendChild(el("div", { style: { background: "#fff4e5", color: "#92400e", fontSize: "11px", padding: "8px 16px", textAlign: "center" } },
-      "ማሳሰቢያ: ውሂብ በዚህ ስልክ ላይ በራስ-ሰር መቀመጥ አልቻለም (ስህተት: " + (storageErrorDetail || "unknown") + ")።"));
-  }
-
-  var content = el("div", { class: "content" });
-  if (state.tab === "dashboard") renderDashboard(content);
-  else if (state.tab === "sales") renderSales(content);
-  else if (state.tab === "items") renderItems(content);
-  else if (state.tab === "expenses") renderExpenses(content);
-  else if (state.tab === "profile") renderProfile(content);
-  else if (state.tab === "loancenter") renderLoanCenter(content);
-  app.appendChild(content);
-  app.appendChild(BottomNav());
-  root.appendChild(app);
-}
-
-/* ================= INIT ================= */
-renderApp();
-initFirebaseIfConfigured();
-
-})();
-</script>
-</body>
-</html>
+  /* ===== PAGE 4: Payment Methods ===== */
+  var payRows = 
