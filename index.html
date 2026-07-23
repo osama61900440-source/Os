@@ -2212,6 +2212,13 @@ function buildReportHtml(data) {
 function exportPrintableReport() {
   var html = buildReportHtml(state.data);
 
+  // Android native bridge: if running inside the Android app, use the
+  // PrintManager directly for perfect multi-page PDF output.
+  if (typeof Android !== "undefined" && Android.printReport) {
+    try { Android.printReport(html); showToast("✓ ባለ 9-ገጽ ሪፖርት በAndroid Print Manager ተዘጋጅቷል"); return; }
+    catch (e) { /* fallback to iframe */ }
+  }
+
   // Remove any stale print frame
   var oldFrame = document.getElementById('print-frame');
   if (oldFrame) { try { oldFrame.remove(); } catch (e) {} }
