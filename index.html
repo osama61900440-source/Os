@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="am" dir="ltr">
 <head>
@@ -7,14 +6,17 @@
 <title>የሱቅ መቆጣጠሪያ ሲስተም</title>
 <style>
 * { box-sizing: border-box; }
-html,body { margin:0; padding:0; background:#F5F7F9; }
+html,body { margin:0; padding:0; background:#F5F7F9; height:100%; overflow:hidden; }
 body { font-family: -apple-system, "Noto Sans Ethiopic", "Segoe UI", Roboto, Arial, sans-serif; color:#1e293b; -webkit-tap-highlight-color:transparent; }
 button { font-family:inherit; cursor:pointer; }
 input, select, textarea { font-family:inherit; }
 ::placeholder { color:#94a3b8; }
 
-.app { max-width:448px; margin:0 auto; min-height:100vh; position:relative; background:#F5F7F9; display:flex; flex-direction:column; }
-.content { flex:1; overflow-y:auto; padding:16px 16px 112px; }
+.app { max-width:448px; margin:0 auto; height:100vh; height:100dvh; position:relative; background:#F5F7F9; display:flex; flex-direction:column; overflow:hidden; }
+.content { flex:1; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:16px 16px 112px; }
+.list-scroll { max-height:380px; overflow-y:auto; -webkit-overflow-scrolling:touch; padding-right:2px; }
+.list-scroll::-webkit-scrollbar { width:5px; }
+.list-scroll::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:999px; }
 .section { margin-bottom:16px; }
 .flex{display:flex}.items-center{align-items:center}.justify-between{justify-content:space-between}.justify-center{justify-content:center}
 .gap2{gap:8px}.gap3{gap:12px}.flex1{flex:1}.flex-col{flex-direction:column}
@@ -69,7 +71,8 @@ input, select, textarea { font-family:inherit; }
 .btn-sm { width:auto; padding:8px 12px; font-size:12px; border-radius:10px; }
 .btn:disabled { opacity:.45; }
 
-.item-row { background:#fff; border:1px solid #eef1f3; border-radius:12px; padding:12px; box-shadow:0 1px 2px rgba(0,0,0,.04); margin-bottom:8px; }
+.item-row { background:#fff; border:1px solid #dfe4ea; border-radius:14px; padding:14px; box-shadow:0 2px 6px rgba(15,23,42,.07); margin-bottom:14px; transition:box-shadow .15s ease; }
+.item-row:active { box-shadow:0 1px 3px rgba(15,23,42,.06); }
 .item-name { font-weight:700; font-size:14px; color:#1e293b; }
 .item-sub { font-size:11px; color:#94a3b8; margin-top:2px; }
 .trash-btn { border:none; background:#fef2f2; color:#ef4444; border-radius:8px; padding:7px 10px; font-size:11px; white-space:nowrap; }
@@ -98,10 +101,10 @@ input, select, textarea { font-family:inherit; }
 .sheet h2 { font-size:15px; margin:0; font-weight:800; color:#1e293b; }
 
 /* side drawer */
-.drawer-overlay { position:fixed; inset:0; z-index:55; display:flex; justify-content:flex-end; }
+.drawer-overlay { position:fixed; inset:0; z-index:55; display:flex; justify-content:flex-start; }
 .drawer-bg { position:absolute; inset:0; background:rgba(0,0,0,.42); }
-.drawer { position:relative; width:86%; max-width:360px; height:100%; background:#fff; box-shadow:-8px 0 24px rgba(0,0,0,.18); display:flex; flex-direction:column; animation:slideLeft .18s ease-out; }
-@keyframes slideLeft { from{ transform:translateX(24px); opacity:.6 } to{ transform:translateX(0); opacity:1 } }
+.drawer { position:relative; width:86%; max-width:360px; height:100%; background:#fff; box-shadow:8px 0 24px rgba(0,0,0,.18); display:flex; flex-direction:column; animation:slideLeft .18s ease-out; }
+@keyframes slideLeft { from{ transform:translateX(-24px); opacity:.6 } to{ transform:translateX(0); opacity:1 } }
 .drawer-header { background:#1e293b; color:#fff; padding:20px 18px; }
 .drawer-header h2 { margin:0; font-size:16px; font-weight:800; }
 .drawer-body { overflow-y:auto; padding:14px; flex:1; }
@@ -770,9 +773,9 @@ function openAddExpenseModal(existing) {
       setData(function (d) {
         if (existing) {
           var e = d.expenses.find(function (x) { return x.id === existing.id; });
-          if (e) { e.title = title; e.amountCents = amt; e.date = dateInput.value || todayISO(); e.category = categorySelect.value; }
+          if (e) { e.title = title; e.amountCents = amt; e.date = dateInput.value || todayISO(); e.category = categorySelect.value; e.syncStatus = "pending"; }
         } else {
-          d.expenses.push({ id: uid(), title: title, category: categorySelect.value, amountCents: amt, date: dateInput.value || todayISO(), createdAt: Date.now() });
+          d.expenses.push({ id: uid(), title: title, category: categorySelect.value, amountCents: amt, date: dateInput.value || todayISO(), createdAt: Date.now(), syncStatus: "pending" });
         }
         return d;
       });
@@ -816,7 +819,7 @@ function openAllocationModal() {
   }, function (close) {
     var btn = el("button", { class: "btn btn-primary" }, "አስቀምጥ");
     btn.addEventListener("click", guarded(function () {
-      setData(function (d) { d.allocations = rows.map(function (r) { return { id: r.id, name: r.name.trim() || "ክፍል", percent: Number(r.percent) || 0 }; }); return d; });
+      setData(function (d) { d.allocations = rows.map(function (r) { return { id: r.id, name: r.name.trim() || "ክፍል", percent: Number(r.percent) || 0, syncStatus: "pending" }; }); return d; });
       close();
     }));
     return btn;
@@ -1005,7 +1008,7 @@ function renderSales(container) {
           paymentMethod: state_.paymentMethod, bankName: state_.paymentMethod === "bank" ? state_.bankName : "",
           customerPhone: state_.paymentMethod === "credit" ? state_.customerPhone : "", dueDate: state_.paymentMethod === "credit" ? state_.dueDate : "",
           paid: state_.paymentMethod !== "credit",
-          date: todayISO(), createdAt: Date.now()
+          date: todayISO(), createdAt: Date.now(), syncStatus: "pending"
         });
         return d;
       });
@@ -1019,13 +1022,13 @@ function renderSales(container) {
   drawPicker();
   container.appendChild(formCard);
 
-  container.appendChild(el("div", { class: "eyebrow mt3 mb2" }, "📜 የቅርብ ጊዜ ሽያጮች"));
-  var historyWrap = el("div", {});
+  container.appendChild(el("div", { class: "eyebrow mt3 mb2" }, "📜 የዛሬ ሽያጮች (" + todayISO() + ")"));
+  var historyWrap = el("div", { class: "list-scroll" });
   container.appendChild(historyWrap);
   function drawHistory() {
     clear(historyWrap);
-    var recent = state.data.sales.slice().sort(function (a, b) { return b.createdAt - a.createdAt; }).slice(0, 20);
-    if (recent.length === 0) { historyWrap.appendChild(el("div", { class: "empty" }, "📭 ምንም ሽያጭ አልተመዘገበም")); return; }
+    var recent = state.data.sales.filter(function (s) { return s.date === todayISO(); }).slice().sort(function (a, b) { return b.createdAt - a.createdAt; });
+    if (recent.length === 0) { historyWrap.appendChild(el("div", { class: "empty" }, "📭 ዛሬ ምንም ሽያጭ አልተመዘገበም")); return; }
     recent.forEach(function (s) {
       var payLabel = s.paymentMethod === "bank" ? ("ባንክ · " + s.bankName) : s.paymentMethod === "credit" ? ("ዱቤ · " + (s.paid ? "ተከፍሏል" : "አልተከፈለም")) : "ካሽ";
       var row = el("div", { class: "item-row" });
@@ -1054,6 +1057,10 @@ function renderSales(container) {
     });
   }
   drawHistory();
+
+  var histBtn = el("button", { class: "btn btn-outline section", style: { marginTop: "12px" } }, "📅 ወደ ታሪክ / ሳምንታዊ / ወርሃዊ ዝርዝር ይግቡ");
+  histBtn.addEventListener("click", function () { openHistoryPicker(); });
+  container.appendChild(histBtn);
 }
 
 function openEditSaleModal(sale) {
@@ -1115,34 +1122,68 @@ function renderItems(container) {
   var search = el("input", { class: "input section", placeholder: "🔍 ዕቃ ይፈልጉ..." });
   container.appendChild(search);
   var listWrap = el("div", {});
+  var moreWrap = el("div", {});
   container.appendChild(listWrap);
+  container.appendChild(moreWrap);
+  var showOlder = false;
+
+  function buildItemRow(i) {
+    var stock = itemStock(state.data, i.id);
+    var shelf = itemSoldOutInfo(state.data, i);
+    var row = el("div", { class: "item-row" });
+    var top = el("div", { class: "flex items-center justify-between" }, [
+      el("div", {}, [
+        el("div", { class: "item-name" }, i.name),
+        el("div", { class: "item-sub" }, "የገዢ ዋጋ: " + fmt(i.costPriceCents) + " | መሸጫ: " + fmt(i.sellPriceCents)),
+        el("div", { style: { fontSize: "11px", fontWeight: "700", marginTop: "2px", color: stock <= 0 ? "#ef4444" : stock <= 5 ? "#f59e0b" : "#64748b" } }, "ቀሪ ስቶክ: " + stock)
+      ])
+    ]);
+    var editBtn = el("button", { class: "btn btn-outline btn-sm" }, "✎");
+    editBtn.addEventListener("click", function () { openEditItemModal(i); });
+    var delBtn = el("button", { class: "trash-btn" }, "🗑️");
+    delBtn.addEventListener("click", function () { if (confirm("ይህን ዕቃ መሰረዝ ይፈልጋሉ?")) setData(function (d) { d.items = d.items.filter(function (x) { return x.id !== i.id; }); return d; }); });
+    top.appendChild(el("div", { class: "flex gap2" }, [editBtn, delBtn]));
+    row.appendChild(top);
+    row.appendChild(el("div", { class: "shelf-note" },
+      shelf.soldOut ? ("⏱ " + i.dateAdded + " ገብቶ በ" + shelf.days + " ቀናት ውስጥ አልቋል (" + shelf.soldOutDate + ")")
+        : ("⏱ " + i.dateAdded + " ገብቷል — እስካሁን " + shelf.daysSoFar + " ቀናት ቆይቷል፣ ገና አላለቀም")));
+    return row;
+  }
 
   function draw(q) {
-    clear(listWrap);
-    var filtered = state.data.items.filter(function (i) { return i.name.toLowerCase().indexOf((q || "").toLowerCase()) !== -1; });
+    clear(listWrap); clear(moreWrap);
+    var query = (q || "").trim();
+    var filtered = state.data.items.filter(function (i) { return i.name.toLowerCase().indexOf(query.toLowerCase()) !== -1; })
+      .slice().sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); }); // newest first
     if (filtered.length === 0) { listWrap.appendChild(el("div", { class: "empty" }, "🗃️ ምንም ዕቃ አልተገኘም")); return; }
-    filtered.forEach(function (i) {
-      var stock = itemStock(state.data, i.id);
-      var shelf = itemSoldOutInfo(state.data, i);
-      var row = el("div", { class: "item-row" });
-      var top = el("div", { class: "flex items-center justify-between" }, [
-        el("div", {}, [
-          el("div", { class: "item-name" }, i.name),
-          el("div", { class: "item-sub" }, "የገዢ ዋጋ: " + fmt(i.costPriceCents) + " | መሸጫ: " + fmt(i.sellPriceCents)),
-          el("div", { style: { fontSize: "11px", fontWeight: "700", marginTop: "2px", color: stock <= 0 ? "#ef4444" : stock <= 5 ? "#f59e0b" : "#64748b" } }, "ቀሪ ስቶክ: " + stock)
-        ])
-      ]);
-      var editBtn = el("button", { class: "btn btn-outline btn-sm" }, "✎");
-      editBtn.addEventListener("click", function () { openEditItemModal(i); });
-      var delBtn = el("button", { class: "trash-btn" }, "🗑️");
-      delBtn.addEventListener("click", function () { if (confirm("ይህን ዕቃ መሰረዝ ይፈልጋሉ?")) setData(function (d) { d.items = d.items.filter(function (x) { return x.id !== i.id; }); return d; }); });
-      top.appendChild(el("div", { class: "flex gap2" }, [editBtn, delBtn]));
-      row.appendChild(top);
-      row.appendChild(el("div", { class: "shelf-note" },
-        shelf.soldOut ? ("⏱ " + i.dateAdded + " ገብቶ በ" + shelf.days + " ቀናት ውስጥ አልቋል (" + shelf.soldOutDate + ")")
-          : ("⏱ " + i.dateAdded + " ገብቷል — እስካሁን " + shelf.daysSoFar + " ቀናት ቆይቷል፣ ገና አላለቀም")));
-      listWrap.appendChild(row);
-    });
+
+    if (query) {
+      // Searching: show every match directly in a scroll box — the 5-item cap only applies to the unfiltered default view.
+      var searchBox = el("div", { class: "list-scroll" });
+      filtered.forEach(function (i) { searchBox.appendChild(buildItemRow(i)); });
+      listWrap.appendChild(searchBox);
+      return;
+    }
+
+    var latest = filtered.slice(0, 5);
+    var older = filtered.slice(5);
+    latest.forEach(function (i) { listWrap.appendChild(buildItemRow(i)); });
+
+    if (older.length > 0) {
+      if (!showOlder) {
+        var showBtn = el("button", { class: "btn btn-outline section" }, "🗂️ ሁሉንም ዕቃዎች አሳይ (የቀደሙ ዝርዝሮች — " + older.length + ")");
+        showBtn.addEventListener("click", function () { showOlder = true; draw(search.value); });
+        moreWrap.appendChild(showBtn);
+      } else {
+        moreWrap.appendChild(el("div", { class: "eyebrow mb2" }, "🗂️ የቀደሙ ዝርዝሮች"));
+        var olderBox = el("div", { class: "list-scroll" });
+        older.forEach(function (i) { olderBox.appendChild(buildItemRow(i)); });
+        moreWrap.appendChild(olderBox);
+        var hideBtn = el("button", { class: "btn btn-outline btn-sm mt2" }, "▲ ሰብስብ");
+        hideBtn.addEventListener("click", function () { showOlder = false; draw(search.value); });
+        moreWrap.appendChild(hideBtn);
+      }
+    }
   }
   search.addEventListener("input", function (e) { draw(e.target.value); });
   draw("");
@@ -1198,13 +1239,13 @@ function renderExpenses(container) {
     container.appendChild(catCard);
   }
 
-  container.appendChild(el("div", { class: "eyebrow mb2" }, "ሁሉም ወጪዎች"));
-  var listWrap = el("div", {});
+  container.appendChild(el("div", { class: "eyebrow mb2" }, "የዛሬ ወጪዎች (" + todayISO() + ")"));
+  var listWrap = el("div", { class: "list-scroll" });
   container.appendChild(listWrap);
   function draw() {
     clear(listWrap);
-    var list = state.data.expenses.slice().sort(function (a, b) { return b.createdAt - a.createdAt; });
-    if (list.length === 0) { listWrap.appendChild(el("div", { class: "empty" }, "📭 ምንም ወጪ አልተመዘገበም")); return; }
+    var list = state.data.expenses.filter(function (e) { return e.date === todayISO(); }).slice().sort(function (a, b) { return b.createdAt - a.createdAt; });
+    if (list.length === 0) { listWrap.appendChild(el("div", { class: "empty" }, "📭 ዛሬ ምንም ወጪ አልተመዘገበም")); return; }
     list.forEach(function (e) {
       var row = el("div", { class: "item-row" });
       row.appendChild(el("div", { class: "flex items-center justify-between" }, [
@@ -1222,6 +1263,10 @@ function renderExpenses(container) {
     });
   }
   draw();
+
+  var histBtn = el("button", { class: "btn btn-outline section", style: { marginTop: "12px" } }, "📅 ወደ ታሪክ / ሳምንታዊ / ወርሃዊ ዝርዝር ይግቡ");
+  histBtn.addEventListener("click", function () { openHistoryPicker(); });
+  container.appendChild(histBtn);
 }
 
 /* ================= reports page (period toggle + bank-ready summary + PDF export) — now lives in the drawer ================= */
@@ -1438,450 +1483,1308 @@ function renderLoanCenter(container) {
   saveMktBtn.addEventListener("click", guarded(function () { setData(function (d) { d.loanCenter.marketAnalysis = mktText.value.trim(); return d; }); showToast("ተቀምጧል"); }));
   mktCard.appendChild(saveMktBtn);
   container.appendChild(mktCard);
+
+  var pdfBtn = el("button", { class: "btn btn-navy section" }, "🖨️ ባለ 9-ገጽ ሪፖርት አዘጋጅ / አትም");
+  pdfBtn.addEventListener("click", guarded(function () { openReportPrepSheet(); }));
+  container.appendChild(pdfBtn);
 }
 
-/* ================= report prep & printable window (9-page PDF document) ================= */
-function openReportPrepSheet() {
-  openSheet("የ9-ገጽ ባንክ ሪፖርት ማዘጋጃ", function (body) {
-    body.appendChild(el("div", { class: "helpmsg" }, "ይህ ለባንክ ኦፊሰሮች የሚቀርብ የተሟላ የ9-ገጽ ህጋዊ ሪፖርት ያዘጋጃል። እባክዎ ከታች 'አትም / PDF አውርድ' የሚለውን ይጫኑ።"));
-  }, function (close) {
-    var btn = el("button", { class: "btn btn-navy" }, "🖨️ አትም / PDF አውርድ");
-    btn.addEventListener("click", guarded(function () {
-      generateAndPrint9PageReport();
-      close();
+
+/* ============================================================
+   PROFESSIONAL 9-PAGE BANK AUDIT PDF EXPORT  —  pdfMake edition
+   Version 2.0 — Amharic-capable (Noto Sans Ethiopic embedded at runtime)
+   ============================================================ */
+
+/* ---- pdfMake / font loading (kicked off once at app start, see init) ----
+   We proactively load pdfmake.min.js + a base64 Amharic (Noto Sans
+   Ethiopic) TTF the first time the app opens, so that by the time the user
+   actually taps "PDF አውርድ" the library and font are already warm in
+   memory and the export feels instant instead of failing with a generic
+   "internet ያረጋግጡ" error in the middle of report generation. */
+var PDFMAKE_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/pdfmake.min.js";
+var NOTO_ETHIOPIC_TTF_URL = "https://cdn.jsdelivr.net/gh/googlefonts/noto-fonts/hinted/ttf/NotoSansEthiopic/NotoSansEthiopic-Regular.ttf";
+var NOTO_ETHIOPIC_BOLD_TTF_URL = "https://cdn.jsdelivr.net/gh/googlefonts/noto-fonts/hinted/ttf/NotoSansEthiopic/NotoSansEthiopic-Bold.ttf";
+var pdfEngineState = "idle"; // idle | loading | ready | error
+var pdfEngineError = "";
+var pdfEnginePromise = null;
+
+function arrayBufferToBase64(buffer) {
+  var bytes = new Uint8Array(buffer);
+  var binary = "";
+  var chunk = 0x8000;
+  for (var i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
+/* Loads pdfmake + registers the Amharic font into pdfMake's virtual file
+   system. Cached in pdfEnginePromise so repeated calls (auto-warm at
+   startup, then the real export tap) reuse the same in-flight/completed
+   request instead of re-downloading. */
+function ensurePdfEngine() {
+  if (pdfEnginePromise) return pdfEnginePromise;
+  pdfEngineState = "loading"; pdfEngineError = "";
+  pdfEnginePromise = injectScript(PDFMAKE_URL)
+    .then(function () {
+      return Promise.all([
+        fetch(NOTO_ETHIOPIC_TTF_URL).then(function (r) { if (!r.ok) throw new Error("font fetch failed (regular)"); return r.arrayBuffer(); }),
+        fetch(NOTO_ETHIOPIC_BOLD_TTF_URL).then(function (r) { if (!r.ok) throw new Error("font fetch failed (bold)"); return r.arrayBuffer(); })
+      ]);
+    })
+    .then(function (buffers) {
+      var regularB64 = arrayBufferToBase64(buffers[0]);
+      var boldB64 = arrayBufferToBase64(buffers[1]);
+      window.pdfMake.vfs = window.pdfMake.vfs || {};
+      window.pdfMake.vfs["NotoSansEthiopic-Regular.ttf"] = regularB64;
+      window.pdfMake.vfs["NotoSansEthiopic-Bold.ttf"] = boldB64;
+      window.pdfMake.fonts = {
+        NotoEthiopic: {
+          normal: "NotoSansEthiopic-Regular.ttf",
+          bold: "NotoSansEthiopic-Bold.ttf",
+          italics: "NotoSansEthiopic-Regular.ttf",
+          bolditalics: "NotoSansEthiopic-Bold.ttf"
+        }
+      };
+      pdfEngineState = "ready";
+      return true;
+    })
+    .catch(function (err) {
+      pdfEngineState = "error";
+      pdfEngineError = (err && err.message) || String(err);
+      pdfEnginePromise = null; // allow retry on next attempt
+      throw err;
+    });
+  return pdfEnginePromise;
+}
+
+/* ---- small pdfMake content-building helpers ---- */
+var PDF_NAVY = "#122B4A", PDF_ACCENT = "#3B82F6", PDF_EMERALD = "#10A34A", PDF_CRIMSON = "#DC2626",
+    PDF_AMBER = "#F59E0B", PDF_SLATE = "#1E293B", PDF_SLATE_LIGHT = "#475569", PDF_GRAY = "#94A3B8",
+    PDF_LIGHT_GRAY = "#E2E8F0", PDF_BG = "#F8FAFC";
+var PDF_PIE_COLORS = ["#3B82F6", "#10A34A", "#F59E0B", "#DC2626", "#8B5CF6", "#14B8A6", "#F97316"];
+
+function pdfSectionTitle(title, subtitle) {
+  var stack = [
+    { text: title, fontSize: 14, bold: true, color: PDF_NAVY, margin: [0, 0, 0, subtitle ? 2 : 4] }
+  ];
+  if (subtitle) stack.push({ text: subtitle, fontSize: 9, color: PDF_SLATE_LIGHT, margin: [0, 0, 0, 4] });
+  stack.push({ canvas: [{ type: "line", x1: 0, y1: 0, x2: 495, y2: 0, lineWidth: 0.75, lineColor: PDF_LIGHT_GRAY }], margin: [0, 0, 0, 8] });
+  return { stack: stack, margin: [0, 10, 0, 4] };
+}
+function pdfKV(label, value, color) {
+  return {
+    columns: [
+      { text: label, fontSize: 10, color: PDF_SLATE_LIGHT, width: "45%" },
+      { text: String(value || "-"), fontSize: 10, color: color || PDF_SLATE, bold: !!color, width: "55%" }
+    ],
+    margin: [0, 2, 0, 2]
+  };
+}
+function pdfHighlightBox(label, value, color) {
+  return {
+    table: {
+      widths: ["*"],
+      body: [[{
+        stack: [
+          { text: label, fontSize: 9, color: PDF_SLATE_LIGHT, margin: [0, 0, 0, 3] },
+          { text: String(value), fontSize: 13, bold: true, color: color }
+        ],
+        fillColor: PDF_BG, border: [false, false, false, false], margin: [8, 8, 8, 8]
+      }]]
+    },
+    layout: { defaultBorder: false },
+    margin: [0, 4, 0, 4]
+  };
+}
+function pdfTable(headers, rows, widths, options) {
+  options = options || {};
+  var body = [headers.map(function (h) { return { text: h, bold: true, color: "#ffffff", fontSize: 9, fillColor: PDF_NAVY, margin: [3, 4, 3, 4] }; })];
+  rows.forEach(function (row, rIdx) {
+    body.push(row.map(function (cell, cIdx) {
+      var isBold = options.boldCol && options.boldCol.indexOf(cIdx) !== -1;
+      var color = (options.rowColors && options.rowColors[rIdx] && options.rowColors[rIdx][cIdx]) || PDF_SLATE;
+      return { text: String(cell === undefined || cell === null || cell === "" ? "-" : cell), fontSize: 8.5, bold: isBold, color: color, fillColor: rIdx % 2 === 0 ? "#FAFBFC" : "#ffffff", margin: [3, 3, 3, 3] };
     }));
-    return btn;
   });
+  return {
+    table: { headerRows: 1, widths: widths, body: body },
+    layout: {
+      hLineWidth: function (i) { return i === 0 || i === 1 ? 0.75 : 0.4; },
+      vLineWidth: function () { return 0; },
+      hLineColor: function () { return PDF_LIGHT_GRAY; },
+      paddingLeft: function () { return 3; }, paddingRight: function () { return 3; }
+    },
+    margin: [0, 2, 0, 8]
+  };
+}
+function pdfComparisonTable(title, leftLabel, leftValue, rightLabel, rightValue, diffLabel, diffValue, diffPositive) {
+  return {
+    stack: [
+      { text: title, fontSize: 11, bold: true, color: PDF_NAVY, margin: [0, 4, 0, 6] },
+      {
+        table: {
+          widths: ["*", "*", "*"],
+          body: [
+            [
+              { text: leftLabel, color: "#ffffff", fillColor: PDF_NAVY, fontSize: 9, bold: true, margin: [5, 5, 5, 5] },
+              { text: rightLabel, color: "#ffffff", fillColor: PDF_NAVY, fontSize: 9, bold: true, margin: [5, 5, 5, 5] },
+              { text: diffLabel, color: "#ffffff", fillColor: PDF_NAVY, fontSize: 9, bold: true, margin: [5, 5, 5, 5] }
+            ],
+            [
+              { text: leftValue, fontSize: 11, bold: true, fillColor: PDF_BG, margin: [5, 6, 5, 6] },
+              { text: rightValue, fontSize: 11, bold: true, fillColor: PDF_BG, margin: [5, 6, 5, 6] },
+              { text: diffValue, fontSize: 11, bold: true, color: diffPositive ? PDF_EMERALD : PDF_CRIMSON, fillColor: PDF_BG, margin: [5, 6, 5, 6] }
+            ]
+          ]
+        },
+        layout: { hLineWidth: function () { return 0; }, vLineWidth: function () { return 2; }, vLineColor: function () { return "#ffffff"; } }
+      }
+    ],
+    margin: [0, 0, 0, 8]
+  };
+}
+/* Pie chart rendered to an offscreen canvas, then embedded as a PNG data URL
+   (pdfMake has no native pie primitive, so this is the standard approach). */
+function pdfPieChartDataUrl(segments, labels, size) {
+  size = size || 220;
+  var canvas = document.createElement("canvas");
+  var scale = 3;
+  canvas.width = size * scale; canvas.height = (size + labels.length * 20) * scale;
+  var ctx = canvas.getContext("2d");
+  ctx.scale(scale, scale);
+  var cx = size / 2, cy = size / 2, r = size / 2 - 12;
+  var total = segments.reduce(function (s, v) { return s + Math.max(0, v); }, 0);
+  if (total <= 0) {
+    ctx.fillStyle = "#e2e8f0"; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2 * Math.PI); ctx.fill();
+  } else {
+    var start = -Math.PI / 2;
+    segments.forEach(function (seg, i) {
+      var angle = (Math.max(0, seg) / total) * 2 * Math.PI;
+      ctx.fillStyle = PDF_PIE_COLORS[i % PDF_PIE_COLORS.length];
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, r, start, start + angle); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2; ctx.stroke();
+      start += angle;
+    });
+    ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.arc(cx, cy, r * 0.45, 0, 2 * Math.PI); ctx.fill();
+  }
+  var ly = size + 14;
+  ctx.font = "12px sans-serif";
+  segments.forEach(function (seg, i) {
+    if (seg <= 0) return;
+    ctx.fillStyle = PDF_PIE_COLORS[i % PDF_PIE_COLORS.length];
+    ctx.fillRect(4, ly - 9, 10, 10);
+    ctx.fillStyle = "#475569";
+    var pct = total > 0 ? Math.round((seg / total) * 100) : 0;
+    ctx.fillText((labels[i] || "") + "  " + pct + "%", 18, ly);
+    ly += 16;
+  });
+  return canvas.toDataURL("image/png");
 }
 
-function generateAndPrint9PageReport() {
-  var data = state.data;
-  var prof = data.profile || freshProfile();
+/* ---- Build the full 9-page docDefinition ---- */
+function buildAuditDocDefinition(data) {
+  var profile = data.profile || freshProfile();
   var lc = data.loanCenter || freshLoanCenter();
   var todayEth = gregorianToEthiopian(new Date());
+  var yearStartISO = ethiopianYearStartGregorianISO(todayEth.year);
   var buckets = ethiopianBuckets(data);
 
-  var yearStartISO = ethiopianYearStartGregorianISO(todayEth.year);
-  var ytdSales = data.sales.filter(function (s) { return s.date >= yearStartISO; });
-  var ytdExpenses = data.expenses.filter(function (e) { return e.date >= yearStartISO; });
-  var ytdSt = statsFor(ytdSales, ytdExpenses);
-  var ytdPay = paymentBreakdown(ytdSales);
-  var ytdCat = expenseByCategory(ytdExpenses);
-
-  var totalCap = totalCapitalCents(data);
-  var invValNow = inventoryValueCents(data);
-  var startCap = capitalAsOf(data, yearStartISO);
-
-  var w = window.open("", "_blank");
-  if (!w) { alert("Pop-up ተከልክሏል። እባክዎ Pop-ups ይፍቀዱ።"); return; }
-
-  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>የባንክ ብድር ማመልከቻ ሪፖርት</title><style>' +
-    '@page { size: A4; margin: 18mm 15mm; }' +
-    'body { font-family: "Noto Sans Ethiopic", Arial, sans-serif; font-size: 11pt; color: #1e293b; line-height: 1.5; margin: 0; padding: 0; }' +
-    '.page { page-break-after: always; min-height: 250mm; box-sizing: border-box; padding-top: 10px; position: relative; }' +
-    '.page:last-child { page-break-after: avoid; }' +
-    'h1 { font-size: 20pt; color: #0f172a; margin-top: 0; text-align: center; border-bottom: 2px solid #2563eb; padding-bottom: 8px; }' +
-    'h2 { font-size: 14pt; color: #1e3a8a; border-left: 4px solid #2563eb; padding-left: 8px; margin-top: 18px; margin-bottom: 10px; }' +
-    'h3 { font-size: 12pt; color: #334155; margin-top: 12px; margin-bottom: 6px; }' +
-    'table { width: 100%; border-collapse: collapse; margin-top: 8px; margin-bottom: 14px; font-size: 10pt; }' +
-    'th, td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; }' +
-    'th { background: #f1f5f9; font-weight: bold; color: #0f172a; }' +
-    '.num { text-align: right; }' +
-    '.badge-ok { color: #166534; background: #dcfce7; padding: 2px 6px; border-radius: 4px; font-weight: bold; }' +
-    '.badge-warn { color: #991b1b; background: #fee2e2; padding: 2px 6px; border-radius: 4px; font-weight: bold; }' +
-    '.footer { position: absolute; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-between; font-size: 9pt; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 4px; }' +
-    '.photo-box { width: 100px; height: 100px; border: 1px dashed #cbd5e1; border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; }' +
-    '.photo-box img { width: 100%; height: 100%; object-fit: cover; }' +
-    '</style></head><body>';
-
-  function pFoot(pNum) {
-    return '<div class="footer"><span>' + escapeHtml(prof.shopName || "የሱቅ መቆጣጠሪያ") + ' — የባንክ ብድር ማመልከቻ</span><span>ገጽ ' + pNum + ' ከ 9</span></div>';
-  }
-
-  // --- Page 1: Cover & Business Profile ---
-  html += '<div class="page">';
-  html += '<h1>የባንክ ብድር ማመልከቻ እና የሂሳብ ሪፖርት</h1>';
-  html += '<p style="text-align:center; color:#64748b; font-size:10pt;">የተዘጋጀበት ቀን፦ ' + todayISO() + ' (' + ethLabel(todayEth.year, todayEth.month) + ' ' + todayEth.day + ' ቀን)</p>';
-  html += '<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-top:20px;">';
-  html += '<div style="flex:1;">';
-  html += '<h2>1. የድርጅቱ እና የማናጀሩ ፕሮፋይል</h2>';
-  html += '<table>';
-  html += '<tr><th>የድርጅት ስም</th><td>' + escapeHtml(prof.shopName || "ልጅነት ባልተገለፀ") + '</td></tr>';
-  html += '<tr><th>የማናጀር / ባለቤት ስም</th><td>' + escapeHtml(prof.ownerName || "ያልተገለጸ") + '</td></tr>';
-  html += '<tr><th>የስራ ዘርፍ</th><td>' + escapeHtml(prof.businessSector || "ችርቻሮ ንግድ") + '</td></tr>';
-  html += '<tr><th>የታደሰ ንግድ ፈቃድ ቁጥር</th><td>' + escapeHtml(prof.license || "ያልተገለጸ") + '</td></tr>';
-  html += '<tr><th>የምዝገባ ቁጥር</th><td>' + escapeHtml(prof.businessRegistration || "ያልተገለጸ") + '</td></tr>';
-  html += '<tr><th>TIN ቁጥር</th><td>' + escapeHtml(prof.tin || "ያልተገለጸ") + '</td></tr>';
-  html += '<tr><th>ዲጅታል መታወቅያ ቁጥር</th><td>' + escapeHtml(prof.digitalId || "ያልተገለጸ") + '</td></tr>';
-  html += '<tr><th>የስራ አድራሻ</th><td>' + escapeHtml(prof.address || "ያልተገለጸ") + '</td></tr>';
-  html += '<tr><th>ስልክ / ኢሜይል</th><td>' + escapeHtml(prof.phone || "") + ' / ' + escapeHtml(prof.email || "") + '</td></tr>';
-  html += '</table></div>';
-  if (prof.managerPhoto) {
-    html += '<div style="margin-left:20px;" class="photo-box"><img src="' + prof.managerPhoto + '" /></div>';
-  }
-  html += '</div>';
-  html += '<h2>2. የብድር ጥያቄ ማጠቃለያ</h2>';
-  html += '<table>';
-  html += '<tr><th>የሚጠየቀው ብድር መጠን</th><td class="num" style="font-size:12pt; font-weight:bold; color:#2563eb;">' + fmt(lc.requestedAmountCents) + '</td></tr>';
-  html += '<tr><th>የድርጅቱ አሁን ያለ ጠቅላላ ካፒታል</th><td class="num" style="font-weight:bold;">' + fmt(totalCap) + '</td></tr>';
-  html += '<tr><th>የዕቃ ክምችት እሴት (Inventory)</th><td class="num">' + fmt(invValNow) + '</td></tr>';
-  html += '</table>';
-  html += pFoot(1) + '</div>';
-
-  // --- Page 2: Executive Summary & Reconciliation ---
-  html += '<div class="page">';
-  html += '<h1>Executive Summary & Audit Reconciliation</h1>';
-  html += '<h2>1. የያዝነው ' + todayEth.year + ' ዓ.ም አመታዊ ማጠቃለያ (YTD)</h2>';
-  html += '<table>';
-  html += '<tr><th>ጠቅላላ ሽያጭ (Gross Revenue)</th><td class="num" style="font-weight:bold;">' + fmt(ytdSt.revenue) + '</td></tr>';
-  html += '<tr><th>ጠቅላላ ስራ ማስኬጃ ወጪ (Total Expenses)</th><td class="num" style="color:#dc2626;">' + fmt(ytdSt.expenseTotal) + '</td></tr>';
-  html += '<tr><th>የተጣራ ትርፍ (Net Profit)</th><td class="num" style="font-size:12pt; font-weight:bold; color:#16a34a;">' + fmt(ytdSt.profit) + '</td></tr>';
-  html += '<tr><th>የግብይቶች ብዛት (Total Transactions)</th><td class="num">' + transactionCount(ytdSales) + ' ሽያጮች</td></tr>';
-  html += '</table>';
-
-  html += '<h2>2. የገንዘብ ክፍያ መንገድ እና የሂሳብ ማረጋገጫ (Reconciliation)</h2>';
-  var recon = verifyPaymentReconciliation(ytdSales);
-  html += '<table>';
-  html += '<tr><th>በካሽ የተሰበሰበ</th><td class="num">' + fmt(ytdPay.cash) + '</td></tr>';
-  html += '<tr><th>በባንክ ትራንስፈር የመጣ</th><td class="num">' + fmt(ytdPay.bank) + '</td></tr>';
-  html += '<tr><th>በዱቤ የተሸጠ (ጠቅላላ)</th><td class="num">' + fmt(ytdPay.credit) + '</td></tr>';
-  html += '<tr><th>-- የተሰበሰበ ዱቤ</th><td class="num">' + fmt(ytdPay.creditCollected) + '</td></tr>';
-  html += '<tr><th>-- ያልተሰበሰበ ዱቤ (Outstanding Credit)</th><td class="num" style="color:#dc2626; font-weight:bold;">' + fmt(ytdPay.creditOutstanding) + '</td></tr>';
-  html += '<tr style="background:#f8fafc;"><th>የክፍያዎች ድምር vs ጠቅላላ ገቢ</th><td class="num">' + (recon.ok ? '<span class="badge-ok">✓ በትክክል ይገጥማል (' + fmt(recon.total) + ')</span>' : '<span class="badge-warn">⚠️ ልዩነት አለ</span>') + '</td></tr>';
-  html += '</table>';
-  html += '<p style="font-size:9.5pt; color:#64748b;">* ማሳሰቢያ፦ ይህ የሂሳብ መግለጫ በሲስተሙ የተመዘገቡ እያንዳንዱን የሽያጭ እና የወጪ ደረሰኞች መነሻ በማድረግ በቀጥታ የተሰላ ህጋዊ ኦዲት ነው።</p>';
-  html += pFoot(2) + '</div>';
-
-  // --- Page 3: Monthly Breakdown (Table of all 13 Eth months) ---
-  html += '<div class="page">';
-  html += '<h1>የ' + todayEth.year + ' ዓ.ም የወራት ዝርዝር የፋይናንስ እንቅስቃሴ</h1>';
-  html += '<table><thead><tr><th>ወር</th><th>ሽያጭ (ገቢ)</th><th>ስራ ማስኬጃ ወጪ</th><th>የተጣራ ትርፍ</th><th>የሽያጭ ብዛት</th></tr></thead><tbody>';
-  var totRev = 0, totExp = 0, totProf = 0, totTx = 0;
+  var yearSales = [], yearExpenses = [];
   for (var m = 1; m <= 13; m++) {
-    var b = buckets[todayEth.year + "-" + m] || { sales: [], expenses: [] };
-    var stM = statsFor(b.sales, b.expenses);
-    totRev += stM.revenue; totExp += stM.expenseTotal; totProf += stM.profit; totTx += b.sales.length;
-    html += '<tr><td>' + ETH_MONTHS[m - 1] + '</td><td class="num">' + fmt(stM.revenue) + '</td><td class="num">' + fmt(stM.expenseTotal) + '</td><td class="num" style="font-weight:bold;">' + fmt(stM.profit) + '</td><td class="num">' + b.sales.length + '</td></tr>';
+    var b = buckets[todayEth.year + "-" + m];
+    if (b) { yearSales = yearSales.concat(b.sales); yearExpenses = yearExpenses.concat(b.expenses); }
   }
-  html += '<tr style="background:#f1f5f9; font-weight:bold;"><td>ጠቅላላ ድምር</td><td class="num">' + fmt(totRev) + '</td><td class="num">' + fmt(totExp) + '</td><td class="num">' + fmt(totProf) + '</td><td class="num">' + totTx + '</td></tr>';
-  html += '</tbody></table>';
-  html += pFoot(3) + '</div>';
+  var yearStats = statsFor(yearSales, yearExpenses);
+  var yearPay = paymentBreakdown(yearSales);
+  var yearByCat = expenseByCategory(yearExpenses);
+  var capitalNow = totalCapitalCents(data);
+  var capitalYearStart = capitalAsOf(data, yearStartISO);
+  var invValueNow = inventoryValueCents(data);
 
-  // --- Page 4: Expense Breakdown & Profit Allocation ---
-  html += '<div class="page">';
-  html += '<h1>የወጪዎች ምድብ እና የትርፍ ክፍፍል ፖሊሲ</h1>';
-  html += '<h2>1. የስራ ማስኬጃ ወጪዎች በምድብ (YTD)</h2>';
-  html += '<table><thead><tr><th>የወጪ ምድብ</th><th>መጠን</th><th>ድርሻ (%)</th></tr></thead><tbody>';
-  EXPENSE_CATEGORIES.forEach(function (cat) {
-    var amt = ytdCat[cat] || 0;
-    var pct = ytdSt.expenseTotal > 0 ? ((amt / ytdSt.expenseTotal) * 100).toFixed(1) : "0.0";
-    html += '<tr><td>' + cat + '</td><td class="num">' + fmt(amt) + '</td><td class="num">' + pct + '%</td></tr>';
-  });
-  html += '<tr style="font-weight:bold; background:#f1f5f9;"><td>ጠቅላላ ወጪ</td><td class="num">' + fmt(ytdSt.expenseTotal) + '</td><td class="num">100%</td></tr>';
-  html += '</tbody></table>';
-
-  html += '<h2>2. የትርፍ ክፍፍል እና ስራ ላይ የማዋል ፖሊሲ (Profit Allocation)</h2>';
-  html += '<table><thead><tr><th>የክፍፍል አላማ</th><th>የተመደበ መቶኛ (%)</th><th>የ' + todayEth.year + ' ዓ.ም የብር መጠን</th></tr></thead><tbody>';
-  (data.allocations || []).forEach(function (al) {
-    var amt = ytdSt.profit > 0 ? Math.round(ytdSt.profit * (Number(al.percent) / 100)) : 0;
-    html += '<tr><td>' + escapeHtml(al.name) + '</td><td class="num">' + al.percent + '%</td><td class="num" style="font-weight:bold;">' + fmt(amt) + '</td></tr>';
-  });
-  html += '</tbody></table>';
-  html += pFoot(4) + '</div>';
-
-  // --- Page 5: Loan Utilization & Proforma Invoices ---
-  html += '<div class="page">';
-  html += '<h1>የብድር አጠቃቀም እቅድ እና የፕሮፎርማ ሰነዶች</h1>';
-  html += '<h2>1. የሚጠየቀው ብድር ክፍፍል (Loan Capital Utilization Plan)</h2>';
-  html += '<table><thead><tr><th>የስራ / የግዢ አላማ</th><th>መቶኛ (%)</th><th>የተመደበ የብር መጠን</th></tr></thead><tbody>';
-  (lc.usageAllocations || []).forEach(function (ua) {
-    var amt = Math.round(lc.requestedAmountCents * (Number(ua.percent) / 100));
-    html += '<tr><td>' + escapeHtml(ua.purpose) + '</td><td class="num">' + ua.percent + '%</td><td class="num" style="font-weight:bold;">' + fmt(amt) + '</td></tr>';
-  });
-  html += '</tbody></table>';
-
-  html += '<h2>2. የተያያዙ የፕሮፎርማ ኢንቮይሶች (Proforma Invoices)</h2>';
-  if ((lc.proformaInvoices || []).length === 0) {
-    html += '<p style="color:#94a3b8;">ምንም የፕሮፎርማ ሰነድ አልተመዘገበም።</p>';
-  } else {
-    html += '<table><thead><tr><th>አቅራቢ ድርጅት</th><th>የዕቃ/አገልግሎት ዝርዝር</th><th>የተጠቀሰ ዋጋ</th></tr></thead><tbody>';
-    var pfTot = 0;
-    lc.proformaInvoices.forEach(function (pf) {
-      pfTot += pf.amountCents;
-      html += '<tr><td>' + escapeHtml(pf.supplier) + '</td><td>' + escapeHtml(pf.description || "-") + '</td><td class="num">' + fmt(pf.amountCents) + '</td></tr>';
-    });
-    html += '<tr style="font-weight:bold; background:#f1f5f9;"><td>ጠቅላላ የፕሮፎርማ ድምር</td><td>-</td><td class="num">' + fmt(pfTot) + '</td></tr>';
-    html += '</tbody></table>';
-  }
-  html += pFoot(5) + '</div>';
-
-  // --- Page 6: 12-Month Cash Flow Projection ---
-  html += '<div class="page">';
-  html += '<h1>የ12 ወራት የገንዘብ ፍሰት ትንበያ (Cash Flow Projection)</h1>';
-  html += '<p>ብድሩ ከተለቀቀ በኋላ የሚጠበቅ ወርሃዊ የሽያጭ እና የገቢ ፍሰት ግምት፦</p>';
-  html += '<table><thead><tr><th>ወር</th><th>የታቀደ ወርሃዊ ገቢ (Projected Revenue)</th></tr></thead><tbody>';
-  var projTot = 0;
-  (lc.cashFlowProjection || []).forEach(function (cfp) {
-    projTot += cfp.projectedRevenueCents;
-    html += '<tr><td>' + ETH_MONTHS[cfp.month - 1] + '</td><td class="num" style="font-weight:bold;">' + fmt(cfp.projectedRevenueCents) + '</td></tr>';
-  });
-  html += '<tr style="font-weight:bold; background:#f1f5f9;"><td>ጠቅላላ የአመት ትንበያ ድምር</td><td class="num" style="font-size:11pt; color:#2563eb;">' + fmt(projTot) + '</td></tr>';
-  html += '</tbody></table>';
-  html += pFoot(6) + '</div>';
-
-  // --- Page 7: Inventory & Asset Valuation ---
-  html += '<div class="page">';
-  html += '<h1>የዕቃ ክምችት ዝርዝር እና የሀብት እሴት (Inventory Valuation)</h1>';
-  html += '<table><thead><tr><th>የዕቃ ስም</th><th>የገዙበት ዋጋ</th><th>የመሸጫ ዋጋ</th><th>ቀሪ ስቶክ</th><th>ጠቅላላ የሃብት እሴት (Cost)</th></tr></thead><tbody>';
-  var totAsset = 0;
-  data.items.forEach(function (it) {
-    var st = Math.max(0, itemStock(data, it.id));
-    var val = st * it.costPriceCents;
-    totAsset += val;
-    html += '<tr><td>' + escapeHtml(it.name) + '</td><td class="num">' + fmt(it.costPriceCents) + '</td><td class="num">' + fmt(it.sellPriceCents) + '</td><td class="num">' + st + '</td><td class="num" style="font-weight:bold;">' + fmt(val) + '</td></tr>';
-  });
-  html += '<tr style="font-weight:bold; background:#f1f5f9;"><td colspan="4">ጠቅላላ የዕቃ ክምችት የሃብት እሴት ድምር</td><td class="num" style="font-size:11pt; color:#16a34a;">' + fmt(totAsset) + '</td></tr>';
-  html += '</tbody></table>';
-  html += pFoot(7) + '</div>';
-
-  // --- Page 8: Market Analysis & Suppliers ---
-  html += '<div class="page">';
-  html += '<h1>የገበያ ሁኔታ እና ዋና ዋና አቅራቢዎች</h1>';
-  html += '<h2>1. የድርጅቱ ዋና ዋና አቅራቢዎች (Key Suppliers)</h2>';
-  if ((lc.suppliers || []).length === 0) {
-    html += '<p style="color:#94a3b8;">ምንም አቅራቢ አልተመዘገበም።</p>';
-  } else {
-    html += '<table><thead><tr><th>የአቅራቢ ስም</th><th>አድራሻ / ስልክ</th></tr></thead><tbody>';
-    lc.suppliers.forEach(function (s) {
-      html += '<tr><td>' + escapeHtml(s.name) + '</td><td>' + escapeHtml(s.address || "-") + '</td></tr>';
-    });
-    html += '</tbody></table>';
+  var content = [];
+  var pageBreakNext = false;
+  function addPage(nodes) {
+    if (content.length > 0) nodes[0] = Object.assign({}, nodes[0], { pageBreak: "before" });
+    content = content.concat(nodes);
   }
 
-  html += '<h2>2. የገበያ ተወዳዳሪነት እና የንግድ ጥንካሬ ማብራሪያ</h2>';
-  html += '<div style="border:1px solid #cbd5e1; border-radius:8px; padding:12px; min-height:150px; background:#f8fafc; font-size:10.5pt;">';
-  html += escapeHtml(lc.marketAnalysis || "የገበያ ሁኔታ ማብራሪያ አልተሞላም።")
-    .replace(/\n/g, "<br/>");
-  html += '</div>';
-  html += pFoot(8) + '</div>';
+  /* ===== PAGE 1: Company Profile ===== */
+  var profileFields = [
+    ["የማናጀር ስም", profile.ownerName], ["የስራ ዘርፍ", profile.businessSector], ["TIN ቁጥር", profile.tin],
+    ["የታደሰ ንግድ ፈቃድ ቁጥር", profile.license], ["የጸደቀ የንግድ ምዝገባ ቁጥር", profile.businessRegistration],
+    ["የታደሰ ዲጅታል መታወቅያ", profile.digitalId], ["የስራ አድራሻ", profile.address],
+    ["ኢሜይል", profile.email], ["ስልክ ቁጥር", profile.phone]
+  ].filter(function (f) { return f[1]; });
 
-  // --- Page 9: Legal Declaration & Signatures ---
-  html += '<div class="page">';
-  html += '<h1>ህጋዊ ማረጋገጫ እና ፊርማ (Declaration & Signatures)</h1>';
-  html += '<div style="margin-top:30px; font-size:11pt; line-height:1.8; text-align:justify;">';
-  html += '<p>እኔ ከዚህ በላይ ስሜ እና አድራሻዬ የተጠቀሰው የድርጅቱ ማናጀር/ባለቤት፣ በዚህ የ9-ገጽ የባንክ ብድር ማመልከቻ ሪፖርት ውስጥ የተካተቱት ማንኛውም የሂሳብ መረጃዎች፣ የዕቃ ክምችት፣ የሽያጭ እና የወጪ መዝገቦች እንዲሁም የብድር አጠቃቀም እቅዶች ሙሉ በሙሉ እውነተኛ፣ ትክክለኛ እና በሲስተማችን ከተመዘገበው ህጋዊ መረጃ የተወሰዱ መሆናቸውን በህግ ፊት እረጋግጣለሁ።</p>';
-  html += '</div>';
-
-  html += '<div style="margin-top:80px; display:flex; justify-content:space-between;">';
-  html += '<div style="width:45%; border-top:1px solid #0f172a; padding-top:8px; text-align:center;">';
-  html += '<b>የማናጀር / አመልካች ፊርማ</b><br/>';
-  html += 'ስም፦ ' + escapeHtml(prof.ownerName || "_______________________") + '<br/>';
-  html += 'ቀን፦ ' + todayISO();
-  html += '</div>';
-
-  html += '<div style="width:45%; border-top:1px solid #0f172a; padding-top:8px; text-align:center;">';
-  html += '<b>የድርጅቱ ህጋዊ ማህተም (Stamp)</b><br/><br/><br/>';
-  html += '</div>';
-  html += '</div>';
-
-  html += '<div style="margin-top:100px; border:1px dashed #94a3b8; padding:12px; border-radius:8px; font-size:9.5pt; color:#475569;">';
-  html += '<b>ለባንክ ኦፊሰሮች ብቻ (For Bank Official Use Only):</b><br/>';
-  html += 'የቀረበውን ሰነድ እና ኦዲት ተቀብሎ ያረጋገጠው ብድር ኦፊሰር ስም፦ _______________________<br/>';
-  html += 'ፊርማ፦ _______________________ ቀን፦ _______________________';
-  html += '</div>';
-
-  html += pFoot(9) + '</div>';
-
-  html += '</body></html>';
-
-  w.document.open();
-  w.document.write(html);
-  w.document.close();
-  setTimeout(function () { w.print(); }, 500);
-}
-
-/* ================= cloud sync indicator ================= */
-function cloudStatus() {
-  try {
-    var raw = localStorage.getItem(FIREBASE_CFG_KEY);
-    if (!raw) return null;
-    var cfg = JSON.parse(raw);
-    if (!cfg || !cfg.apiKey) return null;
-    return el("div", { style: { fontSize: "11px", color: "#16a34a", textAlign: "center", marginTop: "8px" } }, [
-      el("span", { class: "sync-dot", style: { background: "#22c55e" } }),
-      "ከፋየርቤዝ ክላውድ ጋር ተገናኝቷል (" + (cfg.projectId || "active") + ")"
-    ]);
-  } catch (e) { return null; }
-}
-
-function cloudPush(data) {
-  try {
-    var raw = localStorage.getItem(FIREBASE_CFG_KEY);
-    if (!raw) return;
-    var cfg = JSON.parse(raw);
-    if (!cfg || !cfg.apiKey || !cfg.projectId) return;
-    var url = "https://firestore.googleapis.com/v1/projects/" + cfg.projectId + "/databases/(default)/documents/shops/" + (cfg.shopId || "default") + "?key=" + cfg.apiKey;
-    var body = { fields: { payload: { stringValue: JSON.stringify(data) }, updatedAt: { stringValue: new Date().toISOString() } } };
-    fetch(url, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch(function () {});
-  } catch (e) {}
-}
-
-/* ================= cloud settings modal ================= */
-function openCloudSettingsModal() {
-  var apiKeyIn, projIn, shopIn;
-  var existing = {};
-  try { existing = JSON.parse(localStorage.getItem(FIREBASE_CFG_KEY) || "{}"); } catch (e) {}
-
-  openSheet("☁️ የክላውድ (Firebase) ቅንብር", function (body) {
-    body.appendChild(el("div", { class: "helpmsg" }, "መረጃዎ በስልክ ቢጠፋ እንኳን ከክላውድ እንዲመለስ የFirebase Rest API መረጃዎችን እዚህ ያስገቡ።"));
-    apiKeyIn = el("input", { class: "input", value: existing.apiKey || "", placeholder: "AIzaSy..." });
-    projIn = el("input", { class: "input", value: existing.projectId || "", placeholder: "my-shop-app" });
-    shopIn = el("input", { class: "input", value: existing.shopId || "default", placeholder: "default" });
-    body.appendChild(Field("API Key", true, apiKeyIn));
-    body.appendChild(Field("Project ID", true, projIn));
-    body.appendChild(Field("Shop ID (መለያ)", true, shopIn));
-  }, function (close) {
-    var btn = el("button", { class: "btn btn-primary" }, "አስቀምጥ");
-    btn.addEventListener("click", guarded(function () {
-      var cfg = { apiKey: apiKeyIn.value.trim(), projectId: projIn.value.trim(), shopId: shopIn.value.trim() || "default" };
-      localStorage.setItem(FIREBASE_CFG_KEY, JSON.stringify(cfg));
-      showToast("የክላውድ ቅንብር ተቀምጣል");
-      close();
-      renderApp();
-    }));
-    return btn;
-  });
-}
-
-/* ================= side drawer ================= */
-var drawerOpen = false;
-function openDrawer() { drawerOpen = true; renderApp(); }
-function closeDrawer() { drawerOpen = false; renderApp(); }
-
-function renderSideDrawer() {
-  if (!drawerOpen) return null;
-  var overlay = el("div", { class: "drawer-overlay" });
-  var bg = el("div", { class: "drawer-bg", onclick: closeDrawer });
-  var drawer = el("div", { class: "drawer" }, [
-    el("div", { class: "drawer-header flex items-center justify-between" }, [
-      el("h2", {}, "⚙️ ተጨማሪ ሜኑ"),
-      el("button", { class: "sheet-back", onclick: closeDrawer }, "✕")
-    ]),
-    el("div", { class: "drawer-body" }, [
-      menuBtn("🧮", "የትርፍ ክፍፍል እና የግብ ክትትል", "የትርፍ ክፍፍል %, የወርሃዊ ካፒታል ግብ እና አጠቃቀም", function () { state.tab = "allocations"; closeDrawer(); }),
-      menuBtn("📊", "የባንክ ሪፖርት ማውጫ", "ሳምንታዊ፣ ወርሃዊ፣ አመታዊ ሪፖርት እና PDF print", function () { state.tab = "reports"; closeDrawer(); }),
-      menuBtn("🏢", "የንግድ ፕሮፋይል", "የድርጅት ስም፣ TIN፣ ፈቃድ፣ የማናጀር ፎቶ", function () { state.tab = "profile"; closeDrawer(); }),
-      menuBtn("🏦", "የባንክ ብድር ማዕከል", "የብድር አጠቃቀም እቅድ፣ ፕሮፎርማ እና የ12 ወር ትንበያ", function () { state.tab = "loancenter"; closeDrawer(); }),
-      menuBtn("☁️", "የክላውድ (Firebase) ቅንብር", "ኦንላይን ሰርቨር ማገናኛ", function () { closeDrawer(); openCloudSettingsModal(); }),
-      menuBtn("💾", "መረጃ ወደ ስልክ አውርድ (Backup)", "JSON ፋይል ሴቭ ለማድረግ", function () { backupData(); closeDrawer(); }),
-      menuBtn("ወደነበረበት መልስ (Restore)", "📂", "የቆየ JSON ፋይል ለማስገባት", function () { restoreData(); closeDrawer(); })
-    ])
+  var page1Header = {
+    table: { widths: ["*"], body: [[{
+      stack: [
+        { text: profile.shopName || "የድርጅት ስም ያልገባ", fontSize: 20, bold: true, color: "#ffffff", margin: [0, 0, 0, 4] },
+        { text: "የባንክ ብድር ማመልከቻ ሪፖርት  |  " + ETH_MONTHS[todayEth.month - 1] + " " + todayEth.year + " ዓ.ም", fontSize: 10, color: "#ffffff" }
+      ],
+      fillColor: PDF_NAVY, margin: [16, 16, 16, 16]
+    }]] },
+    layout: { defaultBorder: false }, margin: [0, 0, 0, 12]
+  };
+  addPage([
+    page1Header,
+    pdfSectionTitle("የድርጅት መገለጫ", "Company Profile & Registration Details"),
+    { stack: profileFields.map(function (f) { return pdfKV(f[0], f[1]); }) },
+    pdfHighlightBox("ሪፖርት የወጣበት ቀን", todayISO() + " (" + ETH_MONTHS[todayEth.month - 1] + " " + todayEth.year + " ዓ.ም)", PDF_ACCENT)
   ]);
-  overlay.appendChild(bg); overlay.appendChild(drawer);
-  return overlay;
-}
 
-function menuBtn(em, title, sub, onClick) {
-  var b = el("button", { class: "menu-item" }, [
-    el("span", { class: "em" }, em),
-    el("div", { class: "flex1" }, [el("div", {}, title), el("div", { class: "sub" }, sub)])
+  /* ===== PAGE 2: Capital & Assets ===== */
+  var capitalDiff = capitalNow - capitalYearStart;
+  var invRows = data.items.map(function (it) {
+    var stock = itemStock(data, it.id);
+    return [it.name, fmt(it.costPriceCents), String(stock), fmt(stock * it.costPriceCents)];
+  }).filter(function (r) { return parseInt(r[2]) > 0; });
+  addPage([
+    pdfSectionTitle("የእሴት እና ካፒታል ዝርዝር", "Capital & Asset Valuation — Year-over-Year Comparison"),
+    pdfComparisonTable("የካፒታል ለውጥ ዝርዝር",
+      "ካፒታል በ" + todayEth.year + " ዓ.ም መጀመሪያ", fmt(capitalYearStart),
+      "ካፒታል አሁን (" + todayISO() + ")", fmt(capitalNow),
+      "የካፒታል ለውጥ (Growth)", (capitalDiff >= 0 ? "+" : "") + fmt(capitalDiff), capitalDiff >= 0),
+    pdfHighlightBox("የአሁኑ የዕቃ ክምችት እሴት (Inventory Asset Value)", fmt(invValueNow), PDF_EMERALD),
+    pdfSectionTitle("የዕቃ ክምችት ዝርዝር", "Current Inventory Breakdown"),
+    invRows.length === 0
+      ? { text: "በአሁኑ ሰዓት ምንም ዕቃ ክምችት የለም።", fontSize: 10, color: PDF_GRAY }
+      : pdfTable(["የዕቃ ስም", "የገዢ ዋጋ", "ቀሪ ስቶክ", "እሴት"], invRows, ["40%", "20%", "15%", "25%"], { boldCol: [3] })
   ]);
-  b.addEventListener("click", onClick);
-  return b;
+
+  /* ===== PAGE 3: Customer Traffic ===== */
+  var trafficRows = [], totalTransactions = 0;
+  for (var mt = 1; mt <= 13; mt++) {
+    var bt = buckets[todayEth.year + "-" + mt];
+    var tc = bt ? transactionCount(bt.sales) : 0;
+    totalTransactions += tc;
+    var itemCounts = {};
+    if (bt) bt.sales.forEach(function (s) { itemCounts[s.itemName] = (itemCounts[s.itemName] || 0) + s.qty; });
+    var topItem = "-", topQty = 0;
+    Object.keys(itemCounts).forEach(function (n) { if (itemCounts[n] > topQty) { topQty = itemCounts[n]; topItem = n; } });
+    trafficRows.push([ETH_MONTHS[mt - 1], String(tc), topItem, topQty > 0 ? (topItem + " (" + topQty + ")") : "-"]);
+  }
+  addPage([
+    pdfSectionTitle("የደንበኞች ትራፊክ", "Customer Traffic Analysis — Transaction Count by Period"),
+    { text: "* እያንዳንዱ የተመዘገበ ሽያጭ እንደ አንድ የደንበኛ አገልግሎት ተቆጥሯል (transaction count)", fontSize: 8, color: PDF_GRAY, margin: [0, 0, 0, 8] },
+    pdfTable(["ወር", "የግብይት ብዛት", "የተሸጠ ዕቃ አይነት", "ከፍተኛ ሽያጭ"], trafficRows, ["25%", "25%", "25%", "25%"], { boldCol: [1] }),
+    pdfHighlightBox("የ" + todayEth.year + " ዓ.ም ጠቅላላ የግብይት ብዛት", String(totalTransactions) + " ግብይቶች", PDF_NAVY)
+  ]);
+
+  /* ===== PAGE 4: Payment Methods ===== */
+  var payRows = [];
+  for (var mp = 1; mp <= 13; mp++) {
+    var bp = buckets[todayEth.year + "-" + mp];
+    var pp = bp ? paymentBreakdown(bp.sales) : { cash: 0, bank: 0, credit: 0 };
+    payRows.push([ETH_MONTHS[mp - 1], fmt(pp.cash), fmt(pp.bank), fmt(pp.credit), fmt(pp.cash + pp.bank + pp.credit)]);
+  }
+  var recon = verifyPaymentReconciliation(yearSales);
+  addPage([
+    pdfSectionTitle("የክፍያ አማራጮች ዝርዝር", "Payment Methods Breakdown — Cash vs Mobile Banking"),
+    pdfTable(["ወር", "ካሽ (ETB)", "ባንክ ትራንስፈር (ETB)", "ዱቤ (ETB)", "ጠቅላላ (ETB)"], payRows, ["18%", "20.5%", "20.5%", "20.5%", "20.5%"], { boldCol: [4] }),
+    pdfSectionTitle("የ" + todayEth.year + " ዓ.ም ጠቅላላ የክፍያ ዝርዝር", "Annual Payment Summary"),
+    pdfHighlightBox("ጠቅላላ ካሽ", fmt(yearPay.cash), PDF_EMERALD),
+    pdfHighlightBox("ጠቅላላ ባንክ ትራንስፈር", fmt(yearPay.bank), PDF_ACCENT),
+    pdfHighlightBox("ጠቅላላ ዱቤ", fmt(yearPay.credit), PDF_AMBER),
+    yearPay.creditOutstanding > 0 ? pdfHighlightBox("ያልተከፈለ ዱቤ (Outstanding)", fmt(yearPay.creditOutstanding), PDF_CRIMSON) : { text: "" },
+    {
+      table: { widths: ["*"], body: [[{ text: (recon.ok ? "✓ ተረጋግጧል፦ ካሽ + ባንክ + ዱቤ = ጠቅላላ ገቢ (" + fmt(recon.total) + ")" : "⚠ ማሳሰቢያ፦ የሽያጭ እና የገቢ ቁጥሮች አልተገጣጠሙም"), fontSize: 9, bold: true, color: recon.ok ? PDF_EMERALD : PDF_CRIMSON, fillColor: PDF_BG, margin: [8, 6, 8, 6] }]] },
+      layout: { defaultBorder: false }, margin: [0, 6, 0, 0]
+    }
+  ]);
+
+  /* ===== PAGE 5: Income Statement ===== */
+  var page5 = [
+    pdfSectionTitle("የአሁኑ የትርፍ እና ወጪ መግለጫ", "Income Statement — Profit & Loss Summary"),
+    pdfHighlightBox("ጠቅላላ ገቢ (Gross Revenue)", fmt(yearStats.revenue), PDF_NAVY),
+    pdfHighlightBox("ጠቅላላ ወጪ (Total Expenses)", fmt(yearStats.expenseTotal), PDF_CRIMSON),
+    {
+      table: { widths: ["*"], body: [[{
+        stack: [
+          { text: yearStats.profit >= 0 ? "የተጣራ ትርፍ (Net Profit)" : "የተጣራ ኪሳራ (Net Loss)", fontSize: 10, color: PDF_SLATE_LIGHT, margin: [0, 0, 0, 4] },
+          { text: fmt(yearStats.profit), fontSize: 18, bold: true, color: yearStats.profit >= 0 ? PDF_EMERALD : PDF_CRIMSON }
+        ], fillColor: PDF_BG, margin: [10, 10, 10, 10]
+      }]] }, layout: { defaultBorder: false }, margin: [0, 8, 0, 8]
+    }
+  ];
+  if (Object.keys(yearByCat).length > 0) {
+    var catRows = [];
+    EXPENSE_CATEGORIES.forEach(function (c) {
+      if (yearByCat[c]) { var pct = yearStats.expenseTotal > 0 ? Math.round((yearByCat[c] / yearStats.expenseTotal) * 100) : 0; catRows.push([c, fmt(yearByCat[c]), pct + "%"]); }
+    });
+    page5.push(pdfSectionTitle("ወጪ በምድብ", "Expense Breakdown by Category"));
+    page5.push(pdfTable(["ምድብ", "መጠን (ETB)", "ከጠቅላላ ወጪ %"], catRows, ["40%", "30%", "30%"], { boldCol: [1] }));
+  }
+  addPage(page5);
+
+  /* ===== PAGE 6: Loan Utilization ===== */
+  var page6 = [
+    pdfSectionTitle("የብድር ፍላጎት እና አጠቃቀም እቅድ", "Loan Request & Utilization Plan"),
+    pdfHighlightBox("የሚጠየቀው የብድር መጠን (Loan Request Amount)", fmt(lc.requestedAmountCents), PDF_NAVY),
+    pdfSectionTitle("የገንዘቡ አጠቃቀም ስርጭት", "Fund Allocation Breakdown")
+  ];
+  if (lc.requestedAmountCents > 0 && lc.usageAllocations.length > 0) {
+    var utilRows = lc.usageAllocations.map(function (u) { return [u.purpose, u.percent + "%", fmt(Math.round(lc.requestedAmountCents * (u.percent / 100)))]; });
+    page6.push(pdfTable(["አላማ", "መቶኛ", "መጠን (ETB)"], utilRows, ["50%", "20%", "30%"], { boldCol: [2] }));
+    var segValues = lc.usageAllocations.map(function (u) { return Math.round(lc.requestedAmountCents * (u.percent / 100)); });
+    var segLabels = lc.usageAllocations.map(function (u) { return u.purpose; });
+    page6.push({ image: pdfPieChartDataUrl(segValues, segLabels), width: 200, alignment: "center", margin: [0, 8, 0, 8] });
+  } else {
+    page6.push({ text: "ምንም የብድር ፍላጎት ወይም የአጠቃቀም እቅድ አልተመዘገበም።", fontSize: 10, color: PDF_GRAY });
+  }
+  if (lc.proformaInvoices && lc.proformaInvoices.length > 0) {
+    page6.push(pdfSectionTitle("የፕሮፎርማ ኢንቮይስ ዝርዝር", "Proforma Invoices"));
+    var pfRows = lc.proformaInvoices.map(function (pf) { return [pf.supplier, pf.description || "-", fmt(pf.amountCents), pf.date]; });
+    page6.push(pdfTable(["አቅራቢ", "ዝርዝር", "ዋጋ (ETB)", "ቀን"], pfRows, ["25%", "35%", "20%", "20%"], { boldCol: [2] }));
+  }
+  addPage(page6);
+
+  /* ===== PAGE 7: Cash Flow Projection ===== */
+  var page7 = [pdfSectionTitle("የ12 ወራት የገንዘብ ፍሰት ትንበያ", "12-Month Cash Flow Projection")];
+  if (lc.cashFlowProjection && lc.cashFlowProjection.length > 0) {
+    var cfRows = [], cfTotal = 0;
+    lc.cashFlowProjection.forEach(function (r) {
+      cfTotal += r.projectedRevenueCents;
+      var bucket = buckets[todayEth.year + "-" + r.month];
+      var actual = bucket ? statsFor(bucket.sales, bucket.expenses).revenue : 0;
+      var diff = r.projectedRevenueCents - actual;
+      cfRows.push([ETH_MONTHS[r.month - 1], fmt(r.projectedRevenueCents), fmt(actual), (diff >= 0 ? "+" : "") + fmt(diff)]);
+    });
+    page7.push(pdfTable(["ወር", "የሚጠበቅ ገቢ (ETB)", "የተረጋገጠ ገቢ (ETB)", "ልዩነት"], cfRows, ["25%", "25%", "25%", "25%"], { boldCol: [1] }));
+    page7.push(pdfHighlightBox("የ12 ወራት ጠቅላላ ትንበያ", fmt(cfTotal), PDF_NAVY));
+  } else {
+    page7.push({ text: "ምንም የገንዘብ ፍሰት ትንበያ አልተመዘገበም።", fontSize: 10, color: PDF_GRAY });
+  }
+  addPage(page7);
+
+  /* ===== PAGE 8: Market & Suppliers ===== */
+  var page8 = [pdfSectionTitle("የአቅራቢዎች እና የገበያ ሁኔታ", "Market & Suppliers Analysis")];
+  if (lc.suppliers && lc.suppliers.length > 0) {
+    page8.push(pdfSectionTitle("ዋና ዋና አቅራቢዎች", "Key Suppliers"));
+    var supRows = lc.suppliers.map(function (s) { return [s.name, s.address || "-", todayISO()]; });
+    page8.push(pdfTable(["አቅራቢ ስም", "አድራሻ", "የተመዘገበበት ቀን"], supRows, ["35%", "45%", "20%"]));
+  } else {
+    page8.push({ text: "ምንም አቅራቢ አልተመዘገበም።", fontSize: 10, color: PDF_GRAY });
+  }
+  page8.push(pdfSectionTitle("የተወዳዳሪነት ጥንካሬዎች", "Competitive Strengths & Market Position"));
+  page8.push({ text: (lc.marketAnalysis && lc.marketAnalysis.trim()) || "ምንም የገበያ ትንተና አልተመዘገበም።", fontSize: 10, color: PDF_SLATE, lineHeight: 1.4 });
+  page8.push(pdfSectionTitle("ማሳሰቢያዎች", "Required Supporting Documents"));
+  [
+    "• የባንክ ስቴትመንት ማያያዣ መመሪያ: ያለፉት 6 ወራት የባንክ ስቴትመንት ኮፒ ከዚህ ሪፖርት ጋር ያያይዙ።",
+    "• የግብር ሰነዶች (Tax Clearance) ማመሳከሪያ: የቅርብ ጊዜ ግብር ክፍያ ደረሰኝ ኮፒ ያዘጋጁ።",
+    "• የንግድ ፈቃድ እና የታደሰ TIN ሰነድ ኮፒዎች ያያይዙ።",
+    "• ይህ ሪፖርት በራስ-ሰር ከንግድ ስራው መዝገብ የተዘጋጀ ሲሆን፣ ቁጥሮቹ ከዕለታዊ ግብይቶች የተመነዩ ናቸው።"
+  ].forEach(function (note) { page8.push({ text: note, fontSize: 9, color: PDF_SLATE_LIGHT, margin: [0, 0, 0, 5] }); });
+  addPage(page8);
+
+  /* ===== PAGE 9: Profit Distribution ===== */
+  var page9 = [pdfSectionTitle("የትርፍ ክፍፍል ስትራቴጂ", "Profit Distribution Strategy")];
+  if (yearStats.profit > 0 && data.allocations && data.allocations.length > 0) {
+    var monthlyAvgProfit = Math.round(yearStats.profit / 12);
+    var allocRows = data.allocations.map(function (a) {
+      return [a.name, a.percent + "%", fmt(Math.round(monthlyAvgProfit * (a.percent / 100))), fmt(Math.round(yearStats.profit * (a.percent / 100)))];
+    });
+    page9.push(pdfTable(["ክፍል", "መቶኛ", "ወርሃዊ (አማካይ ETB)", "አመታዊ (ETB)"], allocRows, ["30%", "15%", "27.5%", "27.5%"], { boldCol: [2, 3] }));
+    var pieValues = data.allocations.map(function (a) { return Math.round(yearStats.profit * (a.percent / 100)); });
+    var pieLabels = data.allocations.map(function (a) { return a.name; });
+    page9.push(pdfSectionTitle("የትርፍ ክፍፍል በግራፍ", "Profit Distribution Visualization"));
+    page9.push({ image: pdfPieChartDataUrl(pieValues, pieLabels), width: 220, alignment: "center", margin: [0, 4, 0, 8] });
+    page9.push({
+      table: { widths: ["*"], body: [[{ text: "ይህ የትርፍ ክፍፍል ስትራቴጂ ከድርጅቱ የአሰራር ፖሊሲ የተወሰደ ሲሆን፣ በየወሩ ከሚገኘው ትርፍ መሰረት ይተገበራል።", fontSize: 9, color: PDF_SLATE_LIGHT, fillColor: PDF_BG, margin: [8, 8, 8, 8] }]] },
+      layout: { defaultBorder: false }
+    });
+  } else {
+    page9.push({ text: "⚠ በዚህ አመት ትርፍ ስላልተገኘ የትርፍ ክፍፍል ሪፖርት አልተዘጋጀም።", fontSize: 11, bold: true, color: PDF_AMBER, margin: [0, 8, 0, 8] });
+    page9.push({ text: "የተገኘው ውጤት: " + fmt(yearStats.profit), fontSize: 10, color: PDF_SLATE_LIGHT });
+    page9.push({ text: "ትርፍ ክፍፍል ስትራቴጂው ትርፍ ሲኖር ብቻ ይተገበራል።", fontSize: 10, color: PDF_SLATE_LIGHT });
+  }
+  addPage(page9);
+
+  var totalPages = 9;
+  return {
+    pageSize: "A4",
+    pageMargins: [40, 40, 40, 50],
+    defaultStyle: { font: "NotoEthiopic", fontSize: 10, lineHeight: 1.0 },
+    content: content,
+    footer: function (currentPage) {
+      return {
+        columns: [
+          { text: "ገጽ " + currentPage + " / " + totalPages + "  |  " + (profile.shopName || "የሱቅ መቆጣጠሪያ ሲስተም") + "  |  በራስ-ሰር ከንግድ ስራው መዝገብ የተዘጋጀ", alignment: "center", fontSize: 8, color: PDF_GRAY }
+        ],
+        margin: [40, 8, 40, 0]
+      };
+    }
+  };
 }
 
-function backupData() {
-  var str = JSON.stringify(state.data, null, 2);
-  var blob = new Blob([str], { type: "application/json" });
+/* Optional fallback only: requires internet the first time (to fetch pdfMake
+   + the Amharic font). Never called automatically — only from the small
+   "ቀጣታ PDF" link in the report-prep sheet, and always clearly labeled as
+   needing a connection. The PRIMARY, offline export is
+   exportPrintableReport() below. */
+function exportFullAuditPdfOnline() {
+  showToast("ባለ 9-ገጽ የባንክ ሪፖርት PDF በማዘጋጀት ላይ...");
+  ensurePdfEngine().then(function () {
+    var docDef = buildAuditDocDefinition(state.data);
+    var profile = state.data.profile || freshProfile();
+    var filename = (profile.shopName || "shop").replace(/[^a-zA-Z0-9\u1200-\u137F]/g, "_") + "-bank-audit-" + todayISO() + ".pdf";
+    window.pdfMake.createPdf(docDef).getBlob(function (blob) {
+      shareOrDownloadPdfBlob(blob, filename);
+    });
+  }).catch(function (err) {
+    showToast("PDF ማዘጋጀት አልተቻለም — ኢንተርኔት ያረጋግጡ");
+    console.error(err);
+  });
+}
+/* Tries the device's native Share sheet first (Telegram, WhatsApp, Drive,
+   any PDF viewer, etc. — exactly like the Android Share Menu the person
+   asked for). If the browser can't share files (older browsers, desktop
+   Chrome without file-share support) or the user cancels, we fall back to
+   a plain download link so the PDF is never just lost. */
+function shareOrDownloadPdfBlob(blob, filename) {
+  var file = null;
+  try { file = new File([blob], filename, { type: "application/pdf" }); } catch (e) { file = null; }
+  if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+    navigator.share({ files: [file], title: filename, text: "የ" + filename + " ባንክ ኦዲት ሪፖርት" })
+      .then(function () { showToast("✓ ሪፖርቱ ተጋርቷል"); })
+      .catch(function (err) {
+        if (err && err.name === "AbortError") return; // user closed the share sheet — not an error
+        downloadPdfBlob(blob, filename);
+      });
+    return;
+  }
+  downloadPdfBlob(blob, filename);
+}
+function downloadPdfBlob(blob, filename) {
   var url = URL.createObjectURL(blob);
   var a = document.createElement("a");
-  a.href = url; a.download = "shop-data-backup-" + todayISO() + ".json";
-  a.click();
-  URL.revokeObjectURL(url);
-  showToast("Backup ፋይል ወርዷል");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
+  showToast("✓ ባለ 9-ገጽ የባንክ ሪፖርት PDF ወርዷል");
 }
 
-function restoreData() {
-  var inp = document.createElement("input");
-  inp.type = "file"; inp.accept = ".json";
-  inp.onchange = function (e) {
-    var file = e.target.files[0]; if (!file) return;
-    var r = new FileReader();
-    r.onload = function (ev) {
+/* ============================================================
+   PRIMARY 9-PAGE REPORT — fully OFFLINE, print/share-based.
+   ============================================================
+   Instead of depending on a PDF-generation library and a font fetched over
+   the network (which is exactly what produces "Failed to fetch" the moment
+   a phone has no signal), we build a clean, styled HTML document —
+   entirely in memory, entirely offline — and hand it to the browser's own
+   print engine via window.print(). Android's print preview then lets the
+   user "Save as PDF" or send it straight to any other app through the
+   system Share sheet, satisfying the Android Print Service / Share Menu
+   requirement with zero network dependency. Because the browser renders
+   this exactly the same way it renders the rest of the (Amharic) app UI,
+   there is no separate font to embed or fetch — whatever renders the
+   app's own Amharic text renders the report's Amharic text too. */
+function pageWrap(pageNum, totalPages, titleAm, titleEn, bodyHtml) {
+  var cls = 'rpage' + (pageNum === 1 ? ' rpage-first' : '');
+  return '<section class="' + cls + '"><div class="rpage-head"><div class="rkicker">ገጽ ' + pageNum + ' / ' + totalPages + '</div>' +
+    '<h1>' + escapeHtml(titleAm) + '</h1><div class="rsub">' + escapeHtml(titleEn) + '</div></div>' + bodyHtml + '</section>';
+}
+function rTable(headers, rows, opts) {
+  opts = opts || {};
+  var boldCol = opts.boldCol || [];
+  var html = '<table><thead><tr>' + headers.map(function (h) { return '<th>' + escapeHtml(h) + '</th>'; }).join("") + '</tr></thead><tbody>';
+  if (rows.length === 0) {
+    html += '<tr><td colspan="' + headers.length + '" class="rempty">ምንም መረጃ የለም</td></tr>';
+  } else {
+    rows.forEach(function (row) {
+      html += '<tr>' + row.map(function (cell, i) {
+        var cls = boldCol.indexOf(i) !== -1 ? ' class="rbold"' : "";
+        return '<td' + cls + '>' + escapeHtml(cell === undefined || cell === null || cell === "" ? "-" : cell) + '</td>';
+      }).join("") + '</tr>';
+    });
+  }
+  html += '</tbody></table>';
+  return html;
+}
+function rHighlight(label, value, colorClass) {
+  return '<div class="rhl ' + (colorClass || "") + '"><div class="rhl-label">' + escapeHtml(label) + '</div><div class="rhl-value">' + escapeHtml(value) + '</div></div>';
+}
+function rKV(label, value) {
+  return '<div class="rkv"><span>' + escapeHtml(label) + '</span><b>' + escapeHtml(value) + '</b></div>';
+}
+
+function buildReportHtml(data) {
+  var profile = data.profile || freshProfile();
+  var lc = data.loanCenter || freshLoanCenter();
+  var todayEth = gregorianToEthiopian(new Date());
+  var yearStartISO = ethiopianYearStartGregorianISO(todayEth.year);
+  var buckets = ethiopianBuckets(data);
+  var yearSales = [], yearExpenses = [];
+  for (var m = 1; m <= 13; m++) { var b = buckets[todayEth.year + "-" + m]; if (b) { yearSales = yearSales.concat(b.sales); yearExpenses = yearExpenses.concat(b.expenses); } }
+  var yearStats = statsFor(yearSales, yearExpenses);
+  var monthBucket = buckets[todayEth.year + "-" + todayEth.month];
+  var monthStats = monthBucket ? statsFor(monthBucket.sales, monthBucket.expenses) : { revenue: 0, expenseTotal: 0, profit: 0 };
+  var todayStats = dayStats(data, todayISO());
+  var yearPay = paymentBreakdown(yearSales);
+  var yearByCat = expenseByCategory(yearExpenses);
+  var capitalNow = totalCapitalCents(data);
+  var capitalYearStart = capitalAsOf(data, yearStartISO);
+  var invValueNow = inventoryValueCents(data);
+  var recon = verifyPaymentReconciliation(yearSales);
+  var gt = goalTrackerStats(data);
+  var cuMonth = capitalUtilizationStats(data, "month");
+  var cuYear = capitalUtilizationStats(data, "year");
+  var TOTAL_PAGES = 9;
+  var pages = "";
+
+  /* ---- 1. የዕለታዊ/ወርሃዊ ሽያጭ ሪፖርት ---- */
+  var salesMonthlyRows = [];
+  for (var mm = 1; mm <= 13; mm++) {
+    var bkt = buckets[todayEth.year + "-" + mm];
+    var st = bkt ? statsFor(bkt.sales, bkt.expenses) : { revenue: 0 };
+    salesMonthlyRows.push([ETH_MONTHS[mm - 1], fmt(st.revenue), String(bkt ? bkt.sales.length : 0)]);
+  }
+  pages += pageWrap(1, TOTAL_PAGES, "የዕለታዊ/ወርሃዊ ሽያጭ ሪፖርት", "Daily & Monthly Sales Report",
+    rHighlight("የዛሬ ሽያጭ (" + todayISO() + ")", fmt(todayStats.revenue), "blue") +
+    rHighlight("የ" + ethLabel(todayEth.year, todayEth.month) + " ጠቅላላ ሽያጭ", fmt(monthStats.revenue), "green") +
+    rHighlight("የ" + todayEth.year + " ዓ.ም ጠቅላላ ሽያጭ", fmt(yearStats.revenue), "navy") +
+    '<h2>በወር የተከፋፈለ ሽያጭ (13ቱ ወራት)</h2>' +
+    rTable(["ወር", "ጠቅላላ ሽያጭ (ETB)", "የግብይት ብዛት"], salesMonthlyRows, { boldCol: [1] }));
+
+  /* ---- 2. የወጪዎች ማጠቃለያ ሪፖርት ---- */
+  var expMonthlyRows = [];
+  for (var me = 1; me <= 13; me++) {
+    var bkte = buckets[todayEth.year + "-" + me];
+    var ste = bkte ? statsFor(bkte.sales, bkte.expenses) : { expenseTotal: 0 };
+    expMonthlyRows.push([ETH_MONTHS[me - 1], fmt(ste.expenseTotal)]);
+  }
+  var catRows = EXPENSE_CATEGORIES.filter(function (c) { return yearByCat[c]; }).map(function (c) {
+    var pct = yearStats.expenseTotal > 0 ? Math.round((yearByCat[c] / yearStats.expenseTotal) * 100) : 0;
+    return [c, fmt(yearByCat[c]), pct + "%"];
+  });
+  pages += pageWrap(2, TOTAL_PAGES, "የወጪዎች ማጠቃለያ ሪፖርት", "Expense Summary Report",
+    rHighlight("የዛሬ ወጪ", fmt(todayStats.expenseTotal), "red") +
+    rHighlight("የ" + ethLabel(todayEth.year, todayEth.month) + " ጠቅላላ ወጪ", fmt(monthStats.expenseTotal), "red") +
+    rHighlight("የ" + todayEth.year + " ዓ.ም ጠቅላላ ወጪ", fmt(yearStats.expenseTotal), "navy") +
+    '<h2>ወጪ በምድብ (' + todayEth.year + ' ዓ.ም)</h2>' +
+    rTable(["ምድብ", "መጠን (ETB)", "%"], catRows, { boldCol: [1] }) +
+    '<h2>ወጪ በወር</h2>' +
+    rTable(["ወር", "ጠቅላላ ወጪ (ETB)"], expMonthlyRows, { boldCol: [1] }));
+
+  /* ---- 3. የዕቃ ክምችት ሁኔታ ሪፖርት ---- */
+  var invRows = data.items.map(function (it) {
+    var stock = itemStock(data, it.id);
+    return [it.name, fmt(it.costPriceCents), fmt(it.sellPriceCents), String(stock), fmt(Math.max(0, stock) * it.costPriceCents), stock <= 0 ? "አልቋል" : (stock <= 5 ? "እያለቀ ነው" : "በቂ")];
+  });
+  pages += pageWrap(3, TOTAL_PAGES, "የዕቃ ክምችት ሁኔታ ሪፖርት", "Inventory Status Report",
+    rHighlight("የአሁኑ ጠቅላላ የዕቃ ክምችት እሴት", fmt(invValueNow), "green") +
+    rHighlight("የተመዘገቡ ዕቃ አይነቶች", String(data.items.length) + " አይነት", "navy") +
+    rTable(["ስም", "የገዢ ዋጋ", "የመሸጫ ዋጋ", "ቀሪ ስቶክ", "እሴት", "ሁኔታ"], invRows, { boldCol: [4] }));
+
+  /* ---- 4. የትርፍ ክፍፍል እና ድልድል ሪፖርት ---- */
+  var allocMonthRows = (data.allocations || []).map(function (a) {
+    return [a.name, a.percent + "%", monthStats.profit > 0 ? fmt(Math.round(monthStats.profit * (a.percent / 100))) : "0.00 ብር"];
+  });
+  var allocYearRows = (data.allocations || []).map(function (a) {
+    return [a.name, a.percent + "%", yearStats.profit > 0 ? fmt(Math.round(yearStats.profit * (a.percent / 100))) : "0.00 ብር"];
+  });
+  pages += pageWrap(4, TOTAL_PAGES, "የትርፍ ክፍፍል እና ድልድል ሪፖርት", "Profit Allocation & Distribution Report",
+    rHighlight("የ" + ethLabel(todayEth.year, todayEth.month) + " የተጣራ ትርፍ", fmt(monthStats.profit), monthStats.profit >= 0 ? "green" : "red") +
+    '<h2>ወርሃዊ ክፍፍል</h2>' + rTable(["ክፍል", "መቶኛ", "የገንዘብ መጠን"], allocMonthRows, { boldCol: [2] }) +
+    (monthStats.profit <= 0 ? '<div class="rnote">⚠️ በዚህ ወር ትርፍ ስላልተገኘ ክፍፍሉ 0 ነው።</div>' : "") +
+    '<h2>' + todayEth.year + ' ዓ.ም አመታዊ ክፍፍል</h2>' + rTable(["ክፍል", "መቶኛ", "የገንዘብ መጠን"], allocYearRows, { boldCol: [2] }) +
+    (yearStats.profit <= 0 ? '<div class="rnote">⚠️ በዚህ አመት ትርፍ ስላልተገኘ ክፍፍሉ 0 ነው።</div>' : ""));
+
+  /* ---- 5. የካፒታል ክምችት ግብ ክትትል ሪፖርት ---- */
+  pages += pageWrap(5, TOTAL_PAGES, "የካፒታል ክምችት ግብ ክትትል ሪፖርት", "Capital Accumulation Goal Tracking Report",
+    '<div class="rnote">🔗 መነሻ፦ ' + gt.capitalPct + '% ካፒታል ክፍፍል × የ' + escapeHtml(ethLabel(gt.ethYear, gt.ethMonth)) + ' ትክክለኛ ትርፍ — ከምንም ያልተነሳ፣ ራሱ ከመዝገቡ የተሰላ።</div>' +
+    rHighlight("የወር ግብ", fmt(gt.monthlyGoalCents), "navy") +
+    rHighlight("እስካሁን ማግኘት የነበረበት (ቀን " + gt.daysElapsed + "/" + gt.totalDaysInMonth + ")", fmt(gt.paceToDateCents), "amber") +
+    rHighlight("እስካሁን ወደ ካፒታል የተመደበው", fmt(gt.actualCents), gt.onTrack ? "green" : "red") +
+    rHighlight("እድገት", gt.pctOfMonthlyGoal + "%", "blue") +
+    (gt.onTrack ? '<div class="rgoal-ok">✅ በእቅዱ መሰረት እየሄዱ ነው!</div>' : '<div class="rgoal-warn">⚠️ ግብ አልተሳካም! ጉድለት፦ ' + escapeHtml(fmt(gt.shortfallCents)) + '</div>'));
+
+  /* ---- 6. የካፒታል አጠቃቀም ሪፖርት ---- */
+  function cuBlock(cu) {
+    return rKV("ለካፒታል የተመደበ (" + cu.capitalPct + "%)", fmt(cu.allocatedCents)) +
+      rKV("✅ ለስራ/ለዕቃ መግዣ የዋለ", fmt(cu.usedCents)) +
+      rKV("🕒 ያልተጠቀሙበት/በእጅ ያለ", fmt(cu.idleCents)) +
+      (cu.overageCents > 0 ? rKV("ከመድቡ በላይ የተገዛ", fmt(cu.overageCents)) : "") +
+      '<div class="rnote">' + cu.usedPct + '% ስራ ላይ ውሏል</div>';
+  }
+  pages += pageWrap(6, TOTAL_PAGES, "የካፒታል አጠቃቀም ሪፖርት", "Capital Utilization Report (Working vs Idle Capital)",
+    '<div class="rnote">* ግምቱ በዚህ ጊዜ ውስጥ አዲስ ወደ ስቶክ በገቡ ዕቃዎች (የገዢ ዋጋ × ብዛት) ላይ የተመሰረተ ነው፣ ለብቻው የግዢ መዝገብ ስለሌለ።</div>' +
+    '<h2>' + escapeHtml(cuMonth.label) + '</h2>' + cuBlock(cuMonth) +
+    '<h2 style="margin-top:14px">' + escapeHtml(cuYear.label) + '</h2>' + cuBlock(cuYear));
+
+  /* ---- 7. የንግድ አፈጻጸም እና ጠንካራ ጎኖች ማጠቃለያ ሪፖርት ---- */
+  var totalTx = yearSales.length;
+  var supplierRows = (lc.suppliers || []).map(function (s) { return [s.name, s.address || "-"]; });
+  pages += pageWrap(7, TOTAL_PAGES, "የንግድ አፈጻጸም እና ጠንካራ ጎኖች ማጠቃለያ ሪፖርት", "Business Performance & Strengths Summary",
+    rHighlight("የ" + todayEth.year + " ዓ.ም ጠቅላላ የግብይት ብዛት", totalTx + " ግብይቶች", "navy") +
+    rHighlight("በጣም የተሸጠው ዕቃ (ዛሬ)", (todayStats.topName ? (todayStats.topName + " (" + todayStats.topQty + ")") : "ምንም አልተሸጠም"), "amber") +
+    '<h2>ዋና ዋና አቅራቢዎች</h2>' + rTable(["አቅራቢ ስም", "አድራሻ"], supplierRows) +
+    '<h2>የተወዳዳሪነት ጥንካሬዎች</h2><p class="rpara">' + escapeHtml((lc.marketAnalysis && lc.marketAnalysis.trim()) || "ምንም የገበያ ትንተና አልተመዘገበም።") + '</p>');
+
+  /* ---- 8. የፋይናንስ ቀሪ ሂሳብ እና የባንክ ማስታወሻ ሪፖርት ---- */
+  var capitalDiff = capitalNow - capitalYearStart;
+  pages += pageWrap(8, TOTAL_PAGES, "የፋይናንስ ቀሪ ሂሳብ እና የባንክ ማስታወሻ ሪፖርት", "Financial Balance Sheet & Bank Note",
+    rHighlight("ካፒታል በ" + todayEth.year + " ዓ.ም መጀመሪያ", fmt(capitalYearStart), "blue") +
+    rHighlight("ካፒታል አሁን", fmt(capitalNow), "navy") +
+    rHighlight("የካፒታል ለውጥ", (capitalDiff >= 0 ? "+" : "") + fmt(capitalDiff), capitalDiff >= 0 ? "green" : "red") +
+    '<h2>የክፍያ ፍሰት (' + todayEth.year + ' ዓ.ም)</h2>' +
+    rKV("ካሽ", fmt(yearPay.cash)) + rKV("ባንክ ትራንስፈር", fmt(yearPay.bank)) + rKV("ዱቤ (ጠቅላላ)", fmt(yearPay.credit)) +
+    rKV("⚠️ ያልተከፈለ ዱቤ", fmt(yearPay.creditOutstanding)) +
+    '<div class="' + (recon.ok ? "rgoal-ok" : "rgoal-warn") + '">' + (recon.ok ? "✓ ተረጋግጧል፦ ካሽ + ባንክ + ዱቤ = ጠቅላላ ገቢ" : "⚠️ ማሳሰቢያ፦ ቁጥሮች አልተገጣጠሙም") + '</div>');
+
+  /* ---- 9. አጠቃላይ የሱቁ መቆጣጠሪያ ስርዓት ማጠቃለያ ሪፖርት ---- */
+  var profileRows = [
+    ["የድርጅት ስም", profile.shopName], ["የማናጀር ስም", profile.ownerName], ["TIN ቁጥር", profile.tin],
+    ["የንግድ ፈቃድ ቁጥር", profile.license], ["የስራ አድራሻ", profile.address], ["ስልክ ቁጥር", profile.phone]
+  ].filter(function (r) { return r[1]; });
+  pages += pageWrap(9, TOTAL_PAGES, "አጠቃላይ የሱቁ መቆጣጠሪያ ስርዓት ማጠቃለያ ሪፖርት", "Overall Shop Control System Summary",
+    '<h2>የድርጅት መገለጫ</h2>' + profileRows.map(function (r) { return rKV(r[0], r[1]); }).join("") +
+    '<h2 style="margin-top:14px">የ' + todayEth.year + ' ዓ.ም አጠቃላይ ውጤት</h2>' +
+    rHighlight("ጠቅላላ ገቢ", fmt(yearStats.revenue), "navy") +
+    rHighlight("ጠቅላላ ወጪ", fmt(yearStats.expenseTotal), "red") +
+    rHighlight("የተጣራ ትርፍ", fmt(yearStats.profit), yearStats.profit >= 0 ? "green" : "red") +
+    rHighlight("ጠቅላላ ካፒታል", fmt(capitalNow), "blue") +
+    rHighlight("የካፒታል ግብ እድገት", gt.pctOfMonthlyGoal + "%", "amber") +
+    '<div class="rfootnote">ይህ ሪፖርት በ' + todayISO() + ' ' + escapeHtml(ethLabel(todayEth.year, todayEth.month)) + ' ' + todayEth.year + ' ዓ.ም ላይ በራስ-ሰር ከንግድ ስራው መዝገብ የተዘጋጀ ነው።</div>');
+
+  return '<!DOCTYPE html><html lang="am" dir="ltr"><head><meta charset="UTF-8">' +
+    '<title>' + escapeHtml(profile.shopName || "የሱቅ ሪፖርት") + ' — ባለ 9 ገጽ ሪፖርት</title><style>' +
+    '@page{ size:A4; margin:10mm; }' +
+    '*{box-sizing:border-box;}' +
+    'html,body{margin:0;padding:0;width:100%;}' +
+    'body{font-family:"Noto Sans Ethiopic",-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#1e293b;font-size:11px;line-height:1.45;background:#fff;}' +
+    '.rbackbar{position:sticky;top:0;z-index:10;background:#122B4A;padding:10px 14px;display:flex;align-items:center;gap:10px;}' +
+    '.rbackbar button{background:#ffffff;color:#122B4A;border:none;border-radius:8px;padding:9px 16px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;}' +
+    '.rbackbar span{color:#cbd5e1;font-size:11px;}' +
+    '.rmain{padding:0;}' +
+    '.rpage{width:100%;min-height:277mm;padding:8mm 10mm;page-break-after:always;break-after:page;page-break-inside:auto;position:relative;box-sizing:border-box;border-bottom:1px dashed #e2e8f0;}' +
+    '.rpage:last-child{page-break-after:auto;break-after:auto;border-bottom:none;}' +
+    '.rpage-head{border-bottom:2px solid #122B4A;margin-bottom:10px;padding-bottom:8px;}' +
+    '.rkicker{font-size:10px;color:#94a3b8;font-weight:700;letter-spacing:.03em;}' +
+    'h1{font-size:18px;margin:2px 0 2px;color:#122B4A;}' +
+    '.rsub{font-size:10px;color:#64748b;}' +
+    'h2{font-size:13px;color:#122B4A;margin:14px 0 6px;border-left:3px solid #3B82F6;padding-left:6px;}' +
+    'table{width:100%;border-collapse:collapse;font-size:10.5px;margin:4px 0 10px;border:1px solid #cbd5e1;}' +
+    'th{background:#122B4A;color:#fff;padding:6px 5px;text-align:right;font-weight:700;border:1px solid #1e3a5f;}' +
+    'td{padding:5px;border:1px solid #e2e8f0;}' +
+    'tr:nth-child(even) td{background:#fafbfc;}' +
+    '.rbold{font-weight:700;}' +
+    '.rempty{text-align:center;color:#94a3b8;padding:10px;}' +
+    '.rhl{display:inline-block;min-width:44%;background:#f8fafc;border-radius:8px;padding:8px 10px;margin:3px 6px 3px 0;vertical-align:top;border:1px solid #e2e8f0;border-left:4px solid #cbd5e1;}' +
+    '.rhl.blue{border-left-color:#3b82f6;} .rhl.green{border-left-color:#10a34a;} .rhl.red{border-left-color:#dc2626;} .rhl.amber{border-left-color:#f59e0b;} .rhl.navy{border-left-color:#122B4A;}' +
+    '.rhl-label{font-size:9.5px;color:#64748b;} .rhl-value{font-size:13px;font-weight:800;margin-top:2px;}' +
+    '.rkv{display:flex;justify-content:space-between;font-size:11px;padding:5px 4px;border:1px solid #f1f5f9;border-bottom:1px dashed #e2e8f0;}' +
+    '.rnote{font-size:9.5px;color:#94a3b8;margin:6px 0;}' +
+    '.rpara{font-size:11px;line-height:1.6;color:#334155;}' +
+    '.rgoal-ok{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;font-weight:700;padding:8px;border-radius:8px;margin-top:8px;text-align:center;font-size:11px;}' +
+    '.rgoal-warn{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;font-weight:700;padding:8px;border-radius:8px;margin-top:8px;text-align:center;font-size:11px;}' +
+    '.rfootnote{font-size:9px;color:#94a3b8;margin-top:14px;text-align:center;}' +
+    '@media print{' +
+    'html,body{width:100%;height:auto;overflow:visible!important;background:#fff;}' +
+    '.rpage{page-break-after:always!important;break-after:page!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;border:none!important;box-shadow:none!important;padding:0!important;margin:0!important;width:100%!important;}' +
+    '.rpage:last-child{page-break-after:avoid!important;break-after:avoid!important;}' +
+    '.rhl,.rkv,.rgoal-ok,.rgoal-warn,tr,td,th{page-break-inside:avoid;break-inside:avoid;}' +
+    '.rbackbar{display:none!important;}' +
+    '}' +
+    '</style></head><body>' +
+    '<div class="rbackbar"><button id="rBackBtn">← ወደ ዋናው ገጽ ተመለስ / Back</button><span>ይህ ትር ማተም/ማጋራት ካልፈለጉ ዘግተው ወደ አፑ ይመለሱ</span></div>' +
+    '<div class="rmain">' + pages + '</div>' +
+    '<script>(function(){' +
+      'var btn=document.getElementById("rBackBtn");' +
+      'btn.addEventListener("click",function(){' +
+        'try{window.parent.focus();}catch(e){}' +
+        'try{window.parent.postMessage("close-print-frame","*");}catch(e){}' +
+        'try{window.close();}catch(e){}' +
+        'setTimeout(function(){' +
+          'if(!window.closed){btn.textContent="✕ እባክዎ ይህን ትር በእጅ ይዝጉ";btn.disabled=true;btn.style.opacity=".6";}' +
+        '},350);' +
+      '});' +
+    '})();<\/script>' +
+    '</body></html>';
+}
+
+/* Opens the report in a hidden iframe and triggers the browser's native print
+   dialog (Save as PDF / Android Print Service / Share). Entirely offline.
+   Uses iframe instead of window.open() because Android WebView blocks or
+   limits new windows, and only captures the first viewport page. The iframe
+   stays inside the same WebView document tree so the print adapter sees the
+   full multi-page DOM with proper page-break CSS. */
+function exportPrintableReport() {
+  var html = buildReportHtml(state.data);
+
+  // Remove any stale print frame
+  var oldFrame = document.getElementById('print-frame');
+  if (oldFrame) { try { oldFrame.remove(); } catch (e) {} }
+
+  // Create hidden iframe sized to A4 width so WebView print adapter can
+  // measure page breaks correctly against the CSS @page size.
+  var iframe = document.createElement('iframe');
+  iframe.id = 'print-frame';
+  iframe.setAttribute('title', 'print-frame');
+  iframe.style.cssText = 'position:absolute;top:-9999px;left:-9999px;width:210mm;height:100%;border:none;overflow:visible;';
+  document.body.appendChild(iframe);
+
+  var doc = iframe.contentWindow.document;
+  doc.open();
+  doc.write(html);
+  doc.close();
+
+  // Android WebView needs extra time for layout + fonts before print()
+  var isAndroid = /Android/i.test(navigator.userAgent);
+  var delay = isAndroid ? 1800 : 600;
+
+  setTimeout(function () {
+    try {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      showToast("✓ ባለ 9-ገጽ ሪፖርት ተዘጋጅቷል — 'Save as PDF' ወይም 'Share' ይምረጡ");
+    } catch (err) {
+      console.error('Print failed:', err);
+      showToast("ሪፖርት ማዘጋጀት አልተቻለም — እባክዎ እንደገና ይሞክሩ");
+    }
+    // Cleanup after print dialog has had time to open
+    setTimeout(function () {
+      var f = document.getElementById('print-frame');
+      if (f) { try { f.remove(); } catch (e) {} }
+    }, 10000);
+  }, delay);
+}
+
+/* Preparation sheet: lets the shop owner jump to the editable sections
+   (profile / loan center / allocation & goal) before generating the report,
+   then generate it — fully offline by default. */
+function openReportPrepSheet() {
+  openSheet("📄 ባለ 9-ገጽ ሪፖርት አዘጋጅ", function (body) {
+    body.appendChild(el("div", { class: "helpmsg" }, "ሪፖርቱ ከመረጃ ቋቱ በራሱ (አውቶማቲክ) ይዘጋጃል። ከማተምዎ በፊት የሚከተሉትን በእጅ ማስተካከል ይችላሉ፦"));
+    var editRow = el("div", { class: "flex gap2 mb3", style: { flexWrap: "wrap" } });
+    [["🏢 ፕሮፋይል", "profile"], ["🏦 ብድር ማዕከል", "loancenter"], ["🧮 ክፍፍል/ግብ", "allocgoal"]].forEach(function (x) {
+      var b = el("button", { class: "btn btn-outline btn-sm" }, x[0]);
+      b.addEventListener("click", function () { state.tab = x[1]; renderApp(); });
+      editRow.appendChild(b);
+    });
+    body.appendChild(editRow);
+    body.appendChild(el("div", { class: "eyebrow mb2" }, "ሪፖርቱ የሚያካትታቸው 9 ክፍሎች"));
+    var list = ["1. የዕለታዊ/ወርሃዊ ሽያጭ ሪፖርት", "2. የወጪዎች ማጠቃለያ ሪፖርት", "3. የዕቃ ክምችት ሁኔታ ሪፖርት", "4. የትርፍ ክፍፍል እና ድልድል ሪፖርት",
+      "5. የካፒታል ክምችት ግብ ክትትል ሪፖርት", "6. የካፒታል አጠቃቀም ሪፖርት", "7. የንግድ አፈጻጸም እና ጠንካራ ጎኖች ማጠቃለያ", "8. የፋይናንስ ቀሪ ሂሳብ እና የባንክ ማስታወሻ", "9. አጠቃላይ የሱቁ መቆጣጠሪያ ስርዓት ማጠቃለያ"];
+    list.forEach(function (t) { body.appendChild(el("div", { style: { fontSize: "12px", color: "#475569", padding: "3px 0" } }, t)); });
+  }, function (close) {
+    var wrap = el("div", { class: "flex-col gap2" });
+    var printBtn = el("button", { class: "btn btn-navy" }, "🖨️ ሪፖርት አትም / አጋራ (ከመስመር ውጭ)");
+    printBtn.addEventListener("click", guarded(function () { exportPrintableReport(); }));
+    var onlineBtn = el("button", { class: "btn btn-outline btn-sm", style: { marginTop: "8px" } }, "⬇️ ቀጥታ PDF አውርድ / አጋራ (ኢንተርኔት ያስፈልጋል)");
+    onlineBtn.addEventListener("click", guarded(function () { exportFullAuditPdfOnline(); }));
+    wrap.appendChild(printBtn); wrap.appendChild(onlineBtn);
+    return wrap;
+  });
+}
+
+/* ================= drawer (hamburger side menu) ================= */
+function openMainMenu() {
+  var overlay = el("div", { class: "drawer-overlay" });
+  var bg = el("div", { class: "drawer-bg", onclick: close });
+  var body = el("div", { class: "drawer-body" });
+  var drawerEl = el("div", { class: "drawer" }, [
+    el("div", { class: "drawer-header" }, [el("h2", {}, "☰ ተጨማሪ")]),
+    body
+  ]);
+  overlay.appendChild(bg); overlay.appendChild(drawerEl);
+  function close() { overlay.remove(); }
+  function go(tab) { state.tab = tab; close(); renderApp(); }
+
+  var profileItem = el("button", { class: "menu-item" }, [el("span", { class: "em" }, "🏢"), el("div", {}, [el("div", {}, "የንግድ ፕሮፋይል"), el("div", { class: "sub" }, "ስም፣ TIN፣ ስልክ — ለPDF ሪፖርት ራስጌ")])]);
+  profileItem.addEventListener("click", function () { go("profile"); });
+  var loanItem = el("button", { class: "menu-item" }, [el("span", { class: "em" }, "🏦"), el("div", {}, [el("div", {}, "የባንክ ብድር ማዕከል"), el("div", { class: "sub" }, "የብድር ፍላጎት፣ ትንበያ፣ አቅራቢዎች")])]);
+  loanItem.addEventListener("click", function () { go("loancenter"); });
+  var allocItem = el("button", { class: "menu-item" }, [el("span", { class: "em" }, "🧮"), el("div", {}, [el("div", {}, "የትርፍ ክፍፍል እና የግብ ክትትል"), el("div", { class: "sub" }, "ክፍፍል + ካፒታል ግብ/አጠቃቀም — ከትክክለኛ ትርፍ የተሰላ")])]);
+  allocItem.addEventListener("click", function () { go("allocgoal"); });
+  var reportsItem = el("button", { class: "menu-item" }, [el("span", { class: "em" }, "📊"), el("div", {}, [el("div", {}, "ሪፖርት (ለባንክ)"), el("div", { class: "sub" }, "ሳምንት/ወር/አመት")])]);
+  reportsItem.addEventListener("click", function () { go("reports"); });
+  var printItem = el("button", { class: "menu-item" }, [el("span", { class: "em" }, "🖨️"), el("div", {}, [el("div", {}, "ባለ 9-ገጽ ሪፖርት አትም / አጋራ"), el("div", { class: "sub" }, "ከመስመር ውጭ (Offline) — Save as PDF / Share")])]);
+  printItem.addEventListener("click", function () { close(); openReportPrepSheet(); });
+  var weekly = el("button", { class: "menu-item" }, [el("span", { class: "em" }, "📅"), el("div", {}, [el("div", {}, "ሳምንታዊ ዝርዝር"), el("div", { class: "sub" }, "የዚህ ሳምንት 7ቱ ቀናት በስማቸው")])]);
+  weekly.addEventListener("click", function () { close(); openWeeklyReport(); });
+  var monthly = el("button", { class: "menu-item" }, [el("span", { class: "em" }, "🗓️"), el("div", {}, [el("div", {}, "ወርሃዊ ዝርዝር"), el("div", { class: "sub" }, "13ቱ የኢትዮጵያ ወራት")])]);
+  monthly.addEventListener("click", function () { close(); openMonthlyReport(); });
+  var yearly = el("button", { class: "menu-item" }, [el("span", { class: "em" }, "📆"), el("div", {}, [el("div", {}, "አመታዊ ዝርዝር"), el("div", { class: "sub" }, "በኢትዮጵያ ዓ.ም")])]);
+  yearly.addEventListener("click", function () { close(); openYearlyReport(); });
+  var sync = el("button", { class: "menu-item" }, [el("span", { class: "em" }, "☁️"), el("div", {}, [el("div", {}, "የጋራ ዳታቤዝ (Firebase) ማዋቀሪያ"), el("div", { class: "sub" }, "ብዙ ስልኮች በ real-time እንዲመሳሰሉ")])]);
+  sync.addEventListener("click", function () { close(); openFirebaseSetup(); });
+
+  body.appendChild(profileItem); body.appendChild(loanItem); body.appendChild(allocItem); body.appendChild(printItem); body.appendChild(reportsItem);
+  body.appendChild(weekly); body.appendChild(monthly); body.appendChild(yearly); body.appendChild(sync);
+  document.querySelector(".app").appendChild(overlay);
+}
+
+/* ================= history / archive picker (used from Sales & Expenses pages) =================
+   The front page of Sales/Expenses only ever shows TODAY's records, so the
+   list never grows unbounded and the page stays short. Anything older
+   lives here instead, organized by day/week/month/year. */
+function yesterdayISO() {
+  var d = new Date(); d.setDate(d.getDate() - 1);
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+function openHistoryPicker() {
+  openSheet("📅 ታሪክ / ማህደር", function (body) {
+    body.appendChild(el("div", { class: "helpmsg" }, "የዛሬው ዝርዝር ከፊት ለፊት ገጹ ላይ ብቻ ይታያል። ያለፉትን ቀናት፣ ሳምንት፣ ወር ወይም አመት ለማየት ከታች ይምረጡ።"));
+    var y = yesterdayISO();
+    var dayBtn = el("button", { class: "menu-item" }, [el("span", { class: "em" }, "🗓️"), el("div", {}, [el("div", {}, "ትናንት"), el("div", { class: "sub" }, y)])]);
+    dayBtn.addEventListener("click", function () { openDayDetailSheet(y, "ትናንት (" + y + ")"); });
+    var weekBtn = el("button", { class: "menu-item" }, [el("span", { class: "em" }, "📅"), el("div", {}, [el("div", {}, "ይህ ሳምንት"), el("div", { class: "sub" }, "የ7ቱ ቀናት ማጠቃለያ")])]);
+    weekBtn.addEventListener("click", function () { openWeeklyReport(); });
+    var monthBtn = el("button", { class: "menu-item" }, [el("span", { class: "em" }, "🗓️"), el("div", {}, [el("div", {}, "ይህ ወር"), el("div", { class: "sub" }, "13ቱ የኢትዮጵያ ወራት")])]);
+    monthBtn.addEventListener("click", function () { openMonthlyReport(); });
+    var yearBtn = el("button", { class: "menu-item" }, [el("span", { class: "em" }, "📆"), el("div", {}, [el("div", {}, "ይህ አመት"), el("div", { class: "sub" }, "በኢትዮጵያ ዓ.ም")])]);
+    yearBtn.addEventListener("click", function () { openYearlyReport(); });
+    body.appendChild(dayBtn); body.appendChild(weekBtn); body.appendChild(monthBtn); body.appendChild(yearBtn);
+  }, null);
+}
+/* Full detail (not just totals) for one specific past day — both its sales
+   and its expenses, each in their own scrollable list so this sheet never
+   grows unbounded either. */
+function openDayDetailSheet(iso, label) {
+  openSheet("🗓️ " + (label || iso), function (body) {
+    var st = dayStats(state.data, iso);
+    body.appendChild(el("div", { class: "grid2 mb3" }, [
+      el("div", { class: "card-compact green" }, [el("div", { class: "card-label" }, "ሽያጭ"), el("div", { class: "card-value" }, fmt(st.revenue))]),
+      el("div", { class: "card-compact red" }, [el("div", { class: "card-label" }, "ወጪ"), el("div", { class: "card-value" }, fmt(st.expenseTotal))])
+    ]));
+    body.appendChild(el("div", { class: "card-compact teal mb3" }, [el("div", { class: "card-label" }, "የተጣራ ትርፍ"), el("div", { class: "card-value", style: { color: st.profit >= 0 ? "#0f766e" : "#dc2626" } }, fmt(st.profit))]));
+
+    body.appendChild(el("div", { class: "eyebrow mb2" }, "🧾 ሽያጮች"));
+    var salesForDay = state.data.sales.filter(function (s) { return s.date === iso; }).sort(function (a, b) { return b.createdAt - a.createdAt; });
+    var salesWrap = el("div", { class: "list-scroll", style: { maxHeight: "220px" } });
+    if (salesForDay.length === 0) { salesWrap.appendChild(el("div", { class: "empty" }, "📭 ምንም ሽያጭ የለም")); }
+    salesForDay.forEach(function (s) {
+      var payLabel = s.paymentMethod === "bank" ? ("ባንክ · " + s.bankName) : s.paymentMethod === "credit" ? ("ዱቤ · " + (s.paid ? "ተከፍሏል" : "አልተከፈለም")) : "ካሽ";
+      salesWrap.appendChild(el("div", { class: "item-row" }, [
+        el("div", { class: "flex items-center justify-between" }, [
+          el("div", {}, [el("div", { class: "item-name" }, s.itemName + " × " + s.qty), el("div", { class: "item-sub" }, s.customer + " · " + payLabel)]),
+          el("div", { style: { fontWeight: "800" } }, fmt(s.totalCents))
+        ])
+      ]));
+    });
+    body.appendChild(salesWrap);
+
+    body.appendChild(el("div", { class: "eyebrow mt3 mb2" }, "💸 ወጪዎች"));
+    var expensesForDay = state.data.expenses.filter(function (e) { return e.date === iso; }).sort(function (a, b) { return b.createdAt - a.createdAt; });
+    var expWrap = el("div", { class: "list-scroll", style: { maxHeight: "220px" } });
+    if (expensesForDay.length === 0) { expWrap.appendChild(el("div", { class: "empty" }, "📭 ምንም ወጪ የለም")); }
+    expensesForDay.forEach(function (e) {
+      expWrap.appendChild(el("div", { class: "item-row" }, [
+        el("div", { class: "flex items-center justify-between" }, [
+          el("div", {}, [el("div", { class: "item-name" }, e.category || "ሌላ"), el("div", { class: "item-sub" }, e.title || "")]),
+          el("div", { style: { fontWeight: "800", color: "#dc2626" } }, fmt(e.amountCents))
+        ])
+      ]));
+    });
+    body.appendChild(expWrap);
+  }, null);
+}
+
+function openWeeklyReport() {
+  openSheet("📅 ሳምንታዊ ሪፖርት", function (body) {
+    var now = new Date();
+    var day = now.getDay(), diffToMonday = (day + 6) % 7;
+    var monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday);
+    var isoList = [];
+    for (var j = 0; j < 7; j++) {
+      var dd = new Date(monday); dd.setDate(monday.getDate() + j);
+      var iso = dd.getFullYear() + "-" + String(dd.getMonth() + 1).padStart(2, "0") + "-" + String(dd.getDate()).padStart(2, "0");
+      isoList.push({ iso: iso, label: ETH_WEEKDAYS[j] });
+    }
+    var weekSales = state.data.sales.filter(function (s) { return isoList.some(function (x) { return x.iso === s.date; }); });
+    var weekExpenses = state.data.expenses.filter(function (e) { return isoList.some(function (x) { return x.iso === e.date; }); });
+    var weekTotals = statsFor(weekSales, weekExpenses);
+    body.appendChild(el("div", { class: "card violet section" }, [el("div", { class: "card-label" }, "የሳምንቱ ጠቅላላ ትርፍ"), el("div", { class: "card-value" }, fmt(weekTotals.profit))]));
+    body.appendChild(renderAllocationBlock(weekTotals.profit, state.data.allocations, "የሳምንቱ"));
+    body.appendChild(el("div", { class: "eyebrow mt3 mb2" }, "በቀናት"));
+    isoList.forEach(function (x) {
+      var st = dayStats(state.data, x.iso);
+      body.appendChild(el("div", { class: "day-card" }, [
+        el("div", { class: "dname" }, x.label + " (" + x.iso + ")"),
+        el("div", { class: "row" }, [el("span", {}, "ሽያጭ"), el("b", {}, fmt(st.revenue))]),
+        el("div", { class: "row" }, [el("span", {}, "ወጪ"), el("b", {}, fmt(st.expenseTotal))]),
+        el("div", { class: "row" }, [el("span", {}, "ትርፍ"), el("b", { style: { color: st.profit >= 0 ? "#16a34a" : "#dc2626" } }, fmt(st.profit))])
+      ]));
+    });
+  }, null);
+}
+
+function openMonthlyReport() {
+  openSheet("🗓️ ወርሃዊ ሪፖርት", function (body) {
+    var buckets = ethiopianBuckets(state.data);
+    var todayEth = gregorianToEthiopian(new Date());
+    body.appendChild(el("div", { class: "eyebrow mb2" }, todayEth.year + " ዓ.ም — 13ቱ ወራት"));
+    for (var m = 1; m <= 13; m++) {
+      var key = todayEth.year + "-" + m;
+      var bucket = buckets[key];
+      var st = bucket ? statsFor(bucket.sales, bucket.expenses) : { revenue: 0, expenseTotal: 0, profit: 0 };
+      body.appendChild(el("div", { class: "day-card" }, [
+        el("div", { class: "dname" }, ETH_MONTHS[m - 1]),
+        el("div", { class: "row" }, [el("span", {}, "ሽያጭ"), el("b", {}, fmt(st.revenue))]),
+        el("div", { class: "row" }, [el("span", {}, "ወጪ"), el("b", {}, fmt(st.expenseTotal))]),
+        el("div", { class: "row" }, [el("span", {}, "ትርፍ"), el("b", { style: { color: st.profit >= 0 ? "#16a34a" : "#dc2626" } }, fmt(st.profit))])
+      ]));
+    }
+  }, null);
+}
+
+function openYearlyReport() {
+  openSheet("📆 አመታዊ ሪፖርት", function (body) {
+    var buckets = ethiopianBuckets(state.data);
+    var yearMap = {};
+    Object.keys(buckets).forEach(function (k) {
+      var b = buckets[k];
+      if (!yearMap[b.year]) yearMap[b.year] = { sales: [], expenses: [] };
+      yearMap[b.year].sales = yearMap[b.year].sales.concat(b.sales);
+      yearMap[b.year].expenses = yearMap[b.year].expenses.concat(b.expenses);
+    });
+    var todayEth = gregorianToEthiopian(new Date());
+    if (!yearMap[todayEth.year]) yearMap[todayEth.year] = { sales: [], expenses: [] };
+    var years = Object.keys(yearMap).map(Number).sort(function (a, b) { return b - a; });
+    years.forEach(function (y) {
+      var st = statsFor(yearMap[y].sales, yearMap[y].expenses);
+      body.appendChild(el("div", { class: "day-card" }, [
+        el("div", { class: "dname" }, y + " ዓ.ም"),
+        el("div", { class: "row" }, [el("span", {}, "ሽያጭ"), el("b", {}, fmt(st.revenue))]),
+        el("div", { class: "row" }, [el("span", {}, "ወጪ"), el("b", {}, fmt(st.expenseTotal))]),
+        el("div", { class: "row" }, [el("span", {}, "ትርፍ"), el("b", { style: { color: st.profit >= 0 ? "#16a34a" : "#dc2626" } }, fmt(st.profit))])
+      ]));
+    });
+  }, null);
+}
+
+/* ================= Firebase (optional, lazy-loaded — app stays 100% offline unless this is set up) ================= */
+var firebaseReady = false, firebaseDb = null, firebaseDocPath = null, firebaseApplyingRemote = false;
+var firebaseState = "idle"; // idle | connecting | connected | error
+var firebaseErrorDetail = "";
+/* Default config supplied by the shop owner — baked in so every phone that
+   opens this same file auto-connects to the same shared shop without
+   anyone needing to retype it. Still editable via ☰ → ☁️ if ever needed. */
+var DEFAULT_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCmAI1Op2i-HD7Qy66ZqHoxjpr9UTt4vPM",
+  authDomain: "seniy-624d6.firebaseapp.com",
+  projectId: "seniy-624d6",
+  storageBucket: "seniy-624d6.firebasestorage.app",
+  messagingSenderId: "631207328604",
+  appId: "1:631207328604:web:7867624bd48cbc0baa5f99",
+  shopId: "seniy-main-shop"
+};
+function loadFirebaseConfig() {
+  try {
+    var v = localStorage.getItem(FIREBASE_CFG_KEY);
+    if (v) { var parsed = JSON.parse(v); return parsed && parsed.disabled ? null : parsed; }
+  } catch (e) {}
+  return DEFAULT_FIREBASE_CONFIG;
+}
+function saveFirebaseConfig(cfg) { try { localStorage.setItem(FIREBASE_CFG_KEY, JSON.stringify(cfg)); } catch (e) {} }
+
+function injectScript(src) {
+  return new Promise(function (resolve, reject) {
+    var existing = document.querySelector('script[src="' + src + '"]');
+    if (existing) { resolve(); return; }
+    var s = document.createElement("script");
+    s.src = src; s.onload = resolve; s.onerror = function () { reject(new Error("script load failed: " + src)); };
+    document.head.appendChild(s);
+  });
+}
+function friendlyFirebaseError(code) {
+  if (!code) return "";
+  if (code.indexOf("permission-denied") !== -1) return "ፈቃድ የለም — Firestore Rules ውስጥ 'Publish' መደረጉን ያረጋግጡ (☰ → ☁️ ላይ ያለውን rules እንደገና ይለጥፉ)።";
+  if (code.indexOf("not-found") !== -1 || code.indexOf("unavailable") !== -1) return "Firestore Database አልተፈጠረም — Firebase Console → Firestore Database → Create database ይጫኑ።";
+  if (code.indexOf("network") !== -1 || code === "TypeError: Failed to fetch") return "የኢንተርኔት ግንኙነት ችግር አለ — ይሞክሩ እንደገና ኢንተርኔት ካገኙ በኋላ።";
+  return code;
+}
+var firebaseUnsubscribe = null;
+function initFirebaseIfConfigured(onDone) {
+  var cfg = loadFirebaseConfig();
+  if (!cfg || !cfg.apiKey || !cfg.shopId) { firebaseState = "idle"; if (onDone) onDone(); return; }
+  /* Offline-first: the app must work fully from localStorage with zero
+     network. We only ever attempt a Firebase connection when the browser
+     itself reports it has connectivity — otherwise we'd immediately throw
+     "Failed to fetch" on every app open for anyone without internet at that
+     moment. When the device comes back online (see the 'online' listener
+     near the bottom of this file), we retry automatically — so syncing
+     only ever happens when there's actually a network to sync over. */
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    firebaseState = "idle"; firebaseErrorDetail = ""; if (onDone) onDone(); return;
+  }
+  firebaseState = "connecting"; firebaseErrorDetail = "";
+  renderApp();
+  injectScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js")
+    .then(function () { return injectScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"); })
+    .then(function () {
       try {
-        var parsed = JSON.parse(ev.target.result);
-        if (parsed && Array.isArray(parsed.items)) {
-          setData(function () { return parsed; });
-          showToast("መረጃው በትክክል ተመልሷል");
-        } else { alert("ትክክለኛ የሱቅ መረጃ ፋይል አይደለም!"); }
-      } catch (err) { alert("ፋይሉን ማንበብ አልተቻለም!"); }
-    };
-    r.readAsText(file);
-  };
-  inp.click();
+        if (!firebaseDb) {
+          try { firebase.initializeApp(cfg); } catch (e) { /* already initialized — fine */ }
+          firebaseDb = firebase.firestore();
+          /* NOTE: we deliberately do NOT call enablePersistence() here.
+             Firestore's IndexedDB offline-persistence layer is the known
+             cause of "FIRESTORE INTERNAL ASSERTION FAILED: Unexpected
+             state" inside restrictive in-app browsers (TikTok/Facebook/etc
+             WebViews have broken IndexedDB support). Our app already keeps
+             its own localStorage cache for offline use, so we don't need
+             Firestore's built-in persistence and avoid this whole bug class. */
+        }
+        if (firebaseUnsubscribe) { firebaseUnsubscribe(); firebaseUnsubscribe = null; }
+        firebaseDocPath = firebaseDb.collection("shops").doc(cfg.shopId);
+        firebaseDb.runTransaction(function (tx) {
+          return tx.get(firebaseDocPath).then(function (docSnap) {
+            if (!docSnap.exists) tx.set(firebaseDocPath, state.data);
+          });
+        }).catch(function (err) {
+          firebaseState = "error"; firebaseErrorDetail = (err && err.code) || (err && err.message) || String(err);
+          renderApp();
+        });
+        firebaseUnsubscribe = firebaseDocPath.onSnapshot(function (docSnap) {
+          firebaseState = "connected"; firebaseReady = true; firebaseErrorDetail = "";
+          /* CRITICAL offline-first rule: if we have local edits made while
+             offline (syncStatus === "pending" anywhere), we must PUSH them
+             up now instead of blindly overwriting local state with
+             whatever the server currently has — otherwise reconnecting
+             would silently discard sales/expenses recorded while offline.
+             Only when there is nothing pending locally do we pull the
+             server's copy (e.g. changes made from another device). */
+          if (hasPendingSync(state.data)) {
+            cloudPush(state.data);
+          } else if (docSnap.exists) {
+            var remote = docSnap.data();
+            if (remote && Array.isArray(remote.items)) {
+              firebaseApplyingRemote = true;
+              state.data = remote;
+              saveLocal(state.data);
+              firebaseApplyingRemote = false;
+            }
+          }
+          renderApp();
+          if (onDone) onDone();
+        }, function (err) {
+          firebaseState = "error"; firebaseReady = false;
+          firebaseErrorDetail = (err && err.code) || (err && err.message) || String(err);
+          renderApp();
+          if (onDone) onDone();
+        });
+      } catch (err) {
+        firebaseState = "error"; firebaseReady = false;
+        firebaseErrorDetail = (err && err.message) || String(err);
+        renderApp();
+        if (onDone) onDone();
+      }
+    })
+    .catch(function (err) {
+      firebaseState = "error"; firebaseReady = false;
+      firebaseErrorDetail = (err && err.message) || String(err);
+      renderApp();
+      if (onDone) onDone();
+    });
+}
+/* ================= per-record sync status (offline-first) =================
+   Every sale/expense/allocation is written to localStorage the INSTANT it's
+   created (see setData → saveLocal, which always runs first, synchronously,
+   with no network involved) and tagged syncStatus:"pending". Only once that
+   exact document has been successfully written to Firestore do we flip the
+   matching records to "synced". This makes the sync state visible and
+   auditable, and — combined with the push-vs-pull rule in the onSnapshot
+   handler above — guarantees offline-made records are never silently lost
+   or overwritten when the connection returns. */
+function hasPendingSync(data) {
+  if (!data) return false;
+  if ((data.sales || []).some(function (s) { return s.syncStatus === "pending"; })) return true;
+  if ((data.expenses || []).some(function (e) { return e.syncStatus === "pending"; })) return true;
+  if ((data.allocations || []).some(function (a) { return a.syncStatus === "pending"; })) return true;
+  return false;
+}
+function countPendingSync(data) {
+  if (!data) return 0;
+  var n = 0;
+  (data.sales || []).forEach(function (s) { if (s.syncStatus === "pending") n++; });
+  (data.expenses || []).forEach(function (e) { if (e.syncStatus === "pending") n++; });
+  (data.allocations || []).forEach(function (a) { if (a.syncStatus === "pending") n++; });
+  return n;
+}
+function markAllSynced(data) {
+  var changed = false;
+  (data.sales || []).forEach(function (s) { if (s.syncStatus === "pending") { s.syncStatus = "synced"; changed = true; } });
+  (data.expenses || []).forEach(function (e) { if (e.syncStatus === "pending") { e.syncStatus = "synced"; changed = true; } });
+  (data.allocations || []).forEach(function (a) { if (a.syncStatus === "pending") { a.syncStatus = "synced"; changed = true; } });
+  return changed;
+}
+function cloudPush(data) {
+  if (!firebaseReady || !firebaseDocPath || firebaseApplyingRemote) return;
+  /* Data is already safely written to localStorage by saveLocal() before
+     this is ever called (see setData()), so a sync failure here can NEVER
+     lose the user's data — it only means the cloud copy (and the
+     pending→synced flags) stay stale until the next successful push.
+     try/catch belt-and-braces around the SDK call itself, on top of the
+     .catch(), covers even a synchronous throw from the Firestore SDK when
+     the connection drops mid-write. */
+  try {
+    firebaseDocPath.set(data).then(function () {
+      firebaseState = "connected";
+      if (markAllSynced(state.data)) { saveLocal(state.data); renderApp(); }
+    }).catch(function (err) {
+      firebaseState = "error"; firebaseErrorDetail = (err && err.code) || (err && err.message) || String(err);
+      renderApp();
+    });
+  } catch (err) {
+    firebaseState = "error"; firebaseErrorDetail = (err && err.message) || String(err);
+    renderApp();
+  }
+}
+function cloudStatus() {
+  var cfg = loadFirebaseConfig();
+  var pending = countPendingSync(state.data);
+  if (!cfg) {
+    if (pending > 0) return el("div", { class: "section", style: { fontSize: "11px", color: "#b45309", textAlign: "center", padding: "0 8px" } }, "🟡 " + pending + " መዝገቦች በስልኩ ላይ ተቀምጠዋል (ኦፍላይን)");
+    return null;
+  }
+  var color = firebaseState === "connected" ? (pending > 0 ? "#f59e0b" : "#22c55e") : firebaseState === "error" ? "#ef4444" : "#94a3b8";
+  var text = firebaseState === "connected"
+    ? (pending > 0 ? ("እየላከ ነው... (" + pending + " ይቀራሉ)") : ("የጋራ ዳታቤዝ ተገናኝቷል (ሱቅ: " + cfg.shopId + ")"))
+    : firebaseState === "error" ? ("⚠️ ግንኙነት አልተሳካም — " + friendlyFirebaseError(firebaseErrorDetail) + (pending > 0 ? (" · " + pending + " በስልኩ ላይ ተቀምጠው ይጠብቃሉ") : ""))
+    : (pending > 0 ? ("🟡 ኦፍላይን — " + pending + " መዝገቦች ኢንተርኔት ሲገኝ ይላካሉ") : "የጋራ ዳታቤዝ በመገናኘት ላይ...");
+  return el("div", { class: "section", style: { fontSize: "11px", color: firebaseState === "error" ? "#dc2626" : "#64748b", textAlign: "center", padding: "0 8px" } }, [
+    el("span", { class: "sync-dot", style: { background: color } }), text
+  ]);
 }
 
-/* ================= main layout ================= */
+function openFirebaseSetup() {
+  var cfg = loadFirebaseConfig() || {};
+  var fields = ["apiKey", "authDomain", "projectId", "storageBucket", "messagingSenderId", "appId", "shopId"];
+  var labels = { apiKey: "apiKey", authDomain: "authDomain", projectId: "projectId", storageBucket: "storageBucket", messagingSenderId: "messagingSenderId", appId: "appId", shopId: "የሱቅ መለያ ኮድ (ሁሉም ስልኮች ተመሳሳይ መስጠት አለባቸው)" };
+  var inputs = {};
+  var statusBox;
+  function drawStatus() {
+    if (!statusBox) return;
+    clear(statusBox);
+    var color = firebaseState === "connected" ? "#16a34a" : firebaseState === "error" ? "#dc2626" : "#b45309";
+    var text = firebaseState === "connected" ? "✓ ተገናኝቷል"
+      : firebaseState === "error" ? ("✕ ስህተት: " + friendlyFirebaseError(firebaseErrorDetail))
+      : firebaseState === "connecting" ? "… በመገናኘት ላይ" : "ገና አልተሞከረም";
+    statusBox.appendChild(el("div", { style: { fontSize: "12px", fontWeight: "700", color: color, background: "#f8fafc", padding: "10px", borderRadius: "10px" } }, text));
+  }
+  openSheet("☁️ የጋራ ዳታቤዝ (Firebase) ማዋቀሪያ", function (body) {
+    body.appendChild(el("div", { class: "helpmsg" },
+      "ብዙ ስልኮች በ real-time እንዲመሳሰሉ firebase.google.com ላይ ነጻ አካውንት ፈጥረው Firestore Database ያንቁ፣ Project Settings ውስጥ ያለውን የ config ቁጥሮች እዚህ ይለጥፉ። ይህን ካልሞሉ አፕሊኬሽኑ በራሱ በዚህ ስልክ ላይ ብቻ (ያለ ኢንተርኔት) መስራቱን ይቀጥላል።"));
+    statusBox = el("div", { class: "mb3" });
+    drawStatus();
+    body.appendChild(statusBox);
+    var testBtn = el("button", { class: "btn btn-outline btn-sm", style: { marginBottom: "12px" } }, "🔄 ግንኙነት አሁን ሞክር");
+    testBtn.addEventListener("click", function () { drawStatusConnecting(); initFirebaseIfConfigured(drawStatus); });
+    function drawStatusConnecting() { firebaseState = "connecting"; drawStatus(); }
+    body.appendChild(testBtn);
+    fields.forEach(function (f) {
+      var input = el("input", { class: "input", value: cfg[f] || "", placeholder: labels[f] });
+      inputs[f] = input;
+      body.appendChild(Field(labels[f], f === "apiKey" || f === "shopId", input));
+    });
+  }, function (close) {
+    var row = el("div", { class: "flex gap2" });
+    if (cfg.apiKey) {
+      var clearBtn = el("button", { class: "btn btn-outline" }, "አላቅ (ኦፍላይን ብቻ ተመለስ)");
+      clearBtn.addEventListener("click", function () { saveFirebaseConfig({ disabled: true }); showToast("የጋራ ዳታቤዝ ግንኙነት ተቋርጧል — አሁን ኦፍላይን ብቻ ነው"); location.reload(); });
+      row.appendChild(clearBtn);
+    }
+    var saveBtn = el("button", { class: "btn btn-primary" }, "አገናኝ / አስቀምጥ");
+    saveBtn.addEventListener("click", guarded(function () {
+      var newCfg = {};
+      fields.forEach(function (f) { newCfg[f] = inputs[f].value.trim(); });
+      if (!newCfg.apiKey || !newCfg.shopId) { showToast("እባክዎ apiKey እና የሱቅ መለያ ኮድ ያስገቡ"); return; }
+      saveFirebaseConfig(newCfg);
+      showToast("ተቀምጧል — በመገናኘት ላይ...");
+      initFirebaseIfConfigured(drawStatus);
+      drawStatus();
+      close();
+    }));
+    row.appendChild(saveBtn);
+    return row;
+  });
+}
+
+/* ================= nav & root ================= */
+function BottomNav() {
+  var items = [{ key: "dashboard", label: "ዳሽቦርድ", em: "🏠" }, { key: "sales", label: "ሽያጭ", em: "📦" }, { key: "items", label: "ዕቃዎች", em: "🗃️" }, { key: "expenses", label: "ወጪ", em: "💸" }];
+  var nav = el("div", { class: "nav" });
+  items.forEach(function (it) {
+    var active = state.tab === it.key;
+    var b = el("button", { class: "navbtn" + (active ? " active" : "") }, [el("span", { class: "em" }, it.em), el("span", { class: "lbl" }, it.label)]);
+    b.addEventListener("click", function () { state.tab = it.key; renderApp(); });
+    nav.appendChild(b);
+  });
+  return el("div", { class: "navwrap" }, [nav]);
+}
+
 function renderApp() {
   var root = document.getElementById("root");
   clear(root);
-
   var app = el("div", { class: "app" });
-
-  /* Header with hamburger and active title */
-  var titleMap = { dashboard: "የሱቅ መቆጣጠሪያ", sales: "ሽያጭ መዝግብ", items: "ዕቃዎች", expenses: "ወጪዎች", allocations: "የትርፍ ክፍፍል እና ግብ", reports: "የባንክ ሪፖርት", profile: "የንግድ ፕሮፋይል", loancenter: "የባንክ ብድር ማዕከል" };
-  var header = el("div", { class: "header" }, [
-    el("button", { class: "hamburger", onclick: openDrawer }, "☰"),
-    el("h1", {}, titleMap[state.tab] || "የሱቅ መቆጣጠሪያ"),
-    el("div", { class: "header-spacer" })
-  ]);
-  app.appendChild(header);
-
-  /* main scrollable content area */
+  var hamBtn = el("button", { class: "hamburger" }, "☰");
+  hamBtn.addEventListener("click", openMainMenu);
+  app.appendChild(el("div", { class: "header" }, [hamBtn, el("h1", {}, "የሱቅ መቆጣጠሪያ ሲስተም"), el("div", { class: "header-spacer" })]));
+  if (!storageAvailable) {
+    app.appendChild(el("div", { style: { background: "#fff4e5", color: "#92400e", fontSize: "11px", padding: "8px 16px", textAlign: "center" } },
+      "ማሳሰቢያ: ውሂብ በዚህ ስልክ ላይ በራስ-ሰር መቀመጥ አልቻለም (ስህተት: " + (storageErrorDetail || "unknown") + ")። Firebase ከተገናኘ ውሂብዎ አይጠፋም፣ ካልሆነ ግን ይህን ገፅ ሲዘጉ ይጠፋል።"));
+  }
   var content = el("div", { class: "content" });
   if (state.tab === "dashboard") renderDashboard(content);
   else if (state.tab === "sales") renderSales(content);
   else if (state.tab === "items") renderItems(content);
   else if (state.tab === "expenses") renderExpenses(content);
-  else if (state.tab === "allocations") renderAllocationAndGoalPage(content);
   else if (state.tab === "reports") renderReports(content);
   else if (state.tab === "profile") renderProfile(content);
   else if (state.tab === "loancenter") renderLoanCenter(content);
+  else if (state.tab === "allocgoal") renderAllocationAndGoalPage(content);
+  else renderDashboard(content);
   app.appendChild(content);
-
-  /* 4-tab bottom navigation */
-  var navWrap = el("div", { class: "navwrap" });
-  var nav = el("div", { class: "nav" });
-  var TABS = [
-    { k: "dashboard", l: "ዳሽቦርድ", em: "📊" },
-    { k: "sales", l: "ሽያጭ", em: "📝" },
-    { k: "items", l: "ዕቃዎች", em: "📦" },
-    { k: "expenses", l: "ወጪዎች", em: "💸" }
-  ];
-  TABS.forEach(function (t) {
-    var btn = el("button", { class: "navbtn" + (state.tab === t.k ? " active" : "") }, [
-      el("span", { class: "em" }, t.em),
-      el("span", { class: "lbl" }, t.l)
-    ]);
-    btn.addEventListener("click", function () { state.tab = t.k; renderApp(); });
-    nav.appendChild(btn);
-  });
-  navWrap.appendChild(nav);
-  app.appendChild(navWrap);
-
-  /* side drawer (if open) */
-  var drawerEl = renderSideDrawer();
-  if (drawerEl) app.appendChild(drawerEl);
-
+  app.appendChild(BottomNav());
   root.appendChild(app);
 }
 
-/* initial boot */
+/* ================= init (offline-first) =================
+   The app renders and is fully usable from localStorage instantly, with
+   zero network calls. Firebase sync (optional, only if the user configured
+   it) is attempted only when the browser reports connectivity, and is
+   retried automatically the moment connectivity returns — so a phone that
+   opens this file with no signal never sees a "Failed to fetch" error, and
+   syncing only ever happens once a network is actually available. */
 renderApp();
+initFirebaseIfConfigured();
+window.addEventListener("online", function () {
+  if (firebaseState === "connected" && hasPendingSync(state.data)) {
+    cloudPush(state.data); // already connected — just push what accumulated while offline
+  } else if (firebaseState !== "connected") {
+    initFirebaseIfConfigured(); // reconnect, which itself pushes pending data (see onSnapshot above)
+  }
+});
+window.addEventListener("offline", function () {
+  if (firebaseState === "connecting") { firebaseState = "idle"; renderApp(); }
+});
+/* ---- Service Worker: makes the HOSTED PAGE ITSELF load offline ----
+   localStorage already makes the app's DATA survive offline, but a page
+   hosted on GitHub Pages (or any web server) still needs the browser to
+   fetch the HTML/JS from the network on every visit unless something
+   caches it. A Service Worker is that something: the very first time this
+   page loads with internet, the worker below caches it; every visit after
+   that — even with zero connectivity — is served straight from that cache,
+   which is exactly what turns "net::ERR_INTERNET_DISCONNECTED" into a
+   normal, fully-working offline load. This requires sw.js to sit next to
+   this HTML file on the server (same folder) — see the accompanying file. */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("./sw.js").catch(function (err) {
+      console.warn("Service worker registration failed (app still works online):", err);
+    });
+  });
+}
+/* NOTE: the 9-page bank report is generated and printed/shared entirely
+   offline via the browser's own print pipeline (see exportPrintableReport
+   below) — no font or library is fetched over the network for it, so there
+   is nothing to pre-warm here. The old direct-PDF-download engine
+   (pdfMake + a fetched Amharic font) still exists as an optional, clearly
+   labeled "requires internet" fallback and is only loaded on demand,
+   never automatically at startup. */
 
 })();
 </script>
 </body>
 </html>
-
-```
