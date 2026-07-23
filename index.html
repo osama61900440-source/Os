@@ -2149,41 +2149,45 @@ function buildReportHtml(data) {
 
   return '<!DOCTYPE html><html lang="am" dir="ltr"><head><meta charset="UTF-8">' +
     '<title>' + escapeHtml(profile.shopName || "የሱቅ ሪፖርት") + ' — ባለ 9 ገጽ ሪፖርት</title><style>' +
-    '@page{ size:A4; margin:10mm; }' +
-    '*{box-sizing:border-box;}' +
-    'html,body{margin:0;padding:0;width:100%;}' +
+    '@page{ size:A4 portrait; margin:0; }' +
+    '*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+    'html,body{margin:0;padding:0;width:100%;height:auto;}' +
     'body{font-family:"Noto Sans Ethiopic",-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#1e293b;font-size:11px;line-height:1.45;background:#fff;}' +
     '.rbackbar{position:sticky;top:0;z-index:10;background:#122B4A;padding:10px 14px;display:flex;align-items:center;gap:10px;}' +
     '.rbackbar button{background:#ffffff;color:#122B4A;border:none;border-radius:8px;padding:9px 16px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;}' +
     '.rbackbar span{color:#cbd5e1;font-size:11px;}' +
     '.rmain{padding:0;}' +
-    '.rpage{width:100%;min-height:277mm;padding:8mm 10mm;page-break-after:always;break-after:page;page-break-inside:auto;position:relative;box-sizing:border-box;border-bottom:1px dashed #e2e8f0;}' +
-    '.rpage:last-child{page-break-after:auto;break-after:auto;border-bottom:none;}' +
+    '.rpage{width:100%;height:277mm;padding:10mm;page-break-after:always;break-after:page;page-break-inside:auto;position:relative;box-sizing:border-box;overflow:hidden;}' +
+    '.rpage:last-child{page-break-after:auto;break-after:auto;height:auto;}' +
     '.rpage-head{border-bottom:2px solid #122B4A;margin-bottom:10px;padding-bottom:8px;}' +
     '.rkicker{font-size:10px;color:#94a3b8;font-weight:700;letter-spacing:.03em;}' +
     'h1{font-size:18px;margin:2px 0 2px;color:#122B4A;}' +
     '.rsub{font-size:10px;color:#64748b;}' +
-    'h2{font-size:13px;color:#122B4A;margin:14px 0 6px;border-left:3px solid #3B82F6;padding-left:6px;}' +
-    'table{width:100%;border-collapse:collapse;font-size:10.5px;margin:4px 0 10px;border:1px solid #cbd5e1;}' +
+    'h2{font-size:13px;color:#122B4A;margin:14px 0 6px;border-left:3px solid #3B82F6;padding-left:6px;page-break-after:avoid;break-after:avoid;}' +
+    'table{width:100%;border-collapse:collapse;font-size:10.5px;margin:4px 0 10px;border:1px solid #cbd5e1;page-break-inside:auto;}' +
+    'thead{display:table-header-group;}' +
+    'tbody{display:table-row-group;}' +
+    'tr{page-break-inside:avoid;break-inside:avoid;}' +
     'th{background:#122B4A;color:#fff;padding:6px 5px;text-align:right;font-weight:700;border:1px solid #1e3a5f;}' +
     'td{padding:5px;border:1px solid #e2e8f0;}' +
     'tr:nth-child(even) td{background:#fafbfc;}' +
     '.rbold{font-weight:700;}' +
     '.rempty{text-align:center;color:#94a3b8;padding:10px;}' +
-    '.rhl{display:inline-block;min-width:44%;background:#f8fafc;border-radius:8px;padding:8px 10px;margin:3px 6px 3px 0;vertical-align:top;border:1px solid #e2e8f0;border-left:4px solid #cbd5e1;}' +
+    '.rhl{display:inline-block;min-width:44%;background:#f8fafc;border-radius:8px;padding:8px 10px;margin:3px 6px 3px 0;vertical-align:top;border:1px solid #e2e8f0;border-left:4px solid #cbd5e1;page-break-inside:avoid;break-inside:avoid;}' +
     '.rhl.blue{border-left-color:#3b82f6;} .rhl.green{border-left-color:#10a34a;} .rhl.red{border-left-color:#dc2626;} .rhl.amber{border-left-color:#f59e0b;} .rhl.navy{border-left-color:#122B4A;}' +
     '.rhl-label{font-size:9.5px;color:#64748b;} .rhl-value{font-size:13px;font-weight:800;margin-top:2px;}' +
-    '.rkv{display:flex;justify-content:space-between;font-size:11px;padding:5px 4px;border:1px solid #f1f5f9;border-bottom:1px dashed #e2e8f0;}' +
+    '.rkv{display:flex;justify-content:space-between;font-size:11px;padding:5px 4px;border:1px solid #f1f5f9;border-bottom:1px dashed #e2e8f0;page-break-inside:avoid;break-inside:avoid;}' +
     '.rnote{font-size:9.5px;color:#94a3b8;margin:6px 0;}' +
     '.rpara{font-size:11px;line-height:1.6;color:#334155;}' +
-    '.rgoal-ok{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;font-weight:700;padding:8px;border-radius:8px;margin-top:8px;text-align:center;font-size:11px;}' +
-    '.rgoal-warn{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;font-weight:700;padding:8px;border-radius:8px;margin-top:8px;text-align:center;font-size:11px;}' +
+    '.rgoal-ok{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;font-weight:700;padding:8px;border-radius:8px;margin-top:8px;text-align:center;font-size:11px;page-break-inside:avoid;break-inside:avoid;}' +
+    '.rgoal-warn{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;font-weight:700;padding:8px;border-radius:8px;margin-top:8px;text-align:center;font-size:11px;page-break-inside:avoid;break-inside:avoid;}' +
     '.rfootnote{font-size:9px;color:#94a3b8;margin-top:14px;text-align:center;}' +
     '@media print{' +
     'html,body{width:100%;height:auto;overflow:visible!important;background:#fff;}' +
-    '.rpage{page-break-after:always!important;break-after:page!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;border:none!important;box-shadow:none!important;padding:0!important;margin:0!important;width:100%!important;}' +
-    '.rpage:last-child{page-break-after:avoid!important;break-after:avoid!important;}' +
-    '.rhl,.rkv,.rgoal-ok,.rgoal-warn,tr,td,th{page-break-inside:avoid;break-inside:avoid;}' +
+    '.rpage{page-break-after:always!important;break-after:page!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;border:none!important;box-shadow:none!important;padding:10mm!important;margin:0!important;width:100%!important;height:277mm!important;overflow:hidden!important;}' +
+    '.rpage:last-child{page-break-after:avoid!important;break-after:avoid!important;height:auto!important;}' +
+    '.rhl,.rkv,.rgoal-ok,.rgoal-warn,tr,td,th{page-break-inside:avoid!important;break-inside:avoid!important;}' +
+    'h2{page-break-after:avoid!important;break-after:avoid!important;}' +
     '.rbackbar{display:none!important;}' +
     '}' +
     '</style></head><body>' +
@@ -2203,32 +2207,37 @@ function buildReportHtml(data) {
     '</body></html>';
 }
 
-/* Opens the report in a hidden iframe and triggers the browser's native print
-   dialog (Save as PDF / Android Print Service / Share). Entirely offline.
-   Uses iframe instead of window.open() because Android WebView blocks or
-   limits new windows, and only captures the first viewport page. The iframe
-   stays inside the same WebView document tree so the print adapter sees the
-   full multi-page DOM with proper page-break CSS. */
+/* Opens the report via Android PrintManager (if inside the app) or
+   falls back to iframe print for browsers. The Android bridge sends the
+   full HTML to Kotlin, which creates a properly-laid-out WebView and
+   uses createPrintDocumentAdapter for true multi-page PDF output. */
 function exportPrintableReport() {
   var html = buildReportHtml(state.data);
 
-  // Android native bridge: if running inside the Android app, use the
-  // PrintManager directly for perfect multi-page PDF output.
+  // === ANDROID APP BRIDGE (primary) ===
+  // This is the ONLY path that works reliably for multi-page PDF
+  // inside an Android WebView. It hands the HTML to Kotlin code
+  // which attaches a temp WebView to the view hierarchy, forces
+  // a full layout, then calls Android PrintManager.
   if (typeof Android !== "undefined" && Android.printReport) {
-    try { Android.printReport(html); showToast("✓ ባለ 9-ገጽ ሪፖርት በAndroid Print Manager ተዘጋጅቷል"); return; }
-    catch (e) { /* fallback to iframe */ }
+    try {
+      Android.printReport(html);
+      return;
+    } catch (e) {
+      console.error("Android bridge failed:", e);
+      // fall through to iframe fallback
+    }
   }
 
-  // Remove any stale print frame
+  // === BROWSER / IFRAME FALLBACK ===
   var oldFrame = document.getElementById('print-frame');
   if (oldFrame) { try { oldFrame.remove(); } catch (e) {} }
 
-  // Create hidden iframe sized to A4 width so WebView print adapter can
-  // measure page breaks correctly against the CSS @page size.
   var iframe = document.createElement('iframe');
   iframe.id = 'print-frame';
   iframe.setAttribute('title', 'print-frame');
-  iframe.style.cssText = 'position:absolute;top:-9999px;left:-9999px;width:210mm;height:100%;border:none;overflow:visible;';
+  // width MUST be A4 width (210mm) so @page CSS matches reality
+  iframe.style.cssText = 'position:fixed;top:0;left:-9999px;width:210mm;height:100vh;border:none;overflow:visible;visibility:hidden;';
   document.body.appendChild(iframe);
 
   var doc = iframe.contentWindow.document;
@@ -2236,25 +2245,20 @@ function exportPrintableReport() {
   doc.write(html);
   doc.close();
 
-  // Android WebView needs extra time for layout + fonts before print()
-  var isAndroid = /Android/i.test(navigator.userAgent);
-  var delay = isAndroid ? 1800 : 600;
-
   setTimeout(function () {
     try {
       iframe.contentWindow.focus();
       iframe.contentWindow.print();
-      showToast("✓ ባለ 9-ገጽ ሪፖርት ተዘጋጅቷል — 'Save as PDF' ወይም 'Share' ይምረጡ");
+      showToast("✓ ባለ 9-ገጽ ሪፖርት ተዘጋጅቷል");
     } catch (err) {
       console.error('Print failed:', err);
-      showToast("ሪፖርት ማዘጋጀት አልተቻለም — እባክዎ እንደገና ይሞክሩ");
+      showToast("ሪፖርት ማዘጋጀት አልተቻለም");
     }
-    // Cleanup after print dialog has had time to open
     setTimeout(function () {
       var f = document.getElementById('print-frame');
       if (f) { try { f.remove(); } catch (e) {} }
-    }, 10000);
-  }, delay);
+    }, 12000);
+  }, 2000);
 }
 
 /* Preparation sheet: lets the shop owner jump to the editable sections
