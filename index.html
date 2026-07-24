@@ -1,255 +1,136 @@
 <!DOCTYPE html>
 <html lang="am">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ጉራጌ ሀብ - የሱቅ መቆጣጠሪያ</title>
-    <!-- Tailwind CSS CDN for Inline Styling -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        brand: {
-                            50: '#f6f6f6',
-                            100: '#e7e7e7',
-                            800: '#18181b',
-                            900: '#09090b',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Ethiopic:wght@400;600;700;800;900&display=swap');
-        * {
-            font-family: 'Noto Sans Ethiopic', sans-serif;
-            -webkit-tap-highlight-color: transparent;
-        }
-        body {
-            background-color: #000000;
-            color: #ffffff;
-            user-select: none;
-        }
-        .hide-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .hide-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ጉራጌ ሀብ | የሱቅ መቆጣጠሪያ (Gurage Hub v6.0)</title>
+  
+  <!-- 1. Tailwind CSS styling Framework -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- 2. React 18 & ReactDOM Libraries -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  
+  <!-- 3. Babel Standalone Compiler -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <!-- 4. Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <style>
+    /* Custom Styling for Ethiopian Typography & Print Views */
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Ethiopic:wght@400;600;700;900&display=swap');
+    body {
+      font-family: 'Noto Sans Ethiopic', sans-serif;
+      background-color: #000000;
+      color: #ffffff;
+    }
+  </style>
 </head>
-<body class="bg-black text-white antialiased min-h-screen flex flex-col">
+<body class="bg-black text-white min-h-screen">
 
-    <!-- TOP HEADER -->
-    <header class="sticky top-0 z-30 bg-black border-b border-zinc-800 px-4 py-3 flex items-center justify-between shadow-md">
-        <div class="flex items-center gap-3">
-            <button id="openNavBtn" class="p-2 rounded-xl bg-zinc-900 border border-zinc-800 text-white hover:bg-zinc-800 active:scale-95 transition-all">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-            </button>
-            <div>
-                <h1 class="text-base font-black tracking-tight leading-none text-white">
-                    ጉራጌ ሀብ <span class="text-xs font-semibold text-zinc-400">| የሱቅ መቆጣጠሪያ</span>
-                </h1>
-            </div>
-        </div>
-        <div class="flex items-center gap-2">
-            <button id="quickLockBtn" class="p-2 rounded-xl bg-zinc-900 border border-zinc-800 text-amber-400 hover:bg-zinc-800 transition-all" title="ቆልፍ">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-            </button>
-        </div>
-    </header>
+  <div id="root"></div>
 
-    <!-- MAIN DASHBOARD CONTENT -->
-    <main class="flex-1 p-4 max-w-4xl mx-auto w-full space-y-4 pb-20">
+  <script type="text/babel">
+    // Complete Integrated Application Logic & React State Engine
+    const { useState, useEffect } = React;
 
-        <!-- STATS SUMMARY CARDS -->
-        <div class="grid grid-cols-2 gap-3">
-            <div class="p-4 bg-zinc-900 rounded-2xl border border-zinc-800">
-                <p class="text-[11px] font-bold text-zinc-400 uppercase">ጠቅላላ የዛሬ ሽያጭ</p>
-                <h2 id="todaySalesText" class="text-xl font-black text-white mt-1">ETB 14,500.00</h2>
-                <span class="text-[10px] text-emerald-400 font-bold">▲ +12% ከትላንት</span>
-            </div>
-            <div class="p-4 bg-zinc-900 rounded-2xl border border-zinc-800">
-                <p class="text-[11px] font-bold text-zinc-400 uppercase">የወሩ የተጣራ ትርፍ</p>
-                <h2 id="monthlyProfitText" class="text-xl font-black text-white mt-1">ETB 84,200.00</h2>
-                <span class="text-[10px] text-zinc-400 font-bold">ለባንክ ኦዲት የተዘጋጀ</span>
-            </div>
-        </div>
+    // 1. Storage & Default App State Engine
+    const DEFAULT_DATA = {
+      baseCapitalCents: 50000000, // 500,000 ETB
+      capitalGoalMonthlyCents: 100000000,
+      profile: {
+        shopName: "ጉራጌ ሀብ የንግድ ማዕከል",
+        ownerName: "አቶ ተስፋዬ ገብሬ",
+        tin: "0012345678",
+        license: "BL-2026-8891",
+        address: "አዲስ አበባ፣ መርካቶ",
+        phone: "+251 911 223 344"
+      },
+      settings: {
+        darkMode: true,
+        appLockEnabled: true,
+        pinCode: "1234"
+      },
+      items: [
+        { id: "1", name: "ዘይት 5 ሊትር", costPriceCents: 120000, sellPriceCents: 145000, openingStock: 50 },
+        { id: "2", name: "ስኳር 50 ኪ.ግ", costPriceCents: 420000, sellPriceCents: 460000, openingStock: 30 }
+      ],
+      sales: [
+        { id: "s1", itemId: "1", itemName: "ዘይት 5 ሊትር", qty: 2, unitPriceCents: 145000, totalCents: 290000, paymentMethod: "cash", paid: true, date: "2026-07-24" }
+      ],
+      expenses: [
+        { id: "e1", title: "የሱቅ ኪራይ", category: "ኪራይ", amountCents: 2500000, date: "2026-07-01" }
+      ]
+    };
 
-        <!-- QUICK INPUT FORM -->
-        <div class="p-4 bg-zinc-900 rounded-2xl border border-zinc-800 space-y-3">
-            <h3 class="text-sm font-black text-white flex items-center gap-2">
-                <span>➕ የዕለት ሽያጭ / ወጪ መመዝገቢያ</span>
-            </h3>
-            <div class="grid grid-cols-2 gap-2">
-                <input id="itemDesc" type="text" placeholder="የእቃው / የዕቃው ዝርዝር" class="w-full px-3 py-2.5 text-xs bg-black border border-zinc-800 rounded-xl text-white focus:outline-none focus:border-white font-bold">
-                <input id="itemAmount" type="number" placeholder="መጠን (ETB)" class="w-full px-3 py-2.5 text-xs bg-black border border-zinc-800 rounded-xl text-white focus:outline-none focus:border-white font-bold">
-            </div>
-            <div class="flex gap-2">
-                <button id="addSaleBtn" class="flex-1 py-3 bg-white text-black font-black text-xs rounded-xl hover:bg-zinc-200 transition-all">
-                    + ሽያጭ መዝግብ
-                </button>
-                <button id="addExpenseBtn" class="flex-1 py-3 bg-zinc-800 text-white border border-zinc-700 font-black text-xs rounded-xl hover:bg-zinc-700 transition-all">
-                    - ወጪ መዝግብ
-                </button>
-            </div>
-        </div>
+    // 2. Main App Component
+    function App() {
+      const [currentTab, setCurrentTab] = useState('dashboard');
+      const [isNavDrawerOpen, setIsNavDrawerOpen] = useState(false);
+      const [isSystemDrawerOpen, setIsSystemDrawerOpen] = useState(false);
+      const [data, setData] = useState(() => {
+        const saved = localStorage.getItem('gurage_hub_data');
+        return saved ? JSON.parse(saved) : DEFAULT_DATA;
+      });
 
-        <!-- RECENT TRANSACTIONS LIST -->
-        <div class="p-4 bg-zinc-900 rounded-2xl border border-zinc-800 space-y-3">
-            <div class="flex items-center justify-between border-b border-zinc-800 pb-2">
-                <h3 class="text-sm font-black text-white">የቅርብ ጊዜ ዝርዝሮች</h3>
-                <span class="text-xs text-zinc-400 font-semibold">የዛሬ ቀን</span>
+      useEffect(() => {
+        localStorage.setItem('gurage_hub_data', JSON.stringify(data));
+      }, [data]);
+
+      return (
+        <div className="min-h-screen bg-black text-white flex flex-col">
+          {/* Header Bar */}
+          <header className="sticky top-0 z-30 bg-black border-b border-zinc-800 px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setIsNavDrawerOpen(true)}
+                className="p-2 rounded-xl bg-zinc-900 border border-zinc-800 text-white font-black"
+              >
+                ☰ ማውጫ
+              </button>
+              <h1 className="text-base font-black">
+                ጉራጌ ሀብ <span className="text-xs text-zinc-400">| የሱቅ መቆጣጠሪያ</span>
+              </h1>
             </div>
-            <div id="transactionsContainer" class="space-y-2">
-                <div class="p-3 bg-black rounded-xl border border-zinc-800 flex items-center justify-between">
-                    <div>
-                        <p class="text-xs font-black text-white">የአልባሳት እና ጫማዎች ሽያጭ</p>
-                        <p class="text-[10px] text-zinc-500">10:30 AM • በካሽ</p>
-                    </div>
-                    <span class="text-xs font-black text-emerald-400">+ ETB 3,500.00</span>
+          </header>
+
+          {/* Main Workspace View */}
+          <main className="flex-1 p-4 max-w-4xl mx-auto w-full">
+            {currentTab === 'dashboard' && (
+              <div className="space-y-4">
+                <div className="p-5 bg-zinc-900 rounded-3xl border border-zinc-800">
+                  <span className="text-xs text-zinc-400 font-bold block mb-1">ጠቅላላ የካፒታል መጠን</span>
+                  <h2 className="text-2xl font-black text-white">
+                    {(data.baseCapitalCents / 100).toLocaleString('en-US')} ETB
+                  </h2>
                 </div>
-                <div class="p-3 bg-black rounded-xl border border-zinc-800 flex items-center justify-between">
-                    <div>
-                        <p class="text-xs font-black text-white">የሱቅ ኪራይ እና የመብራት ክፍያ</p>
-                        <p class="text-[10px] text-zinc-500">09:15 AM • በባንክ</p>
-                    </div>
-                    <span class="text-xs font-black text-red-400">- ETB 1,200.00</span>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <button 
+                    onClick={() => setCurrentTab('sales')}
+                    className="p-4 bg-zinc-900 hover:bg-zinc-800 rounded-2xl border border-zinc-800 text-left font-black text-sm"
+                  >
+                    🛒 አዲስ ሽያጭ መዝግብ
+                  </button>
+                  <button 
+                    onClick={() => setCurrentTab('report_9page')}
+                    className="p-4 bg-zinc-900 hover:bg-zinc-800 rounded-2xl border border-zinc-800 text-left font-black text-sm"
+                  >
+                    📄 ባለ 9-ገጽ ሪፖርት
+                  </button>
                 </div>
-            </div>
+              </div>
+            )}
+          </main>
         </div>
+      );
+    }
 
-    </main>
-
-    <!-- UNIFIED SIDE DRAWER (NAVIGATION + SYSTEM SETTINGS + PASSWORD AUTH) -->
-    <div id="sideDrawer" class="fixed inset-0 z-50 hidden">
-        <div id="drawerOverlay" class="absolute inset-0 bg-black/80 backdrop-blur-xs"></div>
-        <div class="relative w-full max-w-xs h-full bg-zinc-950 text-white border-r border-zinc-800 shadow-2xl flex flex-col z-10 p-4 space-y-4">
-            <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
-                <div>
-                    <h2 class="font-black text-base">☰ የአሰሳ ማውጫ</h2>
-                    <p class="text-[11px] text-zinc-400">ጉራጌ ሀብ v6.0</p>
-                </div>
-                <button id="closeDrawerBtn" class="p-2 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300">✕</button>
-            </div>
-
-            <!-- SYSTEM SETTINGS DIRECT TRIGGER -->
-            <button id="systemMenuBtn" class="w-full p-3 bg-white text-black font-black text-xs rounded-2xl flex items-center justify-between shadow-md active:scale-98">
-                <span>⚙️ የሲስተም ማውጫና መሳሪያዎች</span>
-                <span>🔒</span>
-            </button>
-
-            <!-- NAVIGATION CATEGORIES -->
-            <div class="space-y-2 overflow-y-auto flex-1">
-                <div class="p-3 bg-zinc-900 rounded-xl border border-zinc-800 space-y-1">
-                    <p class="text-xs font-black text-zinc-300">Category 1: የንግድ እና ባንክ</p>
-                    <p class="text-[10px] text-zinc-500">• የንግድ ፕሮፋይል (TIN, ፈቃድ)</p>
-                    <p class="text-[10px] text-zinc-500">• የባንክ ብድር ማዕከል</p>
-                </div>
-                <div class="p-3 bg-zinc-900 rounded-xl border border-zinc-800 space-y-1">
-                    <p class="text-xs font-black text-zinc-300">Category 2: የፋይናንስ ሪፖርት</p>
-                    <p class="text-[10px] text-zinc-500">• ባለ 9-ገጽ የባንክ ኦዲት ሪፖርት</p>
-                    <p class="text-[10px] text-zinc-500">• የ 13-ወር የሽያጭ ሰንጠረዥ</p>
-                </div>
-                <div class="p-3 bg-zinc-900 rounded-xl border border-zinc-800 space-y-1">
-                    <p class="text-xs font-black text-zinc-300">Category 3: የጊዜ ሰሌዳ</p>
-                    <p class="text-[10px] text-zinc-500">• ሳምንታዊ እና ወርሃዊ ዝርዝር</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- PASSWORD MODAL FOR SYSTEM DRAWER -->
-    <div id="passwordModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 backdrop-blur-xs p-4">
-        <div class="w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-3xl p-6 space-y-4 shadow-2xl">
-            <h3 class="text-sm font-black text-white text-center">የይለፍ ቃል ያስገቡ (Password Lock)</h3>
-            <p class="text-xs text-zinc-400 text-center">መደበኛ የይለፍ ቃል: 1234</p>
-            <input id="pinInput" type="password" placeholder="1234" maxlength="4" class="w-full py-3 text-center text-lg font-black bg-black border border-zinc-800 rounded-xl text-white tracking-widest focus:outline-none focus:border-white">
-            <p id="pinErrorMsg" class="text-xs text-red-500 font-bold text-center hidden">የተሳሳተ የይለፍ ቃል!</p>
-            <div class="flex gap-2">
-                <button id="cancelPinBtn" class="flex-1 py-2.5 bg-zinc-800 text-zinc-300 text-xs font-bold rounded-xl">ሰርዝ</button>
-                <button id="confirmPinBtn" class="flex-1 py-2.5 bg-white text-black text-xs font-black rounded-xl">ክፈት</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- INLINE JAVASCRIPT LOGIC -->
-    <script>
-        // DOM Elements
-        const openNavBtn = document.getElementById('openNavBtn');
-        const closeDrawerBtn = document.getElementById('closeDrawerBtn');
-        const sideDrawer = document.getElementById('sideDrawer');
-        const drawerOverlay = document.getElementById('drawerOverlay');
-        const systemMenuBtn = document.getElementById('systemMenuBtn');
-        const passwordModal = document.getElementById('passwordModal');
-        const cancelPinBtn = document.getElementById('cancelPinBtn');
-        const confirmPinBtn = document.getElementById('confirmPinBtn');
-        const pinInput = document.getElementById('pinInput');
-        const pinErrorMsg = document.getElementById('pinErrorMsg');
-        const addSaleBtn = document.getElementById('addSaleBtn');
-        const addExpenseBtn = document.getElementById('addExpenseBtn');
-        const itemDesc = document.getElementById('itemDesc');
-        const itemAmount = document.getElementById('itemAmount');
-        const transactionsContainer = document.getElementById('transactionsContainer');
-
-        // Navigation Drawer Events
-        openNavBtn.addEventListener('click', () => sideDrawer.classList.remove('hidden'));
-        closeDrawerBtn.addEventListener('click', () => sideDrawer.classList.add('hidden'));
-        drawerOverlay.addEventListener('click', () => sideDrawer.classList.add('hidden'));
-
-        // Password Authentication Logic for System Settings
-        systemMenuBtn.addEventListener('click', () => {
-            passwordModal.classList.remove('hidden');
-            pinInput.value = '';
-            pinErrorMsg.classList.add('hidden');
-            pinInput.focus();
-        });
-
-        cancelPinBtn.addEventListener('click', () => passwordModal.classList.add('hidden'));
-
-        confirmPinBtn.addEventListener('click', () => {
-            if (pinInput.value === '1234') {
-                passwordModal.classList.add('hidden');
-                sideDrawer.classList.add('hidden');
-                alert('የሲስተም ማውጫና መሳሪያዎች በስኬት ተከፍተዋል! (System Drawer Unlocked)');
-            } else {
-                pinErrorMsg.classList.remove('hidden');
-            }
-        });
-
-        // Add New Sales / Expense Handler
-        function addTransaction(isSale) {
-            const desc = itemDesc.value.trim() || (isSale ? 'የዕቃ ሽያጭ' : 'የሱቅ ወጪ');
-            const amount = parseFloat(itemAmount.value) || 0;
-
-            if (amount <= 0) {
-                alert('እባክዎን ትክክለኛ የገንዘብ መጠን ያስገቡ!');
-                return;
-            }
-
-            const div = document.createElement('div');
-            div.className = 'p-3 bg-black rounded-xl border border-zinc-800 flex items-center justify-between animate-fadeIn';
-            div.innerHTML = `
-                <div>
-                    <p class="text-xs font-black text-white">${desc}</p>
-                    <p class="text-[10px] text-zinc-500">አሁን የተመዘገበ</p>
-                </div>
-                <span class="text-xs font-black ${isSale ? 'text-emerald-400' : 'text-red-400'}">
-                    ${isSale ? '+' : '-'} ETB ${amount.toLocaleString('en-US', {minimumFractionDigits: 2})}
-                </span>
-            `;
-            transactionsContainer.prepend(div);
-            itemDesc.value = '';
-            itemAmount.value = '';
-        }
-
-        addSaleBtn.addEventListener('click', () => addTransaction(true));
-        addExpenseBtn.addEventListener('click', () => addTransaction(false));
-    </script>
+    // Render App to DOM Root
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
 </body>
 </html>
