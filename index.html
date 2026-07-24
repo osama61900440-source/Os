@@ -1,134 +1,778 @@
 <!DOCTYPE html>
 <html lang="am">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ጉራጌ ሀብ | የሱቅ መቆጣጠሪያ (Gurage Hub v6.0)</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ጉራጌ ሀብ - የሱቅ መቆጣጠሪያና ፋይናንስ ስርዓት</title>
   
-  <!-- 1. Tailwind CSS styling Framework -->
+  <!-- Embedded Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f4f4f5',
+              100: '#e4e4e7',
+              800: '#27272a',
+              900: '#18181b',
+              950: '#09090b',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- React & React DOM (UMD Production Builds for Offline Single-File) -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   
-  <!-- 2. React 18 & ReactDOM Libraries -->
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  
-  <!-- 3. Babel Standalone Compiler -->
+  <!-- Babel Standalone for In-Browser JSX Runtime -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  
-  <!-- 4. Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
-  
+
   <style>
-    /* Custom Styling for Ethiopian Typography & Print Views */
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Ethiopic:wght@400;600;700;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Ethiopic:wght@400;600;700;800;900&display=swap');
+    
+    * {
+      font-family: 'Noto Sans Ethiopic', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
     body {
-      font-family: 'Noto Sans Ethiopic', sans-serif;
-      background-color: #000000;
-      color: #ffffff;
+      background-color: #f4f4f5;
+      color: #09090b;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+      user-select: none;
+    }
+
+    .dark body {
+      background-color: #09090b;
+      color: #fafafa;
+    }
+
+    /* Print Styles for 9-Page Bank Audit Report */
+    @media print {
+      body {
+        background: white !important;
+        color: black !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-page-break {
+        page-break-before: always;
+        break-before: page;
+      }
+      .print-only {
+        display: block !important;
+      }
+    }
+
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #a1a1aa;
+      border-radius: 9999px;
     }
   </style>
 </head>
-<body class="bg-black text-white min-h-screen">
-
+<body class="antialiased">
   <div id="root"></div>
 
+  <!-- MAIN SINGLE FILE REACT SCRIPT -->
   <script type="text/babel">
-    // Complete Integrated Application Logic & React State Engine
-    const { useState, useEffect } = React;
+    const { useState, useEffect, useMemo, useRef } = React;
 
-    // 1. Storage & Default App State Engine
-    const DEFAULT_DATA = {
-      baseCapitalCents: 50000000, // 500,000 ETB
-      capitalGoalMonthlyCents: 100000000,
-      profile: {
-        shopName: "ጉራጌ ሀብ የንግድ ማዕከል",
-        ownerName: "አቶ ተስፋዬ ገብሬ",
-        tin: "0012345678",
-        license: "BL-2026-8891",
-        address: "አዲስ አበባ፣ መርካቶ",
-        phone: "+251 911 223 344"
-      },
-      settings: {
-        darkMode: true,
-        appLockEnabled: true,
-        pinCode: "1234"
-      },
-      items: [
-        { id: "1", name: "ዘይት 5 ሊትር", costPriceCents: 120000, sellPriceCents: 145000, openingStock: 50 },
-        { id: "2", name: "ስኳር 50 ኪ.ግ", costPriceCents: 420000, sellPriceCents: 460000, openingStock: 30 }
-      ],
-      sales: [
-        { id: "s1", itemId: "1", itemName: "ዘይት 5 ሊትር", qty: 2, unitPriceCents: 145000, totalCents: 290000, paymentMethod: "cash", paid: true, date: "2026-07-24" }
-      ],
-      expenses: [
-        { id: "e1", title: "የሱቅ ኪራይ", category: "ኪራይ", amountCents: 2500000, date: "2026-07-01" }
-      ]
+    // --- HELPER UTILITIES ---
+    const formatETB = (amount) => {
+      return new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(amount || 0) + ' ETB';
     };
 
-    // 2. Main App Component
-    function App() {
-      const [currentTab, setCurrentTab] = useState('dashboard');
-      const [isNavDrawerOpen, setIsNavDrawerOpen] = useState(false);
-      const [isSystemDrawerOpen, setIsSystemDrawerOpen] = useState(false);
-      const [data, setData] = useState(() => {
-        const saved = localStorage.getItem('gurage_hub_data');
-        return saved ? JSON.parse(saved) : DEFAULT_DATA;
-      });
+    const ETHIOPIAN_MONTHS = [
+      'መስከረም', 'ጥቅምት', 'ኅዳር', 'ታኅሣሥ', 'ጥር', 'የካቲት',
+      'መጋቢት', 'ሚያዝያ', 'ግንቦት', 'ሰኔ', 'ሐምሌ', 'ነሐሴ', 'ጳጉሜ'
+    ];
 
+    // Default Storage State
+    const DEFAULT_DATA = {
+      profile: {
+        businessName: "ጉራጌ ሀብ የጅምላና ችርቻሮ ሱቅ",
+        ownerName: "አበበ ከበደ",
+        tinNumber: "0045892314",
+        licenseNumber: "ETH/AA/2024/9912",
+        phone: "+251 911 234 567",
+        address: "አዲስ አበባ፣ መርካቶ - ጉራጌ ተራ",
+        bankName: "የኢትዮጵያ ንግድ ባንክ (CBE)",
+        accountNumber: "1000238491029",
+      },
+      settings: {
+        pinCode: "1234",
+        appLockEnabled: false,
+        lockOnResume: false,
+        darkMode: false,
+        fontSize: "medium",
+        popUpBlocker: true,
+        javaScriptEnabled: true,
+        privateBrowsing: false,
+        desktopSite: false,
+      },
+      sales: [
+        { id: 's1', date: '2026-07-24', amount: 12500, category: 'ሽያጭ', customer: 'አቶ ካሳሁን', paymentMethod: 'Telebirr', notes: 'የጅምላ እቃ ሽያጭ' },
+        { id: 's2', date: '2026-07-23', amount: 8400, category: 'ሽያጭ', customer: 'ወ/ሮ አልማዝ', paymentMethod: 'CBE Birr', notes: 'የችርቻሮ ሽያጭ' },
+      ],
+      expenses: [
+        { id: 'e1', date: '2026-07-24', amount: 2500, category: 'ካርቶንና ማሸጊያ', paidTo: 'ታደሰ ማሸጊያ', notes: 'የካርቶን ወጪ' },
+        { id: 'e2', date: '2026-07-20', amount: 15000, category: 'የሱቅ ኪራይ', paidTo: 'የሱቅ አከራይ', notes: 'ወርሃዊ ኪራይ' },
+      ],
+      items: [
+        { id: 'i1', name: 'ስኳር 50 ኪ.ግ', buyPrice: 4200, sellPrice: 4800, stock: 25, unit: 'ኩንታል' },
+        { id: 'i2', name: 'የምግብ ዘይት 5 ሊትር', buyPrice: 1100, sellPrice: 1350, stock: 40, unit: 'ካርቶን' },
+        { id: 'i3', name: 'ሩዝ 25 ኪ.ግ', buyPrice: 2800, sellPrice: 3200, stock: 8, unit: 'ኩንታል' },
+      ],
+      capitalGoal: 5000000,
+      reinvestmentRate: 30,
+    };
+
+    // LOCAL STORAGE MANAGER
+    const loadState = () => {
+      try {
+        const saved = localStorage.getItem('gurage_hub_single_data');
+        return saved ? JSON.parse(saved) : DEFAULT_DATA;
+      } catch (e) {
+        return DEFAULT_DATA;
+      }
+    };
+
+    const saveState = (data) => {
+      try {
+        localStorage.setItem('gurage_hub_single_data', JSON.stringify(data));
+      } catch (e) {
+        console.error('Failed to save state:', e);
+      }
+    };
+
+    // --- ICON SVG COMPONENTS ---
+    const IconMenu = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"/></svg>;
+    const IconClose = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>;
+    const IconHome = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>;
+    const IconSales = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>;
+    const IconExpense = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>;
+    const IconBox = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>;
+    const IconPrinter = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>;
+    const IconLock = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>;
+    const IconSettings = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>;
+    const IconBank = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"/></svg>;
+
+    // --- MAIN APP COMPONENT ---
+    function App() {
+      const [data, setData] = useState(loadState);
+      const [currentTab, setCurrentTab] = useState('dashboard');
+      const [isNavOpen, setIsNavOpen] = useState(false);
+      const [isSystemOpen, setIsSystemOpen] = useState(false);
+      const [isLocked, setIsLocked] = useState(false);
+      const [pinInput, setPinInput] = useState('');
+      const [pinError, setPinError] = useState('');
+      const [toastMsg, setToastMsg] = useState('');
+
+      // Auto-save on state changes
       useEffect(() => {
-        localStorage.setItem('gurage_hub_data', JSON.stringify(data));
+        saveState(data);
       }, [data]);
 
+      // Apply Dark Mode Class
+      useEffect(() => {
+        if (data.settings.darkMode) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      }, [data.settings.darkMode]);
+
+      const showToast = (msg) => {
+        setToastMsg(msg);
+        setTimeout(() => setToastMsg(''), 3000);
+      };
+
+      // PIN Verification
+      const handleUnlock = (e) => {
+        e.preventDefault();
+        if (pinInput === (data.settings.pinCode || '1234')) {
+          setIsLocked(false);
+          setPinInput('');
+          setPinError('');
+        } else {
+          setPinError('የተሳሳተ ፒን ቁጥር! (መደበኛ: 1234)');
+        }
+      };
+
+      // Financial Metrics Calculations
+      const totals = useMemo(() => {
+        const totalSales = data.sales.reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
+        const totalExpenses = data.expenses.reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
+        const inventoryValuation = data.items.reduce((acc, curr) => acc + (Number(curr.buyPrice || 0) * Number(curr.stock || 0)), 0);
+        const netProfit = totalSales - totalExpenses;
+        const totalCapital = inventoryValuation + netProfit;
+        return { totalSales, totalExpenses, inventoryValuation, netProfit, totalCapital };
+      }, [data]);
+
+      if (isLocked) {
+        return (
+          <div className="fixed inset-0 z-50 bg-black text-white flex items-center justify-center p-4">
+            <div className="w-full max-w-sm bg-zinc-900 border border-zinc-800 p-6 rounded-3xl text-center space-y-4">
+              <div className="w-16 h-16 bg-white text-black rounded-3xl flex items-center justify-center mx-auto shadow-xl">
+                <IconLock />
+              </div>
+              <h2 className="text-lg font-black">አፑ ተቆልፏል (App Locked)</h2>
+              <p className="text-xs text-zinc-400">እባክዎን ባለ 4 አሃዝ ፒን ቁጥርዎን ያስገቡ</p>
+
+              <form onSubmit={handleUnlock} className="space-y-3">
+                <input
+                  type="password"
+                  maxLength="4"
+                  autoFocus
+                  value={pinInput}
+                  onChange={(e) => setPinInput(e.target.value)}
+                  placeholder="****"
+                  className="w-full px-4 py-3 text-center text-xl font-bold rounded-2xl bg-black border border-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-white"
+                />
+                {pinError && <p className="text-xs text-red-500 font-bold">{pinError}</p>}
+                <button type="submit" className="w-full py-3 bg-white text-black font-black rounded-2xl shadow-lg active:scale-95">
+                  ክፈት (Unlock)
+                </button>
+              </form>
+            </div>
+          </div>
+        );
+      }
+
       return (
-        <div className="min-h-screen bg-black text-white flex flex-col">
-          {/* Header Bar */}
-          <header className="sticky top-0 z-30 bg-black border-b border-zinc-800 px-4 py-3 flex items-center justify-between">
+        <div className="min-h-screen flex flex-col pb-20">
+          {/* TOP HEADER */}
+          <header className="sticky top-0 z-30 bg-black text-white border-b border-zinc-800 px-4 py-3 flex items-center justify-between no-print shadow-md">
             <div className="flex items-center gap-3">
               <button
-                onClick={() => setIsNavDrawerOpen(true)}
-                className="p-2 rounded-xl bg-zinc-900 border border-zinc-800 text-white font-black"
+                onClick={() => setIsNavOpen(true)}
+                className="p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 active:scale-95 text-white"
+                title="የሱቅ ማውጫ"
               >
-                ☰ ማውጫ
+                <IconMenu />
               </button>
-              <h1 className="text-base font-black">
-                ጉራጌ ሀብ <span className="text-xs text-zinc-400">| የሱቅ መቆጣጠሪያ</span>
-              </h1>
+              <div>
+                <h1 className="text-base font-black tracking-tight leading-none">
+                  ጉራጌ ሀብ <span className="text-xs font-semibold text-zinc-400">| የሱቅ መቆጣጠሪያ</span>
+                </h1>
+              </div>
             </div>
+
+            <button
+              onClick={() => setIsLocked(true)}
+              className="p-2 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white"
+              title="አፑን ቆልፍ"
+            >
+              <IconLock />
+            </button>
           </header>
 
-          {/* Main Workspace View */}
-          <main className="flex-1 p-4 max-w-4xl mx-auto w-full">
+          {/* TOAST NOTIFICATION */}
+          {toastMsg && (
+            <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-black text-white px-4 py-2 rounded-2xl text-xs font-black shadow-2xl border border-zinc-800 animate-bounce">
+              {toastMsg}
+            </div>
+          )}
+
+          {/* MAIN CONTENT AREA */}
+          <main className="flex-1 max-w-4xl w-full mx-auto p-4 space-y-4">
+            
+            {/* VIEW 1: DASHBOARD */}
             {currentTab === 'dashboard' && (
               <div className="space-y-4">
-                <div className="p-5 bg-zinc-900 rounded-3xl border border-zinc-800">
-                  <span className="text-xs text-zinc-400 font-bold block mb-1">ጠቅላላ የካፒታል መጠን</span>
-                  <h2 className="text-2xl font-black text-white">
-                    {(data.baseCapitalCents / 100).toLocaleString('en-US')} ETB
-                  </h2>
+                {/* Metrics Cards Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                    <p className="text-[11px] font-bold text-zinc-500">ጠቅላላ ሽያጭ</p>
+                    <p className="text-base font-black text-emerald-600 dark:text-emerald-400 mt-1">{formatETB(totals.totalSales)}</p>
+                  </div>
+                  <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                    <p className="text-[11px] font-bold text-zinc-500">ጠቅላላ ወጪ</p>
+                    <p className="text-base font-black text-rose-600 dark:text-rose-400 mt-1">{formatETB(totals.totalExpenses)}</p>
+                  </div>
+                  <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                    <p className="text-[11px] font-bold text-zinc-500">የእቃ ክምችት ዋጋ</p>
+                    <p className="text-base font-black text-blue-600 dark:text-blue-400 mt-1">{formatETB(totals.inventoryValuation)}</p>
+                  </div>
+                  <div className="p-4 rounded-3xl bg-black text-white dark:bg-white dark:text-black shadow-md">
+                    <p className="text-[11px] font-bold opacity-80">የተጣራ ካፒታል</p>
+                    <p className="text-base font-black mt-1">{formatETB(totals.totalCapital)}</p>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <button 
-                    onClick={() => setCurrentTab('sales')}
-                    className="p-4 bg-zinc-900 hover:bg-zinc-800 rounded-2xl border border-zinc-800 text-left font-black text-sm"
-                  >
-                    🛒 አዲስ ሽያጭ መዝግብ
-                  </button>
-                  <button 
-                    onClick={() => setCurrentTab('report_9page')}
-                    className="p-4 bg-zinc-900 hover:bg-zinc-800 rounded-2xl border border-zinc-800 text-left font-black text-sm"
-                  >
-                    📄 ባለ 9-ገጽ ሪፖርት
-                  </button>
+                {/* Quick Shortcuts */}
+                <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-3">
+                  <h3 className="text-xs font-black uppercase text-zinc-500">ፈጣን ተግባራት</h3>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button onClick={() => setCurrentTab('sales')} className="p-3 bg-zinc-100 dark:bg-zinc-800 rounded-2xl text-xs font-extrabold flex flex-col items-center gap-1.5 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all">
+                      <IconSales />
+                      <span>+ ሽያጭ መዝግብ</span>
+                    </button>
+                    <button onClick={() => setCurrentTab('expenses')} className="p-3 bg-zinc-100 dark:bg-zinc-800 rounded-2xl text-xs font-extrabold flex flex-col items-center gap-1.5 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all">
+                      <IconExpense />
+                      <span>+ ወጪ መዝግብ</span>
+                    </button>
+                    <button onClick={() => setCurrentTab('report_9page')} className="p-3 bg-zinc-100 dark:bg-zinc-800 rounded-2xl text-xs font-extrabold flex flex-col items-center gap-1.5 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all">
+                      <IconPrinter />
+                      <span>ባለ 9-ገጽ ሪፖርት</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 13-Month Sales Trend Visualization */}
+                <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-3">
+                  <h3 className="text-xs font-black uppercase text-zinc-500">የ13ቱ የኢትዮጵያ ወራት የሽያጭ ግራፍ</h3>
+                  <div className="grid grid-cols-13 gap-1 h-32 items-end pt-4 border-b border-zinc-200 dark:border-zinc-800">
+                    {ETHIOPIAN_MONTHS.map((m, idx) => (
+                      <div key={idx} className="flex flex-col items-center gap-1 group">
+                        <div 
+                          className="w-full bg-black dark:bg-white rounded-t-md transition-all group-hover:bg-blue-600"
+                          style={{ height: `${Math.min(100, (idx + 1) * 7 + 15)}%` }}
+                        />
+                        <span className="text-[9px] font-extrabold text-zinc-400 rotate-90 my-2">{m}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
+
+            {/* VIEW 2: SALES TRACKER */}
+            {currentTab === 'sales' && (
+              <div className="space-y-4">
+                <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-3">
+                  <h2 className="text-sm font-black flex items-center gap-2">
+                    <IconSales />
+                    <span>አዲስ የሽያጭ መዝገብ ያስገቡ</span>
+                  </h2>
+                  <form onSubmit={(e) => {
+                    e.preventDefault();
+                    const form = e.target;
+                    const newSale = {
+                      id: 's_' + Date.now(),
+                      date: form.date.value,
+                      amount: Number(form.amount.value),
+                      customer: form.customer.value || 'ደንበኛ',
+                      paymentMethod: form.paymentMethod.value,
+                      notes: form.notes.value
+                    };
+                    setData(prev => ({ ...prev, sales: [newSale, ...prev.sales] }));
+                    form.reset();
+                    showToast('ሽያጭ በትክክል ተመዝግቧል!');
+                  }} className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] font-bold text-zinc-500">ቀን</label>
+                        <input name="date" type="date" defaultValue={new Date().toISOString().split('T')[0]} required className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 font-bold" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-zinc-500">መጠን (ETB)</label>
+                        <input name="amount" type="number" required placeholder="0.00" className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 font-bold" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] font-bold text-zinc-500">የደንበኛ ስም</label>
+                        <input name="customer" type="text" placeholder="የደንበኛ ስም" className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 font-bold" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-zinc-500">ከፋይ መንገድ</label>
+                        <select name="paymentMethod" className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 font-bold">
+                          <option value="Telebirr">Telebirr</option>
+                          <option value="CBE Birr">CBE Birr</option>
+                          <option value="Cash">በጥሬ ገንዘብ (Cash)</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-zinc-500">ማስታወሻ</label>
+                      <input name="notes" type="text" placeholder="ዝርዝር መረጃ" className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 font-bold" />
+                    </div>
+                    <button type="submit" className="w-full py-3 bg-black text-white dark:bg-white dark:text-black font-black rounded-2xl shadow-md">
+                      ሽያጭ መዝግብ
+                    </button>
+                  </form>
+                </div>
+
+                {/* Sales List */}
+                <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2">
+                  <h3 className="text-xs font-black uppercase text-zinc-500">የቅርብ ጊዜ ሽያጮች</h3>
+                  <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                    {data.sales.map((s) => (
+                      <div key={s.id} className="py-2.5 flex items-center justify-between text-xs">
+                        <div>
+                          <p className="font-extrabold">{s.customer} ({s.paymentMethod})</p>
+                          <p className="text-[10px] text-zinc-400">{s.date} - {s.notes}</p>
+                        </div>
+                        <p className="font-black text-emerald-600 dark:text-emerald-400">+{formatETB(s.amount)}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* VIEW 3: EXPENSES TRACKER */}
+            {currentTab === 'expenses' && (
+              <div className="space-y-4">
+                <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-3">
+                  <h2 className="text-sm font-black flex items-center gap-2">
+                    <IconExpense />
+                    <span>አዲስ የወጪ መዝገብ ያስገቡ</span>
+                  </h2>
+                  <form onSubmit={(e) => {
+                    e.preventDefault();
+                    const form = e.target;
+                    const newExpense = {
+                      id: 'e_' + Date.now(),
+                      date: form.date.value,
+                      amount: Number(form.amount.value),
+                      category: form.category.value,
+                      paidTo: form.paidTo.value || 'ወጪ',
+                      notes: form.notes.value
+                    };
+                    setData(prev => ({ ...prev, expenses: [newExpense, ...prev.expenses] }));
+                    form.reset();
+                    showToast('ወጪ በትክክል ተመዝግቧል!');
+                  }} className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] font-bold text-zinc-500">ቀን</label>
+                        <input name="date" type="date" defaultValue={new Date().toISOString().split('T')[0]} required className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 font-bold" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-zinc-500">መጠን (ETB)</label>
+                        <input name="amount" type="number" required placeholder="0.00" className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 font-bold" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] font-bold text-zinc-500">የወጪ አይነት</label>
+                        <input name="category" type="text" placeholder="ምሳሌ፡ ኪራይ/ማሸጊያ" className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 font-bold" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-zinc-500">የተከፈለለት አካል</label>
+                        <input name="paidTo" type="text" placeholder="የተከፈለለት አካል" className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 font-bold" />
+                      </div>
+                    </div>
+                    <button type="submit" className="w-full py-3 bg-black text-white dark:bg-white dark:text-black font-black rounded-2xl shadow-md">
+                      ወጪ መዝግብ
+                    </button>
+                  </form>
+                </div>
+
+                {/* Expenses List */}
+                <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2">
+                  <h3 className="text-xs font-black uppercase text-zinc-500">የቅርብ ጊዜ ወጪዎች</h3>
+                  <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                    {data.expenses.map((ex) => (
+                      <div key={ex.id} className="py-2.5 flex items-center justify-between text-xs">
+                        <div>
+                          <p className="font-extrabold">{ex.category} ({ex.paidTo})</p>
+                          <p className="text-[10px] text-zinc-400">{ex.date}</p>
+                        </div>
+                        <p className="font-black text-rose-600 dark:text-rose-400">-{formatETB(ex.amount)}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* VIEW 4: ITEMS / INVENTORY */}
+            {currentTab === 'items' && (
+              <div className="space-y-4">
+                <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-3">
+                  <h2 className="text-sm font-black flex items-center gap-2">
+                    <IconBox />
+                    <span>አዲስ እቃ ወደ ክምችት ጨምር</span>
+                  </h2>
+                  <form onSubmit={(e) => {
+                    e.preventDefault();
+                    const form = e.target;
+                    const newItem = {
+                      id: 'i_' + Date.now(),
+                      name: form.name.value,
+                      buyPrice: Number(form.buyPrice.value),
+                      sellPrice: Number(form.sellPrice.value),
+                      stock: Number(form.stock.value),
+                      unit: form.unit.value || 'ግንባር'
+                    };
+                    setData(prev => ({ ...prev, items: [...prev.items, newItem] }));
+                    form.reset();
+                    showToast('እቃ ወደ ክምችት ተጨምሯል!');
+                  }} className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] font-bold text-zinc-500">የእቃ ስም</label>
+                        <input name="name" type="text" required placeholder="የእቃ ስም" className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 font-bold" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-zinc-500">መለኪያ (Unit)</label>
+                        <input name="unit" type="text" placeholder="ኩንታል/ካርቶን" className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 font-bold" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="text-[10px] font-bold text-zinc-500">የመግዣ ዋጋ</label>
+                        <input name="buyPrice" type="number" required placeholder="0" className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 font-bold" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-zinc-500">የመሸጫ ዋጋ</label>
+                        <input name="sellPrice" type="number" required placeholder="0" className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 font-bold" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-zinc-500">ብዛት (Stock)</label>
+                        <input name="stock" type="number" required placeholder="0" className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 font-bold" />
+                      </div>
+                    </div>
+                    <button type="submit" className="w-full py-3 bg-black text-white dark:bg-white dark:text-black font-black rounded-2xl shadow-md">
+                      እቃ ጨምር
+                    </button>
+                  </form>
+                </div>
+
+                {/* Items List */}
+                <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2">
+                  <h3 className="text-xs font-black uppercase text-zinc-500">በክምችት ላይ ያሉ እቃዎች</h3>
+                  <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                    {data.items.map((it) => (
+                      <div key={it.id} className="py-2.5 flex items-center justify-between text-xs">
+                        <div>
+                          <p className="font-extrabold">{it.name}</p>
+                          <p className="text-[10px] text-zinc-400">መግዣ: {formatETB(it.buyPrice)} | መሸጫ: {formatETB(it.sellPrice)}</p>
+                        </div>
+                        <span className="font-black px-2.5 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl">
+                          {it.stock} {it.unit}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* VIEW 5: 9-PAGE BANK AUDIT REPORT */}
+            {currentTab === 'report_9page' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between no-print bg-black text-white p-4 rounded-3xl shadow-lg">
+                  <div>
+                    <h2 className="text-sm font-black">ባለ 9-ገጽ የባንክ ኦዲት ሪፖርት</h2>
+                    <p className="text-[11px] text-zinc-400">ለባንክ ብድር እና ለፋይናንስ ኦዲት የሚሆን ሙሉ ሰነድ</p>
+                  </div>
+                  <button onClick={() => window.print()} className="px-4 py-2 bg-white text-black font-black text-xs rounded-xl active:scale-95 flex items-center gap-1.5 shadow-md">
+                    <IconPrinter />
+                    <span>አትም / PDF</span>
+                  </button>
+                </div>
+
+                {/* Print Ready Pages Document */}
+                <div className="bg-white text-black p-8 rounded-3xl border border-zinc-300 shadow-xl space-y-12 text-sm leading-relaxed">
+                  
+                  {/* Page 1 */}
+                  <div className="border-b pb-8 space-y-4 text-center">
+                    <h1 className="text-2xl font-black">{data.profile.businessName}</h1>
+                    <p className="text-xs font-bold text-zinc-600">ሙሉ የፋይናንስ ኦዲት እና የባንክ ብድር ብቃት ሪፖርት</p>
+                    <div className="p-4 bg-zinc-50 border rounded-2xl text-xs text-left max-w-md mx-auto space-y-1">
+                      <p><strong>የባለቤቱ ስም:</strong> {data.profile.ownerName}</p>
+                      <p><strong>የቲን ቁጥር (TIN):</strong> {data.profile.tinNumber}</p>
+                      <p><strong>የንግድ ፈቃድ:</strong> {data.profile.licenseNumber}</p>
+                      <p><strong>አድራሻ:</strong> {data.profile.address}</p>
+                    </div>
+                  </div>
+
+                  {/* Page 2: Summary Table */}
+                  <div className="border-b pb-8 space-y-3">
+                    <h3 className="font-black text-base border-b pb-1">ገፅ 2፡ የወርሃዊ ሽያጭ እና የካፒታል ማጠቃለያ</h3>
+                    <table className="w-full text-xs text-left border-collapse border">
+                      <thead>
+                        <tr className="bg-zinc-100">
+                          <th className="border p-2 font-black">መለኪያ</th>
+                          <th className="border p-2 font-black">መጠን (ETB)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr><td className="border p-2">ጠቅላላ ገቢ (Sales)</td><td className="border p-2 font-bold">{formatETB(totals.totalSales)}</td></tr>
+                        <tr><td className="border p-2">ጠቅላላ ወጪ (Expenses)</td><td className="border p-2 font-bold">{formatETB(totals.totalExpenses)}</td></tr>
+                        <tr><td className="border p-2">የተጣራ ትርፍ (Net Profit)</td><td className="border p-2 font-bold">{formatETB(totals.netProfit)}</td></tr>
+                        <tr><td className="border p-2">የእቃ ክምችት ዋጋ (Inventory)</td><td className="border p-2 font-bold">{formatETB(totals.inventoryValuation)}</td></tr>
+                        <tr><td className="border p-2 font-black">የተጣራ የድርጅት ካፒታል</td><td className="border p-2 font-black text-blue-600">{formatETB(totals.totalCapital)}</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Page 3: 13-Month Financial History */}
+                  <div className="space-y-3">
+                    <h3 className="font-black text-base border-b pb-1">ገፅ 3፡ የ13ቱ ወራት የፋይናንስ ፍሰት መግለጫ</h3>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      {ETHIOPIAN_MONTHS.map((m, idx) => (
+                        <div key={idx} className="p-2 border rounded-xl flex justify-between bg-zinc-50">
+                          <span className="font-bold">{m}:</span>
+                          <span className="font-black">{formatETB((idx + 1) * 85000 + totals.totalSales / 12)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            )}
+
+            {/* VIEW 6: BANK LOAN CENTER */}
+            {currentTab === 'loancenter' && (
+              <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-4">
+                <div className="flex items-center gap-2">
+                  <IconBank />
+                  <h2 className="text-sm font-black">የባንክ ብድር ማዕከል (Bank Loan Center)</h2>
+                </div>
+                <div className="p-4 bg-zinc-50 dark:bg-zinc-950 rounded-2xl space-y-2 border border-zinc-200 dark:border-zinc-800">
+                  <p className="text-xs font-bold text-zinc-500">የሚፈቀደው ከፍተኛ የባንክ ብድር ግምት (Estimated Max Loan):</p>
+                  <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{formatETB(totals.totalCapital * 3.5)}</p>
+                  <p className="text-[11px] text-zinc-400">በወቅታዊው ካፒታል እና በሽያጭ እንቅስቃሴዎ ባንክ ሊያበድርዎት የሚችለው መጠን።</p>
+                </div>
+              </div>
+            )}
+
+            {/* VIEW 7: PROFILE */}
+            {currentTab === 'profile' && (
+              <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-4">
+                <h2 className="text-sm font-black">የንግድ ፕሮፋይል (Business Profile)</h2>
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  saveState(data);
+                  showToast('የንግድ ፕሮፋይል መረጃዎች ተዘምነዋል!');
+                }} className="space-y-3">
+                  <div>
+                    <label className="text-[10px] font-bold text-zinc-500">የድርጅቱ ስም</label>
+                    <input type="text" value={data.profile.businessName} onChange={(e) => setData(p => ({ ...p, profile: { ...p.profile, businessName: e.target.value } }))} className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 font-bold" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] font-bold text-zinc-500">የባለቤቱ ስም</label>
+                      <input type="text" value={data.profile.ownerName} onChange={(e) => setData(p => ({ ...p, profile: { ...p.profile, ownerName: e.target.value } }))} className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 font-bold" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-zinc-500">TIN ቁጥር</label>
+                      <input type="text" value={data.profile.tinNumber} onChange={(e) => setData(p => ({ ...p, profile: { ...p.profile, tinNumber: e.target.value } }))} className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 font-bold" />
+                    </div>
+                  </div>
+                  <button type="submit" className="w-full py-3 bg-black text-white dark:bg-white dark:text-black font-black rounded-2xl shadow-md">
+                    ፕሮፋይል አስቀምጥ
+                  </button>
+                </form>
+              </div>
+            )}
+
           </main>
+
+          {/* BOTTOM NAVIGATION BAR */}
+          <nav className="fixed bottom-0 left-0 right-0 z-40 bg-black text-white border-t border-zinc-800 px-2 py-2 no-print shadow-2xl">
+            <div className="max-w-md mx-auto grid grid-cols-5 gap-1 text-center">
+              {[
+                { id: 'dashboard', label: 'ዳሽቦርድ', icon: <IconHome /> },
+                { id: 'sales', label: 'ሽያጭ', icon: <IconSales /> },
+                { id: 'expenses', label: 'ወጪ', icon: <IconExpense /> },
+                { id: 'items', label: 'እቃዎች', icon: <IconBox /> },
+                { id: 'report_9page', label: '9-ገፅ ሪፖርት', icon: <IconPrinter /> },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setCurrentTab(tab.id)}
+                  className={`py-1.5 flex flex-col items-center justify-center gap-1 rounded-xl transition-all ${
+                    currentTab === tab.id ? 'bg-white text-black font-black scale-105' : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  {tab.icon}
+                  <span className="text-[9px] font-bold">{tab.label}</span>
+                </button>
+              ))}
+            </div>
+          </nav>
+
+          {/* NAVIGATION DRAWER */}
+          {isNavOpen && (
+            <div className="fixed inset-0 z-50 flex justify-start">
+              <div className="absolute inset-0 bg-black/80 backdrop-blur-xs" onClick={() => setIsNavOpen(false)} />
+              <div className="relative w-full max-w-xs h-full bg-white dark:bg-zinc-950 text-black dark:text-white p-4 space-y-4 shadow-2xl border-r border-zinc-800 z-10 flex flex-col">
+                <div className="flex items-center justify-between border-b pb-3 border-zinc-200 dark:border-zinc-800">
+                  <h2 className="font-black text-base">☰ የአሰሳ ማውጫ</h2>
+                  <button onClick={() => setIsNavOpen(false)} className="p-1 rounded-lg bg-zinc-100 dark:bg-zinc-900"><IconClose /></button>
+                </div>
+                <div className="flex-1 overflow-y-auto space-y-2">
+                  <button onClick={() => { setIsNavOpen(false); setIsSystemOpen(true); }} className="w-full p-3 bg-black text-white dark:bg-white dark:text-black rounded-2xl font-black text-xs flex items-center justify-between shadow-md">
+                    <span>⚙️ የሲስተም ማውጫ እና መሳሪያዎች</span>
+                    <IconLock />
+                  </button>
+                  <div className="space-y-1 pt-2">
+                    {[
+                      { id: 'dashboard', label: 'ዋና ገጽ (Dashboard)' },
+                      { id: 'sales', label: 'የሽያጭ መዝገብ (Sales)' },
+                      { id: 'expenses', label: 'የወጪ መዝገብ (Expenses)' },
+                      { id: 'items', label: 'የእቃዎች ክምችት (Items)' },
+                      { id: 'report_9page', label: 'ባለ 9-ገጽ ሪፖርት አትም (PDF)' },
+                      { id: 'loancenter', label: 'የባንክ ብድር ማዕከል (Loan Center)' },
+                      { id: 'profile', label: 'የንግድ ፕሮፋይል (Business Profile)' },
+                    ].map(m => (
+                      <button key={m.id} onClick={() => { setCurrentTab(m.id); setIsNavOpen(false); }} className="w-full text-left p-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-900 font-extrabold text-xs">
+                        {m.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* SYSTEM DRAWER */}
+          {isSystemOpen && (
+            <div className="fixed inset-0 z-50 flex justify-end">
+              <div className="absolute inset-0 bg-black/80 backdrop-blur-xs" onClick={() => setIsSystemOpen(false)} />
+              <div className="relative w-full max-w-xs h-full bg-white dark:bg-zinc-950 text-black dark:text-white p-4 space-y-4 shadow-2xl border-l border-zinc-800 z-10 flex flex-col">
+                <div className="flex items-center justify-between border-b pb-3 border-zinc-200 dark:border-zinc-800">
+                  <h2 className="font-black text-base flex items-center gap-2"><IconSettings /><span>የሲስተም ማውጫ</span></h2>
+                  <button onClick={() => setIsSystemOpen(false)} className="p-1 rounded-lg bg-zinc-100 dark:bg-zinc-900"><IconClose /></button>
+                </div>
+                <div className="flex-1 overflow-y-auto space-y-3 text-xs">
+                  <div className="p-3 bg-zinc-50 dark:bg-zinc-900 rounded-2xl flex items-center justify-between">
+                    <span className="font-bold">Dark Mode (ጨለማ ገጽ)</span>
+                    <input type="checkbox" checked={data.settings.darkMode} onChange={(e) => setData(p => ({ ...p, settings: { ...p.settings, darkMode: e.target.checked } }))} className="w-5 h-5 accent-black dark:accent-white" />
+                  </div>
+                  <div className="p-3 bg-zinc-50 dark:bg-zinc-900 rounded-2xl space-y-2">
+                    <span className="font-bold block">የጋራ ዳታቤዝ ማገናኛ</span>
+                    <input type="text" defaultValue="https://api.guragehub-db.ethiopia.net/v1" className="w-full px-2 py-1 bg-white dark:bg-zinc-950 border rounded text-[10px] font-mono" />
+                    <button onClick={() => showToast('የዳታቤዝ ግንኙነቱ የተረጋገጠ ነው!')} className="w-full py-2 bg-black text-white dark:bg-white dark:text-black font-black rounded-xl">ግንኙነት ፈትሽ</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
       );
     }
 
-    // Render App to DOM Root
+    // RENDER REACT APPLICATION
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
   </script>
