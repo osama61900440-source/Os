@@ -261,6 +261,102 @@
 
   .toolbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; gap:10px; flex-wrap:wrap; }
 
+  /* ---------- Batch / Stock Registration Wizard ---------- */
+  .wizard-steps{ display:flex; align-items:center; margin-bottom:20px; max-width:520px; }
+  .wz-step{ display:flex; flex-direction:column; align-items:center; gap:6px; flex-shrink:0; }
+  .wz-num{
+    width:32px; height:32px; border-radius:50%; background:var(--border); color:var(--text-mut);
+    display:flex; align-items:center; justify-content:center; font-weight:800; font-size:.85rem; transition:all .2s;
+  }
+  .wz-lab{ font-size:.72rem; font-weight:700; color:var(--text-mut); white-space:nowrap; }
+  .wz-step.active .wz-num{ background:var(--navy); color:#fff; }
+  .wz-step.active .wz-lab{ color:var(--navy); }
+  .wz-step.done .wz-num{ background:var(--green); color:#fff; }
+  .wz-line{ flex:1; height:2px; background:var(--border); margin:0 6px 18px; min-width:24px; }
+  .wz-panel{ display:none; }
+  .wz-panel.active{ display:block; animation:fadein .2s ease; }
+
+  .form-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px 16px; margin-bottom:6px; }
+  .readonly-box{
+    padding:12px 14px; border-radius:10px; background:var(--bg); border:1.5px dashed var(--border);
+    font-weight:800; color:var(--green-dark); font-size:.95rem;
+  }
+  html.dark .readonly-box{ color:var(--green); }
+
+  .item-row{
+    background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm);
+    padding:14px; margin-bottom:12px;
+  }
+  .item-row-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+  .item-row-head b{ font-size:.85rem; color:var(--navy); }
+  html.dark .item-row-head b{ color:#8fb3ff; }
+  .item-row-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:10px; }
+  .item-row-grid .field{ margin-bottom:0; }
+  .item-row-grid label{ font-size:.7rem; }
+  .item-row-grid input{ padding:9px 10px; font-size:.85rem; }
+
+  .receipt-meta{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px; }
+  .receipt-meta > div{ background:var(--bg); border-radius:10px; padding:10px 12px; }
+  .rm-lab{ display:block; font-size:.68rem; color:var(--text-mut); font-weight:700; margin-bottom:2px; }
+  .rm-val{ display:block; font-size:.95rem; font-weight:800; }
+  .table-container{ overflow-x:auto; }
+
+  @media (max-width: 768px){
+    .form-grid{ grid-template-columns:1fr; }
+    .item-row-grid{ grid-template-columns:1fr 1fr; }
+    .receipt-meta{ grid-template-columns:1fr 1fr; }
+  }
+
+  /* ---------- View mode toggle (Settings) ---------- */
+  .view-mode-row{ display:flex; gap:10px; flex-wrap:wrap; }
+  .vm-btn{
+    padding:10px 16px; border:1.5px solid var(--border); border-radius:10px; background:var(--surface);
+    color:var(--text-mut); font-weight:700; font-size:.85rem; cursor:pointer; transition:all .15s;
+  }
+  .vm-btn.active{ background:var(--navy); border-color:var(--navy); color:#fff; }
+
+  /* Forced view-mode overrides (mapped to this app's real class names) */
+  body.force-desktop .sidebar{ transform:none !important; position:sticky !important; }
+  body.force-desktop .menu-btn{ display:none !important; }
+  body.force-desktop .bottom-nav{ display:none !important; }
+  body.force-desktop .cart-fab{ display:none !important; }
+  body.force-desktop .cards-grid{ grid-template-columns:repeat(4,1fr) !important; }
+  body.force-desktop .pos-wrap{ grid-template-columns:1fr 340px !important; }
+  body.force-desktop .form-grid{ grid-template-columns:1fr 1fr !important; }
+  body.force-desktop .item-row-grid{ grid-template-columns:repeat(5,1fr) !important; }
+  body.force-desktop{ min-width:1080px; }
+  html:has(body.force-desktop){ overflow-x:auto; }
+
+  body.force-mobile .sidebar{
+    transform:translateX(100%) !important; position:fixed !important; z-index:50 !important;
+  }
+  html[dir="rtl"] body.force-mobile .sidebar{ transform:translateX(-100%) !important; }
+  body.force-mobile .sidebar.open{ transform:translateX(0) !important; }
+  body.force-mobile .menu-btn{ display:block !important; }
+  body.force-mobile .bottom-nav{ display:flex !important; }
+  body.force-mobile .page{ padding:14px 14px 90px !important; }
+  body.force-mobile .cards-grid{ grid-template-columns:1fr 1fr !important; }
+  body.force-mobile .pos-wrap{ grid-template-columns:1fr !important; }
+  body.force-mobile .form-grid{ grid-template-columns:1fr !important; }
+  body.force-mobile .item-row-grid{ grid-template-columns:1fr 1fr !important; }
+  body.force-mobile .cart-panel{ position:fixed !important; left:0; right:0; bottom:0; z-index:35; border-radius:18px 18px 0 0; max-height:70vh; display:none; }
+  body.force-mobile .cart-panel.show-mobile{ display:block !important; }
+  body.force-mobile .cart-fab{ display:flex !important; }
+
+  /* ---------- Print / PDF receipt ---------- */
+  #printReceipt{ display:none; }
+  @media print{
+    body *{ visibility:hidden; }
+    #printReceipt, #printReceipt *{ visibility:visible; }
+    #printReceipt{ display:block; position:absolute; top:0; left:0; width:100%; padding:24px; color:#000; }
+    #printReceipt .pr-head{ text-align:center; margin-bottom:18px; }
+    #printReceipt .pr-head h2{ margin:0 0 4px; color:#1E3A8A; }
+    #printReceipt table{ width:100%; border-collapse:collapse; font-size:12px; }
+    #printReceipt th, #printReceipt td{ border:1px solid #ccc; padding:6px 8px; text-align:right; }
+    #printReceipt th{ background:#f1f5f9; }
+  }
+
+
   /* Modal */
   .modal-overlay{
     position:fixed; inset:0; background:rgba(10,15,30,.55); display:none; align-items:center; justify-content:center; z-index:100; padding:16px;
@@ -400,6 +496,7 @@
       <div class="nav-item active" data-page="dashboard"><span class="ico">🏠</span> ዋና ገጽ</div>
       <div class="nav-item" data-page="pos"><span class="ico">🛒</span> ሽያጭ (POS)</div>
       <div class="nav-item" data-page="inventory"><span class="ico">📦</span> መጋዘን</div>
+      <div class="nav-item" data-page="receive"><span class="ico">🚚</span> እቃ ገቢ (Batch)</div>
       <div class="nav-item" data-page="employees"><span class="ico">👥</span> ሰራተኞች</div>
       <div class="nav-item" data-page="finance"><span class="ico">💳</span> ገቢ/ወጪ/ዕዳ</div>
       <div class="nav-item" data-page="reports"><span class="ico">📊</span> ሪፖርት</div>
@@ -502,13 +599,102 @@
           <button class="active" data-f="all" onclick="setInvFilter('all',this)">ሁሉም ዕቃዎች</button>
           <button data-f="low" onclick="setInvFilter('low',this)">ያለቁ/ያነሱ</button>
         </div>
-        <button class="btn btn-navy" style="width:auto" onclick="openProductModal()">➕ ዕቃ ጨምር</button>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-primary" style="width:auto" onclick="setPage('receive')">🚚 አዲስ ጭነት መዝግብ (New Batch)</button>
+          <button class="btn btn-navy" style="width:auto" onclick="openProductModal()">➕ ዕቃ ጨምር</button>
+        </div>
       </div>
       <div class="panel">
         <table>
           <thead><tr><th>ስም</th><th>ምድብ</th><th>ግዢ ዋጋ</th><th>ሽያጭ ዋጋ</th><th>ቀሪ መጠን</th><th>ሁኔታ</th></tr></thead>
           <tbody id="inventoryBody"></tbody>
         </table>
+      </div>
+    </section>
+
+    <!-- ---- NEW BATCH / STOCK REGISTRATION (Receive) ---- -->
+    <section class="page" id="page-receive">
+      <h1 class="page-title">🚚 አዲስ ጭነት / ዕቃ ገቢ መመዝገቢያ</h1>
+      <p class="page-sub">የመኪና ጭነት መረጃ ያስገቡ፣ ሲስተሙ የቆመበትን ትክክለኛ ዋጋ በራስ-ሰር ያሰላል</p>
+
+      <div class="wizard-steps" id="wizardSteps">
+        <div class="wz-step active" data-s="1"><span class="wz-num">1</span><span class="wz-lab">ጭነት መረጃ</span></div>
+        <div class="wz-line"></div>
+        <div class="wz-step" data-s="2"><span class="wz-num">2</span><span class="wz-lab">የዕቃ ዝርዝር</span></div>
+        <div class="wz-line"></div>
+        <div class="wz-step" data-s="3"><span class="wz-num">3</span><span class="wz-lab">ማጠቃለያ</span></div>
+      </div>
+
+      <!-- STEP 1 -->
+      <div class="wz-panel active" id="wz-1">
+        <div class="panel">
+          <div class="panel-head"><h3>1️⃣ አጠቃላይ የጭነት መረጃ</h3></div>
+          <div class="form-grid">
+            <div class="field"><label>የመኪናው ታርጋ</label><input type="text" id="rbPlate" placeholder="ለምሳሌ፦ AA 2-B12345"></div>
+            <div class="field"><label>አሽከርካሪ/አራጋፊ ስም</label><input type="text" id="rbDriver" placeholder="ለምሳሌ፦ አበበ ከበደ"></div>
+            <div class="field"><label>የትራንስፖርት ወጪ (ብር)</label><input type="number" id="rbTransportCost" placeholder="10000" oninput="updateTotalExpense()"></div>
+            <div class="field"><label>የጫኝና አውራጅ ወጪ (ብር)</label><input type="number" id="rbLoadingCost" placeholder="500" oninput="updateTotalExpense()"></div>
+            <div class="field"><label>የመጡ የተለዩ እቃዎች ዓይነት ብዛት</label><input type="number" id="rbItemTypeCount" placeholder="5" min="1" max="30"></div>
+            <div class="field">
+              <label>አጠቃላይ የጭነት ወጪ</label>
+              <div class="readonly-box" id="rbTotalExpenseShow">0 ብር</div>
+            </div>
+          </div>
+          <div class="modal-actions" style="justify-content:flex-end">
+            <button class="btn btn-primary" style="width:auto" onclick="goToStep2()">ቀጣይ → የዕቃ ዝርዝር</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2 -->
+      <div class="wz-panel" id="wz-2">
+        <div class="panel">
+          <div class="panel-head">
+            <h3>2️⃣ የእያንዳንዱ ዕቃ ዝርዝር</h3>
+            <span style="font-size:.8rem;color:var(--text-mut)">ከStep 1 የገባው ብዛት፦ <b id="itemCountLabel">0</b> ዕቃ</span>
+          </div>
+          <div id="itemRowsContainer"></div>
+          <div class="modal-actions" style="justify-content:space-between">
+            <button class="btn btn-ghost" style="width:auto" onclick="goToStep(1)">← ተመለስ</button>
+            <button class="btn btn-primary" style="width:auto" onclick="computeAndGoToStep3()">ቀጣይ → ማስላት እና ማጠቃለያ</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3 -->
+      <div class="wz-panel" id="wz-3">
+        <div class="panel" id="receiptCard">
+          <div class="panel-head">
+            <h3>🧾 የእቃ ገቢ መመዝገቢያ ደረሰኝ</h3>
+            <span style="font-size:.78rem;color:var(--text-mut)" id="rbTimestamp"></span>
+          </div>
+
+          <div class="receipt-meta">
+            <div><span class="rm-lab">የመኪና ታርጋ</span><span class="rm-val" id="sumPlate">—</span></div>
+            <div><span class="rm-lab">አራጋፊ</span><span class="rm-val" id="sumDriver">—</span></div>
+            <div><span class="rm-lab">አጠቃላይ ጭነት ወጪ</span><span class="rm-val" id="sumTotalExpense">—</span></div>
+            <div><span class="rm-lab">አጠቃላይ የዕቃ ብዛት</span><span class="rm-val" id="sumTotalQty">—</span></div>
+            <div><span class="rm-lab">በፍሬ ላይ የተደመረ ወጪ</span><span class="rm-val" id="sumPerUnitExpense" style="color:var(--amber)">—</span></div>
+          </div>
+
+          <div class="table-container">
+            <table>
+              <thead><tr>
+                <th>ዕቃ</th><th>ከማን</th><th>ብዛት</th><th>ግዢ ዋጋ</th><th>+ ወጪ/ፍሬ</th><th>የቆመበት ዋጋ</th><th>ሽያጭ ዋጋ</th><th>የትርፍ መጠን</th>
+              </tr></thead>
+              <tbody id="summaryBody"></tbody>
+            </table>
+          </div>
+
+          <div class="cart-total-row"><span>የሚጠበቅ ጠቅላላ ትርፍ</span><span id="sumTotalProfit" style="color:var(--green-dark)">0 ብር</span></div>
+
+          <div class="modal-actions" style="flex-wrap:wrap">
+            <button class="btn btn-ghost" style="width:auto" onclick="goToStep(2)">← ተመለስ</button>
+            <button class="btn btn-navy" style="width:auto" onclick="saveBatchRecord()">💾 መዝገብ አስቀምጥ (Save)</button>
+            <button class="btn btn-ghost" style="width:auto" onclick="printBatchReceipt()">🖨️ አትም / Export PDF</button>
+            <button class="btn btn-primary" style="width:auto" onclick="shareBatchReceipt()">📤 አጋራ (Share)</button>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -611,6 +797,15 @@
       <h1 class="page-title">ቅንብሮች</h1>
       <p class="page-sub">የመተግበሪያውን ገጽታ ያስተካክሉ</p>
       <div class="panel">
+        <div class="panel-head"><h3>📐 የእይታ ሁኔታ (View Mode)</h3></div>
+        <p style="color:var(--text-mut);font-size:.82rem;margin-top:-6px;">በስልክ ላይ ሆነው የላፕቶፕ እይታ ማየት ወይም በተቃራኒው ማስገደድ ይችላሉ።</p>
+        <div class="view-mode-row">
+          <button class="vm-btn" id="mobileViewBtn" onclick="setViewMode('mobile')">📱 ስልክ (Mobile)</button>
+          <button class="vm-btn" id="desktopViewBtn" onclick="setViewMode('desktop')">💻 ላፕቶፕ (Desktop)</button>
+          <button class="vm-btn active" id="autoViewBtn" onclick="setViewMode('auto')">⚙️ አውቶማቲክ (Auto)</button>
+        </div>
+      </div>
+      <div class="panel">
         <div class="setting-row">
           <div><div class="lab">🌙 የገጽታ ሁነታ (Dark Mode)</div><div class="desc">ማታ ላይ ለዓይን ምቹ ያደርጋል</div></div>
           <div class="switch" id="darkSwitch" onclick="toggleDark()"><div class="dot"></div></div>
@@ -710,12 +905,28 @@
   </div>
 </div>
 
+<!-- Hidden print-only receipt (populated by printBatchReceipt()) -->
+<div id="printReceipt">
+  <div class="pr-head">
+    <h2>Gurage POS — የእቃ ገቢ መመዝገቢያ ደረሰኝ</h2>
+    <div id="prMeta" style="font-size:13px;"></div>
+  </div>
+  <table>
+    <thead><tr>
+      <th>ዕቃ</th><th>ከማን</th><th>ብዛት</th><th>ግዢ ዋጋ</th><th>+ ወጪ/ፍሬ</th><th>የቆመበት ዋጋ</th><th>ሽያጭ ዋጋ</th><th>የትርፍ መጠን</th>
+    </tr></thead>
+    <tbody id="prBody"></tbody>
+  </table>
+  <p style="margin-top:16px;font-size:12px;">ይህ ደረሰኝ Gurage POS App በራስ-ሰር ያዘጋጀው ነው።</p>
+</div>
+
 <script>
 /* ===================== STATE ===================== */
 let STATE = {
-  products: [], employees: [], sales: [], expenses: [], debts: [],
+  products: [], employees: [], sales: [], expenses: [], debts: [], batches: [],
   cart: [], payMethod: 'ጥሬ ገንዘብ', invFilter: 'all', branch: 'addis'
 };
+let WIZ = { totalExpense:0, itemCount:0, items:[] };
 let salesChartRef = null, reportChartRef = null;
 
 const seedProducts = [
@@ -790,6 +1001,7 @@ async function loadState(){
       STATE.sales = d.sales || seedSales();
       STATE.expenses = d.expenses || seedExpenses;
       STATE.debts = d.debts || seedDebts;
+      STATE.batches = d.batches || [];
     } else { throw new Error('empty'); }
   }catch(e){
     STATE.products = JSON.parse(JSON.stringify(seedProducts));
@@ -797,6 +1009,7 @@ async function loadState(){
     STATE.sales = seedSales();
     STATE.expenses = JSON.parse(JSON.stringify(seedExpenses));
     STATE.debts = JSON.parse(JSON.stringify(seedDebts));
+    STATE.batches = [];
     await persist();
   }
 }
@@ -804,7 +1017,7 @@ async function persist(){
   try{
     await storageSet(STORAGE_KEY, JSON.stringify({
       products: STATE.products, employees: STATE.employees, sales: STATE.sales,
-      expenses: STATE.expenses, debts: STATE.debts
+      expenses: STATE.expenses, debts: STATE.debts, batches: STATE.batches
     }));
   }catch(e){ console.warn('storage save failed', e); }
 }
@@ -859,9 +1072,10 @@ function setPage(name){
   document.querySelectorAll('.bn-item[data-page]').forEach(n=>n.classList.toggle('active', n.dataset.page===name));
   closeSidebar();
   document.getElementById('cartPanel').classList.remove('show-mobile');
-  const titles = {dashboard:'ዳሽቦርድ', pos:'ሽያጭ', inventory:'መጋዘን', employees:'ሰራተኞች', finance:'ገቢ/ወጪ', reports:'ሪፖርት', pricing:'ፓኬጆች', settings:'ቅንብሮች'};
+  const titles = {dashboard:'ዳሽቦርድ', pos:'ሽያጭ', inventory:'መጋዘን', receive:'እቃ ገቢ', employees:'ሰራተኞች', finance:'ገቢ/ወጪ', reports:'ሪፖርት', pricing:'ፓኬጆች', settings:'ቅንብሮች'};
   document.title = 'Gurage POS | ' + (titles[name]||'');
   if(name==='reports') renderReportChart();
+  if(name==='receive') resetWizard();
 }
 document.querySelectorAll('.nav-item[data-page]').forEach(n=>n.addEventListener('click', ()=>setPage(n.dataset.page)));
 document.querySelectorAll('.bn-item[data-page]').forEach(n=>n.addEventListener('click', ()=>setPage(n.dataset.page)));
@@ -1159,6 +1373,7 @@ async function resetData(){
   STATE.sales = seedSales();
   STATE.expenses = JSON.parse(JSON.stringify(seedExpenses));
   STATE.debts = JSON.parse(JSON.stringify(seedDebts));
+  STATE.batches = [];
   await persist();
   refreshAll();
   toast('🔄 ናሙና መረጃ ዳግም ተጀምሯል');
@@ -1173,6 +1388,267 @@ function exportCsv(){
   const a = document.createElement('a'); a.href = url; a.download = 'gurage-pos-sales.csv'; a.click();
   URL.revokeObjectURL(url);
   toast('⬇️ CSV ወርዷል');
+}
+
+/* ===================== BATCH / STOCK REGISTRATION WIZARD ===================== */
+const PRODUCT_ICONS = ['📦','👕','👖','👟','👜','🧥','🛏️','🧴','🍚','🛢️'];
+
+function resetWizard(){
+  WIZ = { totalExpense:0, itemCount:0, items:[] };
+  ['rbPlate','rbDriver','rbTransportCost','rbLoadingCost','rbItemTypeCount'].forEach(id=>{
+    const el = document.getElementById(id); if(el) el.value='';
+  });
+  document.getElementById('rbTotalExpenseShow').textContent = '0 ብር';
+  document.getElementById('itemRowsContainer').innerHTML = '';
+  goToStep(1);
+}
+
+function updateTotalExpense(){
+  const t = Number(document.getElementById('rbTransportCost').value)||0;
+  const l = Number(document.getElementById('rbLoadingCost').value)||0;
+  WIZ.totalExpense = t + l;
+  document.getElementById('rbTotalExpenseShow').textContent = birr(WIZ.totalExpense) + (t||l ? ` (${birr(t)} ትራንስፖርት + ${birr(l)} አውራጅ)` : '');
+}
+
+function goToStep(n){
+  document.querySelectorAll('.wz-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('wz-'+n).classList.add('active');
+  document.querySelectorAll('.wz-step').forEach(s=>{
+    const sn = Number(s.dataset.s);
+    s.classList.toggle('active', sn===n);
+    s.classList.toggle('done', sn<n);
+  });
+}
+
+function goToStep2(){
+  const plate = document.getElementById('rbPlate').value.trim();
+  const driver = document.getElementById('rbDriver').value.trim();
+  const count = Number(document.getElementById('rbItemTypeCount').value);
+  updateTotalExpense();
+
+  if(!plate || !driver){ toast('⚠️ የመኪና ታርጋ እና የአራጋፊ ስም ያስፈልጋል'); return; }
+  if(!count || count < 1){ toast('⚠️ የእቃዎች ዓይነት ብዛት ትክክለኛ ቁጥር መሆን አለበት'); return; }
+  if(WIZ.totalExpense <= 0){ toast('⚠️ የትራንስፖርት ወይም አውራጅ ወጪ ያስገቡ'); return; }
+
+  WIZ.itemCount = count;
+  document.getElementById('itemCountLabel').textContent = count;
+
+  const box = document.getElementById('itemRowsContainer');
+  box.innerHTML = '';
+  for(let i=0;i<count;i++){
+    box.insertAdjacentHTML('beforeend', `
+      <div class="item-row" data-idx="${i}">
+        <div class="item-row-head"><b>እቃ ${i+1}</b><span style="font-size:1.1rem">${PRODUCT_ICONS[i % PRODUCT_ICONS.length]}</span></div>
+        <div class="item-row-grid">
+          <div class="field"><label>የእቃው ስም</label><input type="text" class="ir-name" placeholder="ለምሳሌ፦ ጫማ"></div>
+          <div class="field"><label>የተረከብከው ከ</label><input type="text" class="ir-supplier" placeholder="ለምሳሌ፦ መሐመድ"></div>
+          <div class="field"><label>ብዛት</label><input type="number" class="ir-qty" placeholder="0" min="0"></div>
+          <div class="field"><label>ግዢ ዋጋ (ብር)</label><input type="number" class="ir-cost" placeholder="0" min="0"></div>
+          <div class="field"><label>ሽያጭ ዋጋ (ብር)</label><input type="number" class="ir-price" placeholder="0" min="0"></div>
+        </div>
+      </div>
+    `);
+  }
+  goToStep(2);
+}
+
+/* Simple, reasonably accurate Gregorian → Ethiopian calendar conversion */
+function toEthiopianDate(d){
+  const gYear = d.getFullYear(), gMonth = d.getMonth()+1, gDay = d.getDate();
+  const isGLeap = (gYear % 4 === 0 && gYear % 100 !== 0) || gYear % 400 === 0;
+  const newYearDay = isGLeap ? 12 : 11; // Sept 11/12 (Gregorian) = Ethiopian New Year
+  let ethYear = gYear - 8;
+  const gregorianNewYear = new Date(gYear, 8, newYearDay); // month 8 = September
+  if(d < gregorianNewYear) ethYear -= 1;
+
+  const startOfEthYear = new Date(ethYear+8, 8, newYearDay);
+  let diffDays = Math.round((d - startOfEthYear) / 86400000);
+  if(diffDays < 0){
+    const prevNewYear = new Date(ethYear+7, 8, newYearDay);
+    diffDays = Math.round((d - prevNewYear) / 86400000);
+  }
+  const ethMonth = Math.floor(diffDays / 30) + 1;
+  const ethDay = (diffDays % 30) + 1;
+  const monthNames = ['መስከረም','ጥቅምት','ኅዳር','ታኅሳስ','ጥር','የካቲት','መጋቢት','ሚያዝያ','ግንቦት','ሰኔ','ሐምሌ','ነሐሴ','ጳጉሜን'];
+  const mName = monthNames[Math.min(ethMonth-1, 12)];
+  return `${ethDay} ${mName} ${ethYear} ዓ.ም`;
+}
+
+function computeAndGoToStep3(){
+  const rows = document.querySelectorAll('#itemRowsContainer .item-row');
+  const items = [];
+  let totalQty = 0;
+
+  for(const row of rows){
+    const name = row.querySelector('.ir-name').value.trim();
+    const supplier = row.querySelector('.ir-supplier').value.trim();
+    const qty = Number(row.querySelector('.ir-qty').value)||0;
+    const cost = Number(row.querySelector('.ir-cost').value)||0;
+    const price = Number(row.querySelector('.ir-price').value)||0;
+    if(!name || qty<=0 || cost<0 || price<=0){
+      toast('⚠️ እባክዎ ሁሉንም የ«'+(row.dataset.idx*1+1)+'» ዕቃ መስኮች በትክክል ይሙሉ');
+      return;
+    }
+    items.push({name, supplier, qty, cost, price});
+    totalQty += qty;
+  }
+  if(totalQty <= 0){ toast('⚠️ ጠቅላላ ብዛት ከዜሮ በላይ መሆን አለበት'); return; }
+
+  // STEP 3 — precise landed-cost math engine
+  const perUnitExpense = WIZ.totalExpense / totalQty;
+  items.forEach(it=>{
+    it.landedCost = it.cost + perUnitExpense;   // የቆመበት ዋጋ
+    it.profitPerUnit = it.price - it.landedCost;
+    it.totalProfit = it.profitPerUnit * it.qty;
+  });
+  WIZ.items = items;
+  WIZ.totalQty = totalQty;
+  WIZ.perUnitExpense = perUnitExpense;
+
+  renderStep3Summary();
+  goToStep(3);
+}
+
+function renderStep3Summary(){
+  const now = new Date();
+  const gDate = now.toLocaleDateString('en-GB').replaceAll('/','/');
+  const gTime = now.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'});
+  const ethDate = toEthiopianDate(now);
+  WIZ.timestamp = { gDate, gTime, ethDate, iso: now.toISOString() };
+
+  document.getElementById('rbTimestamp').textContent = `${gDate} · ${gTime}  |  ${ethDate}`;
+  document.getElementById('sumPlate').textContent = document.getElementById('rbPlate').value.trim();
+  document.getElementById('sumDriver').textContent = document.getElementById('rbDriver').value.trim();
+  document.getElementById('sumTotalExpense').textContent = birr(WIZ.totalExpense);
+  document.getElementById('sumTotalQty').textContent = WIZ.totalQty + ' ፍሬ';
+  document.getElementById('sumPerUnitExpense').textContent = WIZ.perUnitExpense.toFixed(2) + ' ብር/ፍሬ';
+
+  let totalProfit = 0;
+  document.getElementById('summaryBody').innerHTML = WIZ.items.map(it=>{
+    totalProfit += it.totalProfit;
+    return `<tr>
+      <td>${it.name}</td><td>${it.supplier||'—'}</td><td>${it.qty}</td>
+      <td>${it.cost.toFixed(2)} ብር</td><td>+${WIZ.perUnitExpense.toFixed(2)} ብር</td>
+      <td><b>${it.landedCost.toFixed(2)} ብር</b></td><td>${it.price.toFixed(2)} ብር</td>
+      <td style="color:${it.profitPerUnit>=0?'var(--green-dark)':'var(--red)'}">${it.totalProfit.toFixed(0)} ብር</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('sumTotalProfit').textContent = birr(Math.round(totalProfit));
+}
+
+async function saveBatchRecord(){
+  if(!WIZ.items || WIZ.items.length===0){ toast('⚠️ የሚቀመጥ መረጃ የለም'); return; }
+
+  const batch = {
+    id: 'BATCH'+Date.now(),
+    plate: document.getElementById('rbPlate').value.trim(),
+    driver: document.getElementById('rbDriver').value.trim(),
+    transportCost: Number(document.getElementById('rbTransportCost').value)||0,
+    loadingCost: Number(document.getElementById('rbLoadingCost').value)||0,
+    totalExpense: WIZ.totalExpense,
+    totalQty: WIZ.totalQty,
+    perUnitExpense: WIZ.perUnitExpense,
+    items: WIZ.items,
+    timestamp: WIZ.timestamp,
+    branch: STATE.branch
+  };
+  STATE.batches.unshift(batch);
+
+  // Push each received item into inventory: merge into an existing product
+  // (by name, case-insensitive) or create a new one with the landed cost.
+  WIZ.items.forEach(it=>{
+    const existing = STATE.products.find(p=>p.name.trim().toLowerCase()===it.name.trim().toLowerCase());
+    if(existing){
+      existing.stock += it.qty;
+      existing.cost = it.landedCost;   // most recent landed cost
+      existing.price = it.price;
+    } else {
+      STATE.products.push({
+        id:'p'+Date.now()+Math.floor(Math.random()*999),
+        name: it.name, cat:'አዲስ ጭነት',
+        cost: Number(it.landedCost.toFixed(2)), price: it.price, stock: it.qty, emoji:'📦'
+      });
+    }
+  });
+
+  await persist();
+  renderInventory(); renderCategoryTabs(); renderProductGrid(); renderDashboard();
+  toast('✅ የጭነት መዝገብ ተቀምጧል እና ወደ መጋዘን ገብቷል');
+}
+
+function populatePrintReceipt(){
+  const meta = `
+    <b>የመኪና ታርጋ፦</b> ${document.getElementById('sumPlate').textContent} &nbsp;|&nbsp;
+    <b>አራጋፊ፦</b> ${document.getElementById('sumDriver').textContent}<br>
+    <b>ቀንና ሰዓት፦</b> ${document.getElementById('rbTimestamp').textContent}<br>
+    <b>አጠቃላይ ጭነት ወጪ፦</b> ${document.getElementById('sumTotalExpense').textContent} &nbsp;|&nbsp;
+    <b>ጠቅላላ ብዛት፦</b> ${document.getElementById('sumTotalQty').textContent} &nbsp;|&nbsp;
+    <b>በፍሬ ወጪ፦</b> ${document.getElementById('sumPerUnitExpense').textContent}
+  `;
+  document.getElementById('prMeta').innerHTML = meta;
+  document.getElementById('prBody').innerHTML = document.getElementById('summaryBody').innerHTML;
+}
+
+function printBatchReceipt(){
+  if(!WIZ.items || WIZ.items.length===0){ toast('⚠️ መጀመሪያ ማጠቃለያውን ያዘጋጁ'); return; }
+  populatePrintReceipt();
+  window.print();
+}
+
+function buildShareText(){
+  let txt = `🧾 የእቃ ገቢ መመዝገቢያ ደረሰኝ\n`;
+  txt += `ቀንና ሰዓት፦ ${WIZ.timestamp.gDate} | ${WIZ.timestamp.gTime} (${WIZ.timestamp.ethDate})\n`;
+  txt += `የመኪና ታርጋ፦ ${document.getElementById('sumPlate').textContent} (አራጋፊ፦ ${document.getElementById('sumDriver').textContent})\n`;
+  txt += `አጠቃላይ ጭነት ወጪ፦ ${birr(WIZ.totalExpense)}\n`;
+  txt += `አጠቃላይ የእቃ ብዛት፦ ${WIZ.totalQty} ፍሬ\n`;
+  txt += `በፍሬ ላይ የተደመረ ወጪ፦ ${WIZ.perUnitExpense.toFixed(2)} ብር\n\n`;
+  WIZ.items.forEach(it=>{
+    txt += `• ${it.name} (${it.supplier||'—'}) — ${it.qty} ፍሬ | የቆመበት ${it.landedCost.toFixed(2)} ብር | ሽያጭ ${it.price} ብር\n`;
+  });
+  return txt;
+}
+
+async function shareBatchReceipt(){
+  if(!WIZ.items || WIZ.items.length===0){ toast('⚠️ መጀመሪያ ማጠቃለያውን ያዘጋጁ'); return; }
+  const text = buildShareText();
+
+  if(navigator.share){
+    try{
+      await navigator.share({ title:'የእቃ ገቢ መመዝገቢያ ደረሰኝ', text });
+      toast('✅ ተልኳል');
+      return;
+    }catch(e){ /* user cancelled — fall through to manual options */ }
+  }
+  const encoded = encodeURIComponent(text);
+  const choice = window.confirm('📤 በWhatsApp ለመላክ OK ይጫኑ፣ ወይም Cancel ተጭነው የቴሌግራም/ኢሜይል አማራጭ ያግኙ');
+  if(choice){
+    window.open(`https://wa.me/?text=${encoded}`, '_blank');
+  } else {
+    window.open(`https://t.me/share/url?url=&text=${encoded}`, '_blank');
+  }
+}
+
+/* ===================== VIEW MODE (Mobile / Desktop / Auto) ===================== */
+function setViewMode(mode){
+  const body = document.body;
+  body.classList.remove('force-desktop','force-mobile');
+  if(mode==='desktop') body.classList.add('force-desktop');
+  else if(mode==='mobile') body.classList.add('force-mobile');
+  updateActiveViewButtons(mode);
+  storageSet('gurage-view-mode', mode);
+}
+async function loadSavedViewMode(){
+  let mode = 'auto';
+  try{
+    const res = await storageGet('gurage-view-mode');
+    if(res && res.value) mode = res.value;
+  }catch(e){ /* default auto */ }
+  setViewMode(mode);
+}
+function updateActiveViewButtons(mode){
+  document.getElementById('mobileViewBtn')?.classList.toggle('active', mode==='mobile');
+  document.getElementById('desktopViewBtn')?.classList.toggle('active', mode==='desktop');
+  document.getElementById('autoViewBtn')?.classList.toggle('active', mode==='auto');
 }
 
 /* ===================== OFFLINE DETECTION ===================== */
@@ -1197,6 +1673,7 @@ async function refreshAll(){
 }
 (async function init(){
   await loadSettings();
+  await loadSavedViewMode();
   await loadState();
   if(!navigator.onLine) updateOnlineStatus();
   setTimeout(()=>{ document.getElementById('splash').classList.add('hide'); }, 550);
