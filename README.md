@@ -1,0 +1,70 @@
+# Gurage POS App — GitHub Pages ላይ ማስቀመጫ መመሪያ
+
+## ​ችግሩ ምን ነበር?
+1. **ፋይሉ `index.html` ተብሎ አልነበረም።** GitHub Pages በራስ-ሰር የሚከፍተው `index.html` የሚባለውን ፋይል ብቻ ነው። ስሙ የተለየ ከሆነ (ለምሳሌ `gurage-pos-app.html`) የፕሮጀክቱ ዋና ሊንክ ላይ ስትገቡ 404 ያሳያል።
+2. **`window.storage` የተባለው API** የሚሰራው በClaude Artifact ውስጥ ብቻ ነው፤ በGitHub Pages ላይ ስለሌለ መተግበሪያው ላይ ስህተት ፈጥሮ ነበር (ዕቃ መጨመር፣ ሽያጭ ማጠናቀቅ ወዘተ የማይሰሩበት ምክንያት ይሄ ነው)። አሁን ወደ `localStorage` በራስ-ሰር እንዲቀየር (fallback) ተደርጓል።
+
+## ​ፎልደሩ ውስጥ ያለው
+```
+index.html          ← ዋናው መተግበሪያ (ይሄ መሆን ያለበት ስም)
+manifest.json        ← መተግበሪያውን "Install" ማድረግ የሚያስችል PWA ፋይል
+sw.js                 ← ኦፍላይን እንዲሰራ የሚያግዝ Service Worker
+icons/                ← የመተግበሪያ አዶዎች (192px, 512px, apple touch)
+README.md             ← ይሄ መመሪያ
+```
+
+## ​በGitHub Pages ላይ እንዴት ማስቀመጥ ይቻላል?
+
+1. በGitHub ላይ አዲስ ወይም ነባር repository ይክፈቱ።
+2. ​በዚህ ፎልደር ውስጥ ያሉትን ፋይሎች በሙሉ (index.html, manifest.json, sw.js, icons/ አቃፊውን ጨምሮ) **ወደ repository ዋናው ሥር (root)** ይስቀሉ — ንዑስ ፎልደር ውስጥ አያድርጓቸው።
+3. ​ወደ repository **Settings → Pages** ይሂዱ።
+4. ​ከ "Build and deployment" ስር:
+   - Source: **Deploy from a branch**
+   - Branch: **main** (ወይም የሚጠቀሙት ብራንች) እና ​ **/ (root)** የሚለውን ይምረጡ
+   - **Save** ይጫኑ።
+5. ​ከ1-3 ደቂቃ በኋላ ሊንኩ ይታያል፦ `https://<የተጠቃሚ-ስም>.github.io/<repository-ስም>/`
+6. ​ያንን ሊንክ በስልክዎ ወይም ኮምፒውተር ላይ ይክፈቱት።
+
+## ​እንደ እውነተኛ የሞባይል አፕ ለመጫን (Install)
+- **Android/Chrome**: ሊንኩን ይክፈቱ → ⋮ ምናሌ → **"Add to Home screen"** / **"Install app"**።
+- **iPhone/Safari**: ሊንኩን ይክፈቱ → የማጋሪያ (Share) አዝራር → **"Add to Home Screen"**።
+- ​ከተጫነ በኋላ እንደ መደበኛ አፕ በራሱ አዶ ከHome Screen ይከፈታል፣ የብራውዘር አድራሻ መስመር (address bar) ​ አይታይም።
+
+## ​ማስተካከያ የተደረገባቸው ነጥቦች (ይህ ዙር)
+- ✅ ፋይሉ ወደ `index.html` ተቀይሯል (GitHub Pages በትክክል እንዲከፍተው)
+- ✅ `window.storage` ጥገኝነት ተስተካክሎ ወደ `localStorage` fallback ገብቷል (በGitHub Pages ላይ ስራ ላይ ይውላል)
+- ✅ PWA `manifest.json` + `sw.js` + አዶዎች ተጨምረዋል → መተግበሪያውን ወደ Home Screen መጫን ይቻላል
+- ✅ Splash screen (የመክፈቻ ገጽ)፣ safe-area padding (ለNotch ስልኮች)፣ smoother animations ተጨምረዋል
+- ✅ `prefers-reduced-motion` እና keyboard focus outlines ለተደራሽነት (accessibility) ተካትተዋል
+- ✅ የገጽታ ቅንብሮች (Dark mode, ቀለም, የፅሁፍ መጠን) አሁን ይቀመጣሉ እና ዳግም ሲከፈት ይታወሳሉ
+
+## 🚚 አዲስ፦ የእቃ ገቢ / ጭነት መመዝገቢያ (Batch Registration)
+ከ«መጋዘን» ገጽ ወይም ከጎን ማውጫ (🚚 እቃ ገቢ) የሚደረስ 3-ደረጃ ውዝርድ (wizard)፦
+1. **ጭነት መረጃ** — ታርጋ፣ አራጋፊ፣ ትራንስፖርት/አውራጅ ወጪ (አጠቃላይ ወጪ በራስ-ሰር ይደመራል)፣ የዕቃ ዓይነት ብዛት
+2. **የዕቃ ዝርዝር** — ከገባው ብዛት ጋር እኩል የሆኑ ረድፎች በራስ-ሰር ይፈጠራሉ (ስም/ከማን/ብዛት/ግዢ ዋጋ/ሽያጭ ዋጋ)
+3. **ማጠቃለያ** — የቆመበት ዋጋ (Landed Cost) = ግዢ ዋጋ + (አጠቃላይ ወጪ ÷ ጠቅላላ ብዛት) በራስ-ሰር ይሰላል፤ ቀንና ሰዓት (ጎርጎሪዮሳዊ + ኢትዮጵያዊ ዓ.ም) ራሱ ይታተማል
+
+ማጠቃለያው ሲቀመጥ (💾 Save) እያንዳንዱ ዕቃ በራስ-ሰር ወደ «መጋዘን» ስቶክ ውስጥ ይገባል/ይደመራል። 🖨️ አትም የተባለው የብራውዘር Print dialog በመክፈት ንፁህ ደረሰኝ (PDF-ready) ያሳያል፤ 📤 አጋራ የተባለው በስልክ ላይ የስርዓት Share sheet (WhatsApp/Telegram/Email) ይከፍታል ወይም fallback አገናኝ ይሰጣል።
+
+## 📐 አዲስ፦ የእይታ ሁኔታ (View Mode)
+በ«ቅንብሮች» ገጽ ላይ 📱 ስልክ / 💻 ላፕቶፕ / ⚙️ አውቶማቲክ የሚሉ አዝራሮች ተጨምረዋል፤ ምርጫው ይቀመጥና ዳግም ሲከፈት ይታወሳል።
+
+## 🔍 አዲስ፦ Autocomplete በStep 2 (የዕቃ ዝርዝር)
+- «የእቃው ስም» ሳጥን መጻፍ ሲጀምሩ ካለው Main Inventory ተመሳሳይ ስም ያላቸው ዕቃዎች በDropdown ይታያሉ።
+- ነባር ዕቃ ሲመረጥ፦ ግዢ ዋጋ እና ሽያጭ ዋጋ ራሱ ይሞላል (🔗 ነባር እቃ ባጅ ይታያል)፣ ዋጋው ቢቀየር ግን ማስተካከል/መደመር ይቻላል፣ ተጠቃሚው ብዛቱን ብቻ ማስገባት ይኖርበታል።
+- ከዝርዝሩ ውስጥ ተመሳሳይ ካልተገኘ «➕ አዲስ እቃ መዝግብ» የሚል አማራጭ ይታያል፤ ሁሉንም (ስም/ብዛት/ግዢ/ሽያጭ ዋጋ) በእጅ መሙላት ይቻላል።
+
+## 🗄️ የዳታ አደረጃጀት (Data Architecture)
+1. **Batch Receipts (የጭነት ታሪክ)** — `STATE.batches`፦ እያንዳንዱ የመኪና ጭነት (ታርጋ፣ አራጋፊ፣ ትራንስፖርት/አውራጅ ወጪ፣ በፍሬ ወጪ፣ የቆመበት ዋጋ፣ ቀንና ሰዓት) የራሱ የማይቀየር ታሪክ ሆኖ ለብቻው ይቀመጣል፤ አይሰረዝም፣ አይተካም።
+2. **Main Inventory (ዋና ክምችት)** — `STATE.products`፦ በጭነት የመጣ ብዛት ካለው ስቶክ ጋር ይደመራል (ለምሳሌ፦ 50 + 100 = 150)። ማዛመድ በ«እቃ ID» (ከAutocomplete ሲመረጥ) ወይም fallback ባለው ስም ይደረጋል፤ ካልተገኘ አዲስ ምዝገባ ይከፈታል። በPOS ሽያጭ ጊዜ የሚቀነሰው ከዚህ ከተዋሃደው ዋና ክምችት ብቻ ነው።
+
+## 📱 የተስተካከለው የMobile Sidebar ጉድለት
+**ምክንያቱ፦** የተደበቀው sidebar `transform: translateX(100%)` ተብሎ ተቀምጦ ነበር (ወደ ቀኝ/ወደ ይዘቱ ላይ ይገፋ ነበር) ​ ​ ​በምትኩ `translateX(-100%)` (ወደ ግራ ሙሉ በሙሉ ከስክሪኑ ውጭ) መሆን ነበረበት። ይህ በ«Auto» ሁነታም ሆነ በ«ስልክ» የተገደደ ሁነታ ላይ ተስተካክሏል፤ አሁን፦
+- Sidebar በነባሪ ሙሉ በሙሉ ከስክሪኑ ውጭ ተደብቋል፤ ☰ ሲጫኑ ብቻ በለስላሳ (slide-over) ይንሸራተታል።
+- ከውጪ (backdrop) ሲነካ ወይም የማውጫ ንጥል ሲጫኑ ራሱ ይዘጋል።
+- «ላፕቶፕ» ሲመረጥ sidebar ሁልጊዜ ይታያል፣ ገጹ ወደ ብዙ-አምድ (multi-column) ገጽታ ይቀየራል፣ እና ጠባብ ስክሪን ላይ አግድም scroll ይፈቀዳል።
+- «ስልክ» ሲመረጥ (በላፕቶፕ ላይ እንኳን ቢሆን) sidebar ተደብቆ bottom-nav እና ☰ ብቻ ይታያሉ።
+
+
+## ​ማስታወሻ
+ይህ still frontend-only ናሙና ነው (real backend/database/OTP/Chapa-Telebirr ግንኙነት የለውም)። መረጃው የሚቀመጠው በእያንዳንዱ ተጠቃሚ ስልክ/ብራውዘር ላይ ብቻ ነው (localStorage)፤ በተለያዩ መሳሪያዎች መካከል አይመሳሰልም። እውነተኛ ባለብዙ-ተጠቃሚ ስሪት ለመስራት የጀርባ (backend) አገልግሎት (database + auth + real-time sync) ያስፈልጋል።
