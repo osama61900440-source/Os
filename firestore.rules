@@ -1,0 +1,142 @@
+rules_version = '2';
+
+// ============================================================================
+// Gurage POS — Firestore Security Rules
+// Data model:
+//   /users/{uid}                → { role, businessId, name, phone, status, permissions }
+//   /businesses/{businessId}    → { name, location, ownerUid, storePasswordHash }
+//   /businesses/{businessId}/products/{productId}
+//   /businesses/{businessId}/batches/{batchId}
+//   /businesses/{businessId}/sales/{saleId}
+//   /businesses/{businessId}/staffApprovals/{staffUid}  → pending-approval queue
+// ============================================================================
+
+function isSignedIn() {
+  return request.auth != null;
+}
+
+function myUserDoc() {
+  return get(/databases/$(database)/documents/users/$(request.auth.uid));
+}
+
+function myRole() {
+  return isSignedIn() && myUserDoc().data.role;
+}
+
+function myBusinessId() {
+  return myUserDoc().data.businessId;
+}
+
+function isSuperAdmin() {
+  return isSignedIn() && myRole() == 'super_admin';
+}
+
+function isOwnerOf(businessId) {
+  return isSignedIn() && myRole() == 'shop_owner' && myBusinessId() == businessId;
+}
+
+function isActiveStaffOf(businessId) {
+  return isSignedIn()
+    && myRole() == 'staff'
+    && myBusinessId() == businessId
+    && myUserDoc().data.status == 'active';
+}
+
+function isMemberOf(businessId) {
+  return isOwnerOf(businessId) || isActiveStaffOf(businessId);
+}
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ------------------------------------------------------------------
+    // USERS
+    // ------------------------------------------------------------------
+    match /users/{uid} {
+      // Anyone signed in can read their OWN doc (needed right after phone
+      // verification, before we know their role yet) or an admin can read all.
+      allow read: if isSignedIn() && (request.auth.uid == uid || isSuperAdmin() ||
+                     (resource.data.businessId == myBusinessId() && isOwnerOf(resource.data.businessId)));
+
+      // Business and owner-profile docs are created exclusively by the
+      // createBusinessProfile Cloud Function (Admin SDK, functions/index.js)
+      // right after phone OTP confirms — a client can never create their
+      // OWN user doc directly (that would let anyone self-assign a role).
+      //
+      // The ONE direct-client create we DO allow: an already-authenticated
+      // Shop Owner creating the initial staff record for their own business
+      // (staff-add-by-owner.js, right after verifying the staff's phone via
+      // the secondary Auth instance). Locked down to exactly that shape.
+      allow create: if isSignedIn()
+                    && myRole() == 'shop_owner'
+                    && request.auth.uid != uid
+                    && request.resource.data.role == 'staff'
+                    && request.resource.data.businessId == myBusinessId()
+                    && request.resource.data.status == 'awaiting_device_registration'
+                    && request.resource.data.addedBy == request.auth.uid;
+
+      // Only the owner of the same business may flip a staff member's
+      // status (e.g. 'pending_owner_approval' -> 'active'), and only that
+      // one field plus updatedAt. Staff/owner may update their own profile
+      // fields (name) but never their own role/status/businessId.
+      allow update: if isSignedIn() && (
+                      (request.auth.uid == uid
+                        && request.resource.data.role == resource.data.role
+                        && request.resource.data.status == resource.data.status
+                        && request.resource.data.businessId == resource.data.businessId)
+                      ||
+                      (isOwnerOf(resource.data.businessId)
+                        && request.resource.data.diff(resource.data).affectedKeys()
+                             .hasOnly(['status', 'permissions', 'updatedAt']))
+                      || isSuperAdmin()
+                    );
+
+      allow delete: if isSuperAdmin() || isOwnerOf(resource.data.businessId);
+    }
+
+    // ------------------------------------------------------------------
+    // BUSINESSES
+    // ------------------------------------------------------------------
+    match /businesses/{businessId} {
+      allow read: if isSuperAdmin() || isMemberOf(businessId);
+
+      // Created exclusively by createBusinessProfile (Admin SDK) — see note
+      // above. storePasswordHash never touches client code in either
+      // direction (write happens server-side; reads are blocked below).
+      allow create: if false;
+
+      allow update: if isOwnerOf(businessId) || isSuperAdmin();
+      allow delete: if isSuperAdmin();
+
+      // ---- Sub-collections: only members of this business ----
+      match /products/{productId} {
+        allow read, write: if isMemberOf(businessId) || isSuperAdmin();
+      }
+      match /batches/{batchId} {
+        allow read, write: if isMemberOf(businessId) || isSuperAdmin();
+      }
+      match /sales/{saleId} {
+        allow read, write: if isMemberOf(businessId) || isSuperAdmin();
+      }
+
+      // Pending staff waiting for the owner's tap-to-approve action.
+      // Written by the Cloud Function (Admin SDK, bypasses rules) after
+      // verifyStoreAndIssueToken succeeds. Owner can read/approve; the
+      // staff member himself can read only his own pending doc (to know
+      // approval already happened -> though in practice they listen on
+      // /users/{uid} instead, this is a convenience mirror for the owner's
+      // notification list).
+      match /staffApprovals/{staffUid} {
+        allow read: if isOwnerOf(businessId) || (isSignedIn() && request.auth.uid == staffUid);
+        allow update: if isOwnerOf(businessId)
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'approvedAt']);
+        allow create, delete: if false; // only the Cloud Function (Admin SDK) creates these
+      }
+    }
+
+    // Super admins only — global stats view, config, etc.
+    match /admin/{doc=**} {
+      allow read, write: if isSuperAdmin();
+    }
+  }
+}

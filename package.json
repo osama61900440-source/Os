@@ -1,0 +1,11 @@
+{
+  "name": "gurage-pos-functions",
+  "engines": { "node": "20" },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^12.1.0",
+    "firebase-functions": "^5.0.0",
+    "bcrypt": "^5.1.1"
+  },
+  "private": true
+}
